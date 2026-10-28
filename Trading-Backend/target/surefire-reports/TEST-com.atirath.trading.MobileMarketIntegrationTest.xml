@@ -1,0 +1,3267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.atirath.trading.MobileMarketIntegrationTest" time="123.137" tests="7" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="17"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="D:\Trading-Backend\target\test-classes;D:\Trading-Backend\target\classes;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.3.4\spring-boot-starter-web-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter\3.3.4\spring-boot-starter-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot\3.3.4\spring-boot-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.3.4\spring-boot-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.3.4\spring-boot-starter-logging-3.3.4.jar;C:\Users\DELL\.m2\repository\ch\qos\logback\logback-classic\1.5.8\logback-classic-1.5.8.jar;C:\Users\DELL\.m2\repository\ch\qos\logback\logback-core\1.5.8\logback-core-1.5.8.jar;C:\Users\DELL\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.23.1\log4j-to-slf4j-2.23.1.jar;C:\Users\DELL\.m2\repository\org\apache\logging\log4j\log4j-api\2.23.1\log4j-api-2.23.1.jar;C:\Users\DELL\.m2\repository\org\slf4j\jul-to-slf4j\2.0.16\jul-to-slf4j-2.0.16.jar;C:\Users\DELL\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\DELL\.m2\repository\org\yaml\snakeyaml\2.2\snakeyaml-2.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.3.4\spring-boot-starter-json-3.3.4.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.17.2\jackson-datatype-jdk8-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.17.2\jackson-datatype-jsr310-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.17.2\jackson-module-parameter-names-2.17.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.3.4\spring-boot-starter-tomcat-3.3.4.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.30\tomcat-embed-core-10.1.30.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.30\tomcat-embed-websocket-10.1.30.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-web\6.1.13\spring-web-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-beans\6.1.13\spring-beans-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-webmvc\6.1.13\spring-webmvc-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-context\6.1.13\spring-context-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-expression\6.1.13\spring-expression-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-security\3.3.4\spring-boot-starter-security-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-aop\6.1.13\spring-aop-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-config\6.3.3\spring-security-config-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-web\6.3.3\spring-security-web-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.3.4\spring-boot-starter-validation-3.3.4.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.30\tomcat-embed-el-10.1.30.jar;C:\Users\DELL\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.1.Final\hibernate-validator-8.0.1.Final.jar;C:\Users\DELL\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\DELL\.m2\repository\org\jboss\logging\jboss-logging\3.5.3.Final\jboss-logging-3.5.3.Final.jar;C:\Users\DELL\.m2\repository\com\fasterxml\classmate\1.7.0\classmate-1.7.0.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-mail\3.3.4\spring-boot-starter-mail-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-context-support\6.1.13\spring-context-support-6.1.13.jar;C:\Users\DELL\.m2\repository\org\eclipse\angus\jakarta.mail\2.0.3\jakarta.mail-2.0.3.jar;C:\Users\DELL\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.3\jakarta.activation-api-2.1.3.jar;C:\Users\DELL\.m2\repository\org\eclipse\angus\angus-activation\2.0.2\angus-activation-2.0.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\3.3.4\spring-boot-starter-actuator-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\3.3.4\spring-boot-actuator-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-actuator\3.3.4\spring-boot-actuator-3.3.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-observation\1.13.4\micrometer-observation-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-commons\1.13.4\micrometer-commons-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-jakarta9\1.13.4\micrometer-jakarta9-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-core\1.13.4\micrometer-core-1.13.4.jar;C:\Users\DELL\.m2\repository\org\hdrhistogram\HdrHistogram\2.2.2\HdrHistogram-2.2.2.jar;C:\Users\DELL\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-data-jpa\3.3.4\spring-boot-starter-data-jpa-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-aop\3.3.4\spring-boot-starter-aop-3.3.4.jar;C:\Users\DELL\.m2\repository\org\aspectj\aspectjweaver\1.9.22.1\aspectjweaver-1.9.22.1.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.3.4\spring-boot-starter-jdbc-3.3.4.jar;C:\Users\DELL\.m2\repository\com\zaxxer\HikariCP\5.1.0\HikariCP-5.1.0.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-jdbc\6.1.13\spring-jdbc-6.1.13.jar;C:\Users\DELL\.m2\repository\org\hibernate\orm\hibernate-core\6.5.3.Final\hibernate-core-6.5.3.Final.jar;C:\Users\DELL\.m2\repository\jakarta\persistence\jakarta.persistence-api\3.1.0\jakarta.persistence-api-3.1.0.jar;C:\Users\DELL\.m2\repository\jakarta\transaction\jakarta.transaction-api\2.0.1\jakarta.transaction-api-2.0.1.jar;C:\Users\DELL\.m2\repository\org\hibernate\common\hibernate-commons-annotations\6.0.6.Final\hibernate-commons-annotations-6.0.6.Final.jar;C:\Users\DELL\.m2\repository\io\smallrye\jandex\3.1.2\jandex-3.1.2.jar;C:\Users\DELL\.m2\repository\net\bytebuddy\byte-buddy\1.14.19\byte-buddy-1.14.19.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\jaxb-runtime\4.0.5\jaxb-runtime-4.0.5.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\jaxb-core\4.0.5\jaxb-core-4.0.5.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\txw2\4.0.5\txw2-4.0.5.jar;C:\Users\DELL\.m2\repository\com\sun\istack\istack-commons-runtime\4.1.2\istack-commons-runtime-4.1.2.jar;C:\Users\DELL\.m2\repository\jakarta\inject\jakarta.inject-api\2.0.1\jakarta.inject-api-2.0.1.jar;C:\Users\DELL\.m2\repository\org\antlr\antlr4-runtime\4.13.0\antlr4-runtime-4.13.0.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-jpa\3.3.4\spring-data-jpa-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-commons\3.3.4\spring-data-commons-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-orm\6.1.13\spring-orm-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-tx\6.1.13\spring-tx-6.1.13.jar;C:\Users\DELL\.m2\repository\org\slf4j\slf4j-api\2.0.16\slf4j-api-2.0.16.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-aspects\6.1.13\spring-aspects-6.1.13.jar;C:\Users\DELL\.m2\repository\org\postgresql\postgresql\42.7.4\postgresql-42.7.4.jar;C:\Users\DELL\.m2\repository\org\checkerframework\checker-qual\3.42.0\checker-qual-3.42.0.jar;C:\Users\DELL\.m2\repository\com\h2database\h2\2.2.224\h2-2.2.224.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-data-redis\3.3.4\spring-boot-starter-data-redis-3.3.4.jar;C:\Users\DELL\.m2\repository\io\lettuce\lettuce-core\6.3.2.RELEASE\lettuce-core-6.3.2.RELEASE.jar;C:\Users\DELL\.m2\repository\io\netty\netty-common\4.1.113.Final\netty-common-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-handler\4.1.113.Final\netty-handler-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-resolver\4.1.113.Final\netty-resolver-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-buffer\4.1.113.Final\netty-buffer-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-transport-native-unix-common\4.1.113.Final\netty-transport-native-unix-common-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-codec\4.1.113.Final\netty-codec-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-transport\4.1.113.Final\netty-transport-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\projectreactor\reactor-core\3.6.10\reactor-core-3.6.10.jar;C:\Users\DELL\.m2\repository\org\reactivestreams\reactive-streams\1.0.4\reactive-streams-1.0.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-redis\3.3.4\spring-data-redis-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-keyvalue\3.3.4\spring-data-keyvalue-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-oxm\6.1.13\spring-oxm-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-websocket\3.3.4\spring-boot-starter-websocket-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-messaging\6.1.13\spring-messaging-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-websocket\6.1.13\spring-websocket-6.1.13.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-api\0.12.6\jjwt-api-0.12.6.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-impl\0.12.6\jjwt-impl-0.12.6.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-jackson\0.12.6\jjwt-jackson-0.12.6.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.17.2\jackson-databind-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.17.2\jackson-annotations-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.17.2\jackson-core-2.17.2.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-ui\2.6.0\springdoc-openapi-starter-webmvc-ui-2.6.0.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-api\2.6.0\springdoc-openapi-starter-webmvc-api-2.6.0.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-common\2.6.0\springdoc-openapi-starter-common-2.6.0.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-core-jakarta\2.2.22\swagger-core-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\org\apache\commons\commons-lang3\3.14.0\commons-lang3-3.14.0.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-annotations-jakarta\2.2.22\swagger-annotations-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-models-jakarta\2.2.22\swagger-models-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\dataformat\jackson-dataformat-yaml\2.17.2\jackson-dataformat-yaml-2.17.2.jar;C:\Users\DELL\.m2\repository\org\webjars\swagger-ui\5.17.14\swagger-ui-5.17.14.jar;C:\Users\DELL\.m2\repository\org\projectlombok\lombok\1.18.34\lombok-1.18.34.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.3.4\spring-boot-starter-test-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-test\3.3.4\spring-boot-test-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.3.4\spring-boot-test-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\com\jayway\jsonpath\json-path\2.9.0\json-path-2.9.0.jar;C:\Users\DELL\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.2\jakarta.xml.bind-api-4.0.2.jar;C:\Users\DELL\.m2\repository\net\minidev\json-smart\2.5.1\json-smart-2.5.1.jar;C:\Users\DELL\.m2\repository\net\minidev\accessors-smart\2.5.1\accessors-smart-2.5.1.jar;C:\Users\DELL\.m2\repository\org\ow2\asm\asm\9.6\asm-9.6.jar;C:\Users\DELL\.m2\repository\org\assertj\assertj-core\3.25.3\assertj-core-3.25.3.jar;C:\Users\DELL\.m2\repository\org\awaitility\awaitility\4.2.2\awaitility-4.2.2.jar;C:\Users\DELL\.m2\repository\org\hamcrest\hamcrest\2.2\hamcrest-2.2.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.3\junit-jupiter-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.3\junit-jupiter-api-5.10.3.jar;C:\Users\DELL\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\DELL\.m2\repository\org\junit\platform\junit-platform-commons\1.10.3\junit-platform-commons-1.10.3.jar;C:\Users\DELL\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.3\junit-jupiter-params-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.3\junit-jupiter-engine-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\platform\junit-platform-engine\1.10.3\junit-platform-engine-1.10.3.jar;C:\Users\DELL\.m2\repository\org\mockito\mockito-core\5.11.0\mockito-core-5.11.0.jar;C:\Users\DELL\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.19\byte-buddy-agent-1.14.19.jar;C:\Users\DELL\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\DELL\.m2\repository\org\mockito\mockito-junit-jupiter\5.11.0\mockito-junit-jupiter-5.11.0.jar;C:\Users\DELL\.m2\repository\org\skyscreamer\jsonassert\1.5.3\jsonassert-1.5.3.jar;C:\Users\DELL\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-core\6.1.13\spring-core-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-jcl\6.1.13\spring-jcl-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-test\6.1.13\spring-test-6.1.13.jar;C:\Users\DELL\.m2\repository\org\xmlunit\xmlunit-core\2.9.1\xmlunit-core-2.9.1.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-test\6.3.3\spring-security-test-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-core\6.3.3\spring-security-core-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-crypto\6.3.3\spring-security-crypto-6.3.3.jar;"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://java.oracle.com/"/>
+    <property name="user.timezone" value="Asia/Calcutta"/>
+    <property name="org.jboss.logging.provider" value="slf4j"/>
+    <property name="os.name" value="Windows 11"/>
+    <property name="java.vm.specification.version" value="17"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="IN"/>
+    <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk-17\bin"/>
+    <property name="sun.java.command" value="C:\Users\DELL\AppData\Local\Temp\surefire8477072746595642669\surefirebooter-20261023173141550_3.jar C:\Users\DELL\AppData\Local\Temp\surefire8477072746595642669 2026-10-23T17-31-41_030-jvmRun1 surefire-20261023173141550_1tmp surefire_0-20261023173141550_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="D:\Trading-Backend\target\test-classes;D:\Trading-Backend\target\classes;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.3.4\spring-boot-starter-web-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter\3.3.4\spring-boot-starter-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot\3.3.4\spring-boot-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.3.4\spring-boot-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.3.4\spring-boot-starter-logging-3.3.4.jar;C:\Users\DELL\.m2\repository\ch\qos\logback\logback-classic\1.5.8\logback-classic-1.5.8.jar;C:\Users\DELL\.m2\repository\ch\qos\logback\logback-core\1.5.8\logback-core-1.5.8.jar;C:\Users\DELL\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.23.1\log4j-to-slf4j-2.23.1.jar;C:\Users\DELL\.m2\repository\org\apache\logging\log4j\log4j-api\2.23.1\log4j-api-2.23.1.jar;C:\Users\DELL\.m2\repository\org\slf4j\jul-to-slf4j\2.0.16\jul-to-slf4j-2.0.16.jar;C:\Users\DELL\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\DELL\.m2\repository\org\yaml\snakeyaml\2.2\snakeyaml-2.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.3.4\spring-boot-starter-json-3.3.4.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.17.2\jackson-datatype-jdk8-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.17.2\jackson-datatype-jsr310-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.17.2\jackson-module-parameter-names-2.17.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.3.4\spring-boot-starter-tomcat-3.3.4.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.30\tomcat-embed-core-10.1.30.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.30\tomcat-embed-websocket-10.1.30.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-web\6.1.13\spring-web-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-beans\6.1.13\spring-beans-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-webmvc\6.1.13\spring-webmvc-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-context\6.1.13\spring-context-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-expression\6.1.13\spring-expression-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-security\3.3.4\spring-boot-starter-security-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-aop\6.1.13\spring-aop-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-config\6.3.3\spring-security-config-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-web\6.3.3\spring-security-web-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.3.4\spring-boot-starter-validation-3.3.4.jar;C:\Users\DELL\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.30\tomcat-embed-el-10.1.30.jar;C:\Users\DELL\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.1.Final\hibernate-validator-8.0.1.Final.jar;C:\Users\DELL\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\DELL\.m2\repository\org\jboss\logging\jboss-logging\3.5.3.Final\jboss-logging-3.5.3.Final.jar;C:\Users\DELL\.m2\repository\com\fasterxml\classmate\1.7.0\classmate-1.7.0.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-mail\3.3.4\spring-boot-starter-mail-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-context-support\6.1.13\spring-context-support-6.1.13.jar;C:\Users\DELL\.m2\repository\org\eclipse\angus\jakarta.mail\2.0.3\jakarta.mail-2.0.3.jar;C:\Users\DELL\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.3\jakarta.activation-api-2.1.3.jar;C:\Users\DELL\.m2\repository\org\eclipse\angus\angus-activation\2.0.2\angus-activation-2.0.2.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\3.3.4\spring-boot-starter-actuator-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\3.3.4\spring-boot-actuator-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-actuator\3.3.4\spring-boot-actuator-3.3.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-observation\1.13.4\micrometer-observation-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-commons\1.13.4\micrometer-commons-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-jakarta9\1.13.4\micrometer-jakarta9-1.13.4.jar;C:\Users\DELL\.m2\repository\io\micrometer\micrometer-core\1.13.4\micrometer-core-1.13.4.jar;C:\Users\DELL\.m2\repository\org\hdrhistogram\HdrHistogram\2.2.2\HdrHistogram-2.2.2.jar;C:\Users\DELL\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-data-jpa\3.3.4\spring-boot-starter-data-jpa-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-aop\3.3.4\spring-boot-starter-aop-3.3.4.jar;C:\Users\DELL\.m2\repository\org\aspectj\aspectjweaver\1.9.22.1\aspectjweaver-1.9.22.1.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.3.4\spring-boot-starter-jdbc-3.3.4.jar;C:\Users\DELL\.m2\repository\com\zaxxer\HikariCP\5.1.0\HikariCP-5.1.0.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-jdbc\6.1.13\spring-jdbc-6.1.13.jar;C:\Users\DELL\.m2\repository\org\hibernate\orm\hibernate-core\6.5.3.Final\hibernate-core-6.5.3.Final.jar;C:\Users\DELL\.m2\repository\jakarta\persistence\jakarta.persistence-api\3.1.0\jakarta.persistence-api-3.1.0.jar;C:\Users\DELL\.m2\repository\jakarta\transaction\jakarta.transaction-api\2.0.1\jakarta.transaction-api-2.0.1.jar;C:\Users\DELL\.m2\repository\org\hibernate\common\hibernate-commons-annotations\6.0.6.Final\hibernate-commons-annotations-6.0.6.Final.jar;C:\Users\DELL\.m2\repository\io\smallrye\jandex\3.1.2\jandex-3.1.2.jar;C:\Users\DELL\.m2\repository\net\bytebuddy\byte-buddy\1.14.19\byte-buddy-1.14.19.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\jaxb-runtime\4.0.5\jaxb-runtime-4.0.5.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\jaxb-core\4.0.5\jaxb-core-4.0.5.jar;C:\Users\DELL\.m2\repository\org\glassfish\jaxb\txw2\4.0.5\txw2-4.0.5.jar;C:\Users\DELL\.m2\repository\com\sun\istack\istack-commons-runtime\4.1.2\istack-commons-runtime-4.1.2.jar;C:\Users\DELL\.m2\repository\jakarta\inject\jakarta.inject-api\2.0.1\jakarta.inject-api-2.0.1.jar;C:\Users\DELL\.m2\repository\org\antlr\antlr4-runtime\4.13.0\antlr4-runtime-4.13.0.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-jpa\3.3.4\spring-data-jpa-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-commons\3.3.4\spring-data-commons-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-orm\6.1.13\spring-orm-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-tx\6.1.13\spring-tx-6.1.13.jar;C:\Users\DELL\.m2\repository\org\slf4j\slf4j-api\2.0.16\slf4j-api-2.0.16.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-aspects\6.1.13\spring-aspects-6.1.13.jar;C:\Users\DELL\.m2\repository\org\postgresql\postgresql\42.7.4\postgresql-42.7.4.jar;C:\Users\DELL\.m2\repository\org\checkerframework\checker-qual\3.42.0\checker-qual-3.42.0.jar;C:\Users\DELL\.m2\repository\com\h2database\h2\2.2.224\h2-2.2.224.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-data-redis\3.3.4\spring-boot-starter-data-redis-3.3.4.jar;C:\Users\DELL\.m2\repository\io\lettuce\lettuce-core\6.3.2.RELEASE\lettuce-core-6.3.2.RELEASE.jar;C:\Users\DELL\.m2\repository\io\netty\netty-common\4.1.113.Final\netty-common-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-handler\4.1.113.Final\netty-handler-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-resolver\4.1.113.Final\netty-resolver-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-buffer\4.1.113.Final\netty-buffer-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-transport-native-unix-common\4.1.113.Final\netty-transport-native-unix-common-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-codec\4.1.113.Final\netty-codec-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\netty\netty-transport\4.1.113.Final\netty-transport-4.1.113.Final.jar;C:\Users\DELL\.m2\repository\io\projectreactor\reactor-core\3.6.10\reactor-core-3.6.10.jar;C:\Users\DELL\.m2\repository\org\reactivestreams\reactive-streams\1.0.4\reactive-streams-1.0.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-redis\3.3.4\spring-data-redis-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\data\spring-data-keyvalue\3.3.4\spring-data-keyvalue-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-oxm\6.1.13\spring-oxm-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-websocket\3.3.4\spring-boot-starter-websocket-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-messaging\6.1.13\spring-messaging-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-websocket\6.1.13\spring-websocket-6.1.13.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-api\0.12.6\jjwt-api-0.12.6.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-impl\0.12.6\jjwt-impl-0.12.6.jar;C:\Users\DELL\.m2\repository\io\jsonwebtoken\jjwt-jackson\0.12.6\jjwt-jackson-0.12.6.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.17.2\jackson-databind-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.17.2\jackson-annotations-2.17.2.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.17.2\jackson-core-2.17.2.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-ui\2.6.0\springdoc-openapi-starter-webmvc-ui-2.6.0.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-api\2.6.0\springdoc-openapi-starter-webmvc-api-2.6.0.jar;C:\Users\DELL\.m2\repository\org\springdoc\springdoc-openapi-starter-common\2.6.0\springdoc-openapi-starter-common-2.6.0.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-core-jakarta\2.2.22\swagger-core-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\org\apache\commons\commons-lang3\3.14.0\commons-lang3-3.14.0.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-annotations-jakarta\2.2.22\swagger-annotations-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\io\swagger\core\v3\swagger-models-jakarta\2.2.22\swagger-models-jakarta-2.2.22.jar;C:\Users\DELL\.m2\repository\com\fasterxml\jackson\dataformat\jackson-dataformat-yaml\2.17.2\jackson-dataformat-yaml-2.17.2.jar;C:\Users\DELL\.m2\repository\org\webjars\swagger-ui\5.17.14\swagger-ui-5.17.14.jar;C:\Users\DELL\.m2\repository\org\projectlombok\lombok\1.18.34\lombok-1.18.34.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.3.4\spring-boot-starter-test-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-test\3.3.4\spring-boot-test-3.3.4.jar;C:\Users\DELL\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.3.4\spring-boot-test-autoconfigure-3.3.4.jar;C:\Users\DELL\.m2\repository\com\jayway\jsonpath\json-path\2.9.0\json-path-2.9.0.jar;C:\Users\DELL\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.2\jakarta.xml.bind-api-4.0.2.jar;C:\Users\DELL\.m2\repository\net\minidev\json-smart\2.5.1\json-smart-2.5.1.jar;C:\Users\DELL\.m2\repository\net\minidev\accessors-smart\2.5.1\accessors-smart-2.5.1.jar;C:\Users\DELL\.m2\repository\org\ow2\asm\asm\9.6\asm-9.6.jar;C:\Users\DELL\.m2\repository\org\assertj\assertj-core\3.25.3\assertj-core-3.25.3.jar;C:\Users\DELL\.m2\repository\org\awaitility\awaitility\4.2.2\awaitility-4.2.2.jar;C:\Users\DELL\.m2\repository\org\hamcrest\hamcrest\2.2\hamcrest-2.2.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.3\junit-jupiter-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.3\junit-jupiter-api-5.10.3.jar;C:\Users\DELL\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\DELL\.m2\repository\org\junit\platform\junit-platform-commons\1.10.3\junit-platform-commons-1.10.3.jar;C:\Users\DELL\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.3\junit-jupiter-params-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.3\junit-jupiter-engine-5.10.3.jar;C:\Users\DELL\.m2\repository\org\junit\platform\junit-platform-engine\1.10.3\junit-platform-engine-1.10.3.jar;C:\Users\DELL\.m2\repository\org\mockito\mockito-core\5.11.0\mockito-core-5.11.0.jar;C:\Users\DELL\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.19\byte-buddy-agent-1.14.19.jar;C:\Users\DELL\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\DELL\.m2\repository\org\mockito\mockito-junit-jupiter\5.11.0\mockito-junit-jupiter-5.11.0.jar;C:\Users\DELL\.m2\repository\org\skyscreamer\jsonassert\1.5.3\jsonassert-1.5.3.jar;C:\Users\DELL\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-core\6.1.13\spring-core-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-jcl\6.1.13\spring-jcl-6.1.13.jar;C:\Users\DELL\.m2\repository\org\springframework\spring-test\6.1.13\spring-test-6.1.13.jar;C:\Users\DELL\.m2\repository\org\xmlunit\xmlunit-core\2.9.1\xmlunit-core-2.9.1.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-test\6.3.3\spring-security-test-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-core\6.3.3\spring-security-core-6.3.3.jar;C:\Users\DELL\.m2\repository\org\springframework\security\spring-security-crypto\6.3.3\spring-security-crypto-6.3.3.jar;"/>
+    <property name="test" value="MobileMarketIntegrationTest"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\DELL"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2024-07-16"/>
+    <property name="java.home" value="C:\Program Files\Java\jdk-17"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="D:\Trading-Backend"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="FILE_LOG_CHARSET" value="windows-1252"/>
+    <property name="java.awt.headless" value="true"/>
+    <property name="surefire.real.class.path" value="C:\Users\DELL\AppData\Local\Temp\surefire8477072746595642669\surefirebooter-20261023173141550_3.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="17.0.12+8-LTS-286"/>
+    <property name="user.name" value="DELL"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="Cp1252"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="C:\Users\DELL\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://bugreport.java.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="C:\Users\DELL\AppData\Local\Temp\"/>
+    <property name="com.zaxxer.hikari.pool_number" value="1"/>
+    <property name="java.version" value="17.0.12"/>
+    <property name="user.dir" value="D:\Trading-Backend"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="PID" value="6012"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="CONSOLE_LOG_CHARSET" value="windows-1252"/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Program Files\Java\jdk-17\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:/Users/DELL/.gemini/antigravity-ide/bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Program Files\Java\jdk-17\bin;C:\Android\emulator;C:\flutter\bin;C:\Android\Sdk\platform-tools;C:\Android\Sdk\cmdline-tools\latest\bin;C:\Program Files\MySQL\MySQL Shell 8.0\bin\;C:\Users\DELL\AppData\Local\Microsoft\WindowsApps;C:\Users\DELL\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\DELL\AppData\Roaming\npm;C:\Users\DELL\AppData\Local\Python\bin;C:\Program Files\JetBrains\IntelliJ IDEA 2026.1.3\bin;C:\Users\DELL\AppData\Local\Programs\Antigravity IDE\bin;C:\Users\DELL\AppData\Local\Programs\DockerDesktop\resources\bin;C:\Users\DELL\AppData\Local\Programs\Microsoft VS Code\bin\copilot-shim;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="17.0.12+8-LTS-286"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="61.0"/>
+    <property name="LOGGED_APPLICATION_NAME" value="[trading-backend] "/>
+  </properties>
+  <testcase name="testGetMobileActivitySummary" classname="com.atirath.trading.MobileMarketIntegrationTest" time="3.39">
+    <system-out><![CDATA[17:31:44.483 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.atirath.trading.MobileMarketIntegrationTest]: MobileMarketIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+17:31:44.965 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.atirath.trading.TradingBackendApplication for test class com.atirath.trading.MobileMarketIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-23T17:31:46.887+05:30  INFO 6012 --- [trading-backend] [           main] c.a.trading.MobileMarketIntegrationTest  : Starting MobileMarketIntegrationTest using Java 17.0.12 with PID 6012 (started by DELL in D:\Trading-Backend)
+2026-10-23T17:31:46.889+05:30  INFO 6012 --- [trading-backend] [           main] c.a.trading.MobileMarketIntegrationTest  : The following 1 profile is active: "postgres"
+2026-10-23T17:31:52.010+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-23T17:31:52.011+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-23T17:31:52.740+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 701 ms. Found 32 JPA repository interfaces.
+2026-10-23T17:31:52.797+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-23T17:31:52.801+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-10-23T17:31:52.895+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.AccountDocumentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.895+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.BankDetailRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.897+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.CorporateProfileRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.898+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.IdentityKycDetailRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.899+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.IndividualProfileRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.899+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.PasswordResetTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.901+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.UserAccountRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.902+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.UserBiometricCredentialRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.902+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.auth.repository.UserCredentialRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.902+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.AppNotificationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.902+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyAnnouncementRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyAnnualFinancialRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyDocumentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyFinancialRatioRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyHighlightRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyLeadershipRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyQuarterlyFinancialRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.908+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.CompanyShareholdingRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.916+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.EscrowAccountRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.917+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.EscrowRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.917+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MarketCompanyRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.917+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MarketOrderMatchRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.922+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MarketOrderRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.924+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MarketPriceHistoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.924+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MarketTradeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.924+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.MemberWatchlistRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.928+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.OrderEventRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.928+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.ShareLockRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.930+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.ShareTransferRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.934+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.TradeOrderChargeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.934+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.TradeOrderDocumentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.934+05:30  INFO 6012 --- [trading-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.atirath.trading.modules.market.repository.UserShareHoldingRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-23T17:31:52.934+05:30  INFO 6012 --- [trading-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 107 ms. Found 0 Redis repository interfaces.
+2026-10-23T17:31:57.368+05:30  INFO 6012 --- [trading-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-23T17:31:57.606+05:30  INFO 6012 --- [trading-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.3.Final
+2026-10-23T17:31:57.720+05:30  INFO 6012 --- [trading-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-23T17:31:58.992+05:30  INFO 6012 --- [trading-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-23T17:31:59.109+05:30  INFO 6012 --- [trading-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-23T17:32:02.400+05:30  INFO 6012 --- [trading-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@68838767
+2026-10-23T17:32:02.402+05:30  INFO 6012 --- [trading-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-23T17:32:09.381+05:30  INFO 6012 --- [trading-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table if exists account_documents 
+       alter column file_path set data type TEXT
+Hibernate: 
+    alter table if exists app_notifications 
+       alter column message set data type TEXT
+Hibernate: 
+    alter table if exists bank_details 
+       alter column account_number_encrypted set data type TEXT
+Hibernate: 
+    alter table if exists company_announcements 
+       alter column description set data type TEXT
+Hibernate: 
+    alter table if exists company_documents 
+       alter column file_url set data type TEXT
+Hibernate: 
+    alter table if exists company_highlights 
+       alter column highlight_text set data type TEXT
+Hibernate: 
+    alter table if exists identity_kyc_details 
+       alter column aadhaar_number_encrypted set data type TEXT
+Hibernate: 
+    alter table if exists market_companies 
+       alter column description set data type TEXT
+Hibernate: 
+    alter table if exists market_companies 
+       alter column logo_url set data type TEXT
+Hibernate: 
+    alter table if exists market_companies 
+       alter column website_url set data type TEXT
+Hibernate: 
+    alter table if exists order_events 
+       alter column event_note set data type TEXT
+Hibernate: 
+    alter table if exists trade_order_documents 
+       alter column file_url set data type TEXT
+Hibernate: 
+    alter table if exists user_biometric_credentials 
+       alter column public_key set data type TEXT
+2026-10-23T17:33:00.230+05:30  INFO 6012 --- [trading-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-23T17:33:01.574+05:30  INFO 6012 --- [trading-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-23T17:33:06.302+05:30  INFO 6012 --- [trading-backend] [           main] c.a.t.m.m.s.MarketBroadcastService       : [MarketBroadcastService] Initializing real-time market broadcaster...
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+2026-10-23T17:33:07.301+05:30  INFO 6012 --- [trading-backend] [           main] c.a.t.m.m.s.MarketBroadcastService       : [MarketBroadcastService] Initialized 7 tradable companies in memory cache
+2026-10-23T17:33:10.340+05:30  WARN 6012 --- [trading-backend] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-23T17:33:10.469+05:30  INFO 6012 --- [trading-backend] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-10-23T17:33:12.276+05:30  INFO 6012 --- [trading-backend] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-10-23T17:33:15.413+05:30  INFO 6012 --- [trading-backend] [           main] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0'
+2026-10-23T17:33:15.664+05:30  INFO 6012 --- [trading-backend] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-23T17:33:15.664+05:30  INFO 6012 --- [trading-backend] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T17:33:15.668+05:30  INFO 6012 --- [trading-backend] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 4 ms
+2026-10-23T17:33:15.869+05:30  INFO 6012 --- [trading-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-10-23T17:33:15.872+05:30  INFO 6012 --- [trading-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@64b3481e]]
+2026-10-23T17:33:15.876+05:30  INFO 6012 --- [trading-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-10-23T17:33:15.941+05:30  INFO 6012 --- [trading-backend] [           main] c.a.trading.MobileMarketIntegrationTest  : Started MobileMarketIntegrationTest in 90.368 seconds (process running for 94.026)
+2026-10-23T17:33:16.472+05:30  INFO 6012 --- [trading-backend] [           main] c.a.trading.config.DataInitializer       : Checking and seeding initial demo accounts & market data if not present...
+Hibernate: 
+    select
+        ua1_0.user_id 
+    from
+        user_accounts ua1_0 
+    where
+        upper(ua1_0.email)=upper(?) 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        ua1_0.user_id,
+        ua1_0.account_status,
+        ua1_0.account_type,
+        ua1_0.created_at,
+        ua1_0.email,
+        ua1_0.mobile_number,
+        ua1_0.referral_code,
+        ua1_0.updated_at 
+    from
+        user_accounts ua1_0 
+    where
+        upper(ua1_0.email)=upper(?)
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        ua1_0.user_id 
+    from
+        user_accounts ua1_0 
+    where
+        upper(ua1_0.email)=upper(?) 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        ua1_0.user_id,
+        ua1_0.account_status,
+        ua1_0.account_type,
+        ua1_0.created_at,
+        ua1_0.email,
+        ua1_0.mobile_number,
+        ua1_0.referral_code,
+        ua1_0.updated_at 
+    from
+        user_accounts ua1_0 
+    where
+        upper(ua1_0.email)=upper(?)
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        upper(mc1_0.symbol)=upper(?)
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        ua1_0.user_id,
+        ua1_0.account_status,
+        ua1_0.account_type,
+        ua1_0.created_at,
+        ua1_0.email,
+        ua1_0.mobile_number,
+        ua1_0.referral_code,
+        ua1_0.updated_at 
+    from
+        user_accounts ua1_0
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        count(*) 
+    from
+        market_companies mc1_0
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        count(*) 
+    from
+        market_companies mc1_0
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+2026-10-23T17:33:21.325+05:30  INFO 6012 --- [trading-backend] [           main] c.a.trading.config.DataInitializer       : Market companies already seeded (count=7). Skipping seeding.
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+2026-10-23T17:33:21.581+05:30  INFO 6012 --- [trading-backend] [           main] c.a.t.m.m.s.MarketBroadcastService       : [MarketBroadcastService] Initialized 7 tradable companies in memory cache
+Hibernate: 
+    select
+        ea1_0.escrow_account_id,
+        ea1_0.account_reference,
+        ea1_0.account_status,
+        ea1_0.available_balance,
+        ea1_0.blocked_balance,
+        ea1_0.created_at,
+        ea1_0.currency_code,
+        ea1_0.updated_at,
+        ea1_0.user_id 
+    from
+        escrow_accounts ea1_0 
+    where
+        ea1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        upper(mc1_0.symbol)=upper(?)
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        ush1_0.holding_id,
+        ush1_0.average_buy_price,
+        ush1_0.company_id,
+        ush1_0.created_at,
+        ush1_0.locked_shares,
+        ush1_0.total_shares,
+        ush1_0.updated_at,
+        ush1_0.user_id 
+    from
+        user_share_holdings ush1_0 
+    where
+        ush1_0.user_id=? 
+        and ush1_0.company_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        count(mt1_0.trade_id) 
+    from
+        market_trades mt1_0 
+    where
+        mt1_0.status=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        coalesce(sum(mt1_0.trade_value), 0) 
+    from
+        market_trades mt1_0 
+    where
+        mt1_0.status='EXECUTED'
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        count(mt1_0.trade_id) 
+    from
+        market_trades mt1_0 
+    where
+        mt1_0.executed_at>=? 
+        and mt1_0.status='EXECUTED'
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+]]></system-out>
+  </testcase>
+  <testcase name="testGetMobileOrderBook" classname="com.atirath.trading.MobileMarketIntegrationTest" time="0.079">
+    <system-out><![CDATA[Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+]]></system-out>
+  </testcase>
+  <testcase name="testGetMobileRecentTrades" classname="com.atirath.trading.MobileMarketIntegrationTest" time="2.815">
+    <system-out><![CDATA[Hibernate: 
+    select
+        mt1_0.trade_id,
+        mt1_0.buy_order_id,
+        mt1_0.buyer_user_id,
+        mt1_0.company_id,
+        mt1_0.executed_at,
+        mt1_0.match_id,
+        mt1_0.quantity,
+        mt1_0.sell_order_id,
+        mt1_0.seller_user_id,
+        mt1_0.status,
+        mt1_0.trade_no,
+        mt1_0.trade_price,
+        mt1_0.trade_value 
+    from
+        market_trades mt1_0 
+    order by
+        mt1_0.executed_at desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.company_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+]]></system-out>
+  </testcase>
+  <testcase name="testWebCompaniesEndpoint" classname="com.atirath.trading.MobileMarketIntegrationTest" time="4.982">
+    <system-out><![CDATA[Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    select
+        mph1_0.price_history_id,
+        mph1_0.close_price,
+        mph1_0.company_id,
+        mph1_0.created_at,
+        mph1_0.high_price,
+        mph1_0.interval_type,
+        mph1_0.low_price,
+        mph1_0.open_price,
+        mph1_0.price_time,
+        mph1_0.turnover_value,
+        mph1_0.volume_shares 
+    from
+        market_price_history mph1_0 
+    where
+        mph1_0.company_id=? 
+    order by
+        mph1_0.price_time desc 
+    fetch
+        first 2 rows only
+Hibernate: 
+    insert 
+    into
+        market_orders
+        (company_id, order_no, order_side, order_source, order_type, order_value, placed_at, price_per_share, quantity, status, stop_loss_enabled, stop_price, trigger_type, updated_at, user_id, validity) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+    returning order_id
+Hibernate: 
+    insert 
+    into
+        market_orders
+        (company_id, order_no, order_side, order_source, order_type, order_value, placed_at, price_per_share, quantity, status, stop_loss_enabled, stop_price, trigger_type, updated_at, user_id, validity) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+    returning order_id
+]]></system-out>
+  </testcase>
+  <testcase name="testGetMobileSectors" classname="com.atirath.trading.MobileMarketIntegrationTest" time="0.998">
+    <system-out><![CDATA[Hibernate: 
+    select
+        distinct mc1_0.sector 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status='ACTIVE' 
+    order by
+        mc1_0.sector
+Hibernate: 
+    insert 
+    into
+        market_trades
+        (buy_order_id, buyer_user_id, company_id, executed_at, match_id, quantity, sell_order_id, seller_user_id, status, trade_no, trade_price, trade_value) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+    returning trade_id
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        upper(mc1_0.symbol)=upper(?)
+]]></system-out>
+  </testcase>
+  <testcase name="testGetMobileCompanyBySymbol" classname="com.atirath.trading.MobileMarketIntegrationTest" time="3.358">
+    <system-out><![CDATA[Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        upper(mc1_0.symbol)=upper(?)
+Hibernate: 
+    select
+        ua1_0.user_id,
+        ua1_0.account_status,
+        ua1_0.account_type,
+        ua1_0.created_at,
+        ua1_0.email,
+        ua1_0.mobile_number,
+        ua1_0.referral_code,
+        ua1_0.updated_at 
+    from
+        user_accounts ua1_0
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        upper(mc1_0.symbol)=upper(?)
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+]]></system-out>
+  </testcase>
+  <testcase name="testGetMobileCompanies" classname="com.atirath.trading.MobileMarketIntegrationTest" time="8.726">
+    <system-out><![CDATA[Hibernate: 
+    select
+        mc1_0.company_id,
+        mc1_0.available_shares,
+        mc1_0.company_code,
+        mc1_0.company_name,
+        mc1_0.created_at,
+        mc1_0.description,
+        mc1_0.founded_date,
+        mc1_0.headquarters,
+        mc1_0.issued_shares,
+        mc1_0.logo_url,
+        mc1_0.sector,
+        mc1_0.status,
+        mc1_0.symbol,
+        mc1_0.updated_at,
+        mc1_0.website_url 
+    from
+        market_companies mc1_0 
+    where
+        mc1_0.status=? 
+    order by
+        mc1_0.company_name
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        cfr1_0.ratio_id,
+        cfr1_0.book_value,
+        cfr1_0.company_id,
+        cfr1_0.current_ratio,
+        cfr1_0.debt_to_equity,
+        cfr1_0.dividend_yield,
+        cfr1_0.ebitda_margin,
+        cfr1_0.eps,
+        cfr1_0.financial_year,
+        cfr1_0.net_profit_margin,
+        cfr1_0.pe_ratio,
+        cfr1_0.price_to_book,
+        cfr1_0.roce,
+        cfr1_0.roe 
+    from
+        company_financial_ratios cfr1_0 
+    where
+        cfr1_0.company_id=? 
+    order by
+        cfr1_0.financial_year desc 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+Hibernate: 
+    select
+        cp1_0.corporate_id,
+        cp1_0.company_name,
+        cp1_0.contact_person_name,
+        cp1_0.created_at,
+        cp1_0.registration_id,
+        cp1_0.updated_at,
+        cp1_0.user_id 
+    from
+        corporate_profiles cp1_0 
+    where
+        cp1_0.user_id=?
+Hibernate: 
+    select
+        cl1_0.leadership_id,
+        cl1_0.company_id,
+        cl1_0.designation,
+        cl1_0.display_order,
+        cl1_0.is_active,
+        cl1_0.person_name 
+    from
+        company_leadership cl1_0 
+    where
+        cl1_0.company_id=? 
+        and cl1_0.is_active 
+    order by
+        cl1_0.display_order
+Hibernate: 
+    select
+        ikd1_0.kyc_id,
+        ikd1_0.aadhaar_number_encrypted,
+        ikd1_0.created_at,
+        ikd1_0.date_of_birth,
+        ikd1_0.pan_full_name,
+        ikd1_0.pan_number,
+        ikd1_0.updated_at,
+        ikd1_0.user_id 
+    from
+        identity_kyc_details ikd1_0 
+    where
+        ikd1_0.user_id=?
+Hibernate: 
+    select
+        cqf1_0.financial_id,
+        cqf1_0.book_value,
+        cqf1_0.company_id,
+        cqf1_0.current_ratio,
+        cqf1_0.debt_to_equity,
+        cqf1_0.dividend_yield,
+        cqf1_0.ebitda,
+        cqf1_0.ebitda_margin,
+        cqf1_0.eps,
+        cqf1_0.financial_year,
+        cqf1_0.net_profit,
+        cqf1_0.net_profit_margin,
+        cqf1_0.pe_ratio,
+        cqf1_0.period_end_date,
+        cqf1_0.period_label,
+        cqf1_0.price_to_book,
+        cqf1_0.revenue,
+        cqf1_0.roce,
+        cqf1_0.roe,
+        cqf1_0.total_assets,
+        cqf1_0.total_equity 
+    from
+        company_quarterly_financials cqf1_0 
+    where
+        cqf1_0.company_id=? 
+    order by
+        cqf1_0.financial_year desc,
+        cqf1_0.period_label desc
+Hibernate: 
+    select
+        ip1_0.individual_id,
+        ip1_0.created_at,
+        ip1_0.full_name,
+        ip1_0.updated_at,
+        ip1_0.user_id 
+    from
+        individual_profiles ip1_0 
+    where
+        ip1_0.user_id=?
+Hibernate: 
+    select
+        cs1_0.shareholding_id,
+        cs1_0.as_of_date,
+        cs1_0.company_id,
+        cs1_0.holder_category,
+        cs1_0.percentage,
+        cs1_0.shares_held 
+    from
+        company_shareholding cs1_0 
+    where
+        cs1_0.company_id=? 
+    order by
+        cs1_0.percentage desc
+Hibernate: 
+    select
+        uc1_0.credential_id,
+        uc1_0.created_at,
+        uc1_0.password_changed_at,
+        uc1_0.password_hash,
+        uc1_0.updated_at,
+        uc1_0.user_id 
+    from
+        user_credentials uc1_0 
+    where
+        uc1_0.user_id=?
+Hibernate: 
+    select
+        bd1_0.bank_id,
+        bd1_0.account_holder_name,
+        bd1_0.account_number_encrypted,
+        bd1_0.bank_name,
+        bd1_0.branch_name,
+        bd1_0.created_at,
+        bd1_0.ifsc_code,
+        bd1_0.updated_at,
+        bd1_0.user_id 
+    from
+        bank_details bd1_0 
+    where
+        bd1_0.user_id=?
+]]></system-out>
+  </testcase>
+</testsuite>

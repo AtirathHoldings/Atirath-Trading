@@ -1,0 +1,85 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: trading-backend
+  profiles:
+    active: postgres
+
+  # Dev profile uses H2 in-memory DB by default so it runs immediately
+  # Switch to 'postgres' profile or set SPRING_PROFILES_ACTIVE=postgres to use PostgreSQL
+  datasource:
+    url: jdbc:h2:mem:tradingdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# Security & App Configuration
+app:
+  jwt:
+    # 256-bit base64 secret for HMAC-SHA256
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    access-token-expiration-ms: 3600000        # 1 hour
+    refresh-token-expiration-ms: 604800000    # 7 days
+    mobile-refresh-token-expiration-ms: 2592000000 # 30 days for mobile
+  otp:
+    expiration-seconds: 90                    # 90 seconds for Web
+    mobile-expiration-seconds: 60             # 60 seconds for Mobile
+    length: 6
+    max-resend-attempts: 3
+    # When true, OTP is logged to console and test OTP "123456" is accepted
+    dev-mode-enabled: true
+    default-test-otp: "123456"
+
+  # SMS Gateway Settings (MSG91 / Fast2SMS / Twilio / Custom HTTP Gateway)
+  sms:
+    gateway-url: ${SMS_GATEWAY_URL:}
+    api-key: ${SMS_API_KEY:}
+    sender-id: ${SMS_SENDER_ID:ATIRTH}
+
+# Email SMTP Gateway Settings (SendGrid / AWS SES / Gmail / Corporate SMTP)
+spring.mail:
+  host: ${SMTP_HOST:smtp.gmail.com}
+  port: ${SMTP_PORT:587}
+  username: ${SMTP_USERNAME:noreply@atirathgroup.com}
+  password: ${SMTP_PASSWORD:}
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: true
+
+# Swagger / OpenAPI documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+# Actuator Endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
