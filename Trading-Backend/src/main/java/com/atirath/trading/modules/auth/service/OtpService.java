@@ -3,10 +3,12 @@ package com.atirath.trading.modules.auth.service;
 import com.atirath.trading.common.ApiException;
 import com.atirath.trading.common.OtpChannel;
 import com.atirath.trading.common.OtpPurpose;
+import com.atirath.trading.common.ResourceNotFoundException;
 import com.atirath.trading.config.AppProperties;
 import com.atirath.trading.modules.auth.dto.OtpResponse;
 import com.atirath.trading.modules.auth.dto.OtpSendRequest;
 import com.atirath.trading.modules.auth.dto.OtpVerifyRequest;
+import com.atirath.trading.modules.auth.repository.UserAccountRepository;
 import com.atirath.trading.modules.auth.service.gateway.EmailService;
 import com.atirath.trading.modules.auth.service.gateway.SmsService;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +29,12 @@ public class OtpService {
     private final EmailService emailService;
     private final SmsService smsService;
     private final AppProperties appProperties;
+    private final UserAccountRepository userAccountRepository;
 
     // Fast in-memory cache for OTP storage with TTL (Zero DB changes)
     private final Map<String, OtpRecord> otpStore = new ConcurrentHashMap<>();
+    // Short-lived verified marker after OTP verification (used e.g. by web mobile password reset)
+    private final Map<String, Instant> verifiedStore = new ConcurrentHashMap<>();
 
     private record OtpRecord(String code, Instant expiresAt, OtpPurpose purpose, String sessionToken) {
         boolean isExpired() {
@@ -39,6 +44,19 @@ public class OtpService {
 
     public OtpResponse sendOtp(OtpSendRequest request) {
         String target = request.getTarget().trim();
+
+        if (request.getPurpose() == OtpPurpose.PASSWORD_RESET) {
+            if (request.getChannel() == OtpChannel.EMAIL) {
+                if (!userAccountRepository.existsByEmailIgnoreCase(target)) {
+                    throw new ResourceNotFoundException("No account found with email: " + target);
+                }
+            } else {
+                if (!userAccountRepository.existsByMobileNumber(target)) {
+                    throw new ResourceNotFoundException("No account found with mobile number: " + target);
+                }
+            }
+        }
+
         long expirySeconds = (request.getChannel() == OtpChannel.EMAIL)
                 ? appProperties.getOtp().getExpirationSeconds()
                 : appProperties.getOtp().getMobileExpirationSeconds();
@@ -78,6 +96,7 @@ public class OtpService {
         // Universal test OTP support in dev mode
         if (appProperties.getOtp().isDevModeEnabled() && "123456".equals(request.getOtpCode().trim())) {
             otpStore.remove(cacheKey);
+            verifiedStore.put(cacheKey, Instant.now().plusSeconds(600));
             return true;
         }
 
@@ -94,9 +113,21 @@ public class OtpService {
             throw new ApiException("Invalid OTP code. Please enter the correct 6-digit code.");
         }
 
-        // Successfully verified -> Invalidate OTP
+        // Successfully verified -> Invalidate OTP and record short-lived verified state
         otpStore.remove(cacheKey);
+        verifiedStore.put(cacheKey, Instant.now().plusSeconds(600));
         return true;
+    }
+
+    /**
+     * Verifies and consumes the one-time verified OTP state for sensitive follow-up actions (e.g. password reset).
+     */
+    public void consumeVerifiedOtp(String target, OtpPurpose purpose) {
+        String cacheKey = buildCacheKey(target.trim(), purpose);
+        Instant validUntil = verifiedStore.remove(cacheKey);
+        if (validUntil == null || Instant.now().isAfter(validUntil)) {
+            throw new ApiException("OTP verification is required or has expired. Please verify OTP first.");
+        }
     }
 
     private String buildCacheKey(String target, OtpPurpose purpose) {

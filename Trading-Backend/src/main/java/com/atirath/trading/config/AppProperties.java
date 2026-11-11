@@ -22,7 +22,7 @@ public class AppProperties {
 
     @Data
     public static class Otp {
-        private int expirationSeconds = 90;
+        private int expirationSeconds = 60;
         private int mobileExpirationSeconds = 60;
         private int length = 6;
         private int maxResendAttempts = 3;

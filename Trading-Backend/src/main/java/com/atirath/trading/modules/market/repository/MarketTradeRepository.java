@@ -15,6 +15,9 @@ public interface MarketTradeRepository extends JpaRepository<MarketTrade, Long> 
 
     List<MarketTrade> findTop50ByOrderByExecutedAtDesc();
 
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM MarketTrade t WHERE t.buyerUser.userId = :userId OR t.sellerUser.userId = :userId ORDER BY t.executedAt DESC")
+    List<MarketTrade> findUserTrades(@org.springframework.data.repository.query.Param("userId") Long userId);
+
     List<MarketTrade> findTop50ByCompany_CompanyIdOrderByExecutedAtDesc(Long companyId);
 
     long countByStatus(String status);

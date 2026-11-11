@@ -12,4 +12,6 @@ public interface CompanyAnnouncementRepository extends JpaRepository<CompanyAnno
     List<CompanyAnnouncement> findByCompany_CompanyIdAndStatusOrderByAnnouncementDateDesc(Long companyId, String status);
 
     List<CompanyAnnouncement> findByCompany_CompanyIdOrderByAnnouncementDateDesc(Long companyId);
+
+    List<CompanyAnnouncement> findTop5ByStatusOrderByAnnouncementDateDesc(String status);
 }

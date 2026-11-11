@@ -1,271 +1,473 @@
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\AccountLockedException.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\AccountStatus.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\AccountType.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\ApiException.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\ApiResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\ClientType.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\DocumentType.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\GlobalExceptionHandler.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\InvalidCredentialsException.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\OtpChannel.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\OtpExpiredException.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\OtpPurpose.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\ResourceNotFoundException.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\UserRole.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\UserStatus.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\util\AESEncryptionUtil.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\util\BiometricCryptoUtil.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\common\util\HashUtil.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\AppProperties.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\AsyncConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\CustomAccessDeniedHandler.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\DataInitializer.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\JwtAuthenticationEntryPoint.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\JwtAuthenticationFilter.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\JwtTokenProvider.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\MarketRawWebSocketHandler.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\OpenApiConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\RawWebSocketConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\RedisConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\SecurityConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\config\WebSocketConfig.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\AuthController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\MobileAuthController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\WebAuthController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\BankDetailsSubmitRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricEnrollRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricInitiateRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricInitiateResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricStatusResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricVerifyRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\AuthResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\LogoutRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\RefreshTokenRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\UserSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\CorporateRegisterRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\DocumentUploadRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordEmailRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordMobileRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\IndividualRegisterRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\KycSubmitRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\LoginRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileAuthResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileProfileDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileUserDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpSendRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpVerifyRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ResetPasswordWithTokenRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserAccountSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserProfileDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\AccountDocument.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\BankDetail.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\CorporateProfile.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\IdentityKycDetail.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\IndividualProfile.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\PasswordResetToken.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserAccount.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserBiometricCredential.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserCredential.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\AccountDocumentRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\BankDetailRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\CorporateProfileRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\IdentityKycDetailRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\IndividualProfileRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\PasswordResetTokenRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserAccountRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserBiometricCredentialRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserCredentialRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\AuthService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\BiometricService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\CustomUserDetailsService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\gateway\EmailService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\gateway\SmsService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\OtpService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\controller\EscrowController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\CreateEscrowRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowDashboardDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowListItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowPipelineDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusBreakdownDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusPageDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowSummaryMetricsDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowValueTrendDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ProceedPaymentRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\SettlementConfirmationDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\SettlementTrendDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareLockItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareLockStatusPageDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareTransferItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareTransferStatusPageDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\TransferFundsRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\service\EscrowService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketCompanyController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketTradeController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketWebSocketController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MobileMarketController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MobileTradeOrderController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\TradeOrderController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\WatchlistController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\CompanyOverviewDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\CompanySummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\LiveTradeDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketActivitySummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTickDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTradeDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketWebSocketMessage.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileHoldingSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileMyOrdersResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderConfirmationDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderLifecycleDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderPreviewDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobilePlaceOrderRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileTradeScreenDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileWalletSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MobileStockDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MyOrdersResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderBookUpdateDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderConfirmationDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderListItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderPreviewRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderPreviewResponse.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderStatusDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\PlaceOrderRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\PriceCandleDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\UserHoldingDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\UserWalletDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\WatchlistDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\AppNotification.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyAnnouncement.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyAnnualFinancial.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyDocument.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyFinancialRatio.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyHighlight.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyLeadership.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyQuarterlyFinancial.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyShareholding.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\Escrow.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\EscrowAccount.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketCompany.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketOrder.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketOrderMatch.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketPriceHistory.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketTrade.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MemberWatchlist.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\OrderEvent.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\ShareLock.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\ShareTransfer.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\TradeOrderCharge.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\TradeOrderDocument.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\UserShareHolding.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\AppNotificationRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyAnnouncementRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyAnnualFinancialRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyDocumentRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyFinancialRatioRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyHighlightRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyLeadershipRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyQuarterlyFinancialRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyShareholdingRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\EscrowAccountRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\EscrowRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketCompanyRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketOrderMatchRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketOrderRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketPriceHistoryRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketTradeRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MemberWatchlistRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\OrderEventRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\ShareLockRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\ShareTransferRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\TradeOrderChargeRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\TradeOrderDocumentRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\UserShareHoldingRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketBroadcastService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketCompanyService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketPriceHistoryService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketTradeService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\TradeOrderService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\WatchlistService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\controller\NegotiationController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\CounterOfferRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\InitiateNegotiationRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationDashboardDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationHistoryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationInsightDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationListItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationMessageRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationsPageDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationStatusBreakdownDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\TradeAgreementConfirmRequestDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\TradeAgreementDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\Negotiation.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\NegotiationMessage.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\NegotiationOffer.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\TradeAgreement.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationMessageRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationOfferRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\TradeAgreementRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\service\NegotiationService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\controller\NotificationController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\FrequencyOptionDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationChannelStatusDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationListItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationPreferenceRowDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationPreferencesResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationsResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationSummaryKpiDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationTabCountDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\QuietHoursDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\RelatedLinkDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\UpdateNotificationPreferencesRequest.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\model\MemberNotificationPreference.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\repository\MemberNotificationPreferenceRepository.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\service\NotificationService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\controller\PortfolioController.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioActivityItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAllocationSliceDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAnalyticsPerformanceRowDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAnalyticsResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioCompanyOwnershipRowDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioCompanyPnlRowDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDashboardDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDayMovementDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDistributionItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioHoldingItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioHoldingsResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrderDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrderItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrdersResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOwnershipResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOwnershipSummaryDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPerformanceDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlSummaryDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlTrendPointDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPositionItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPositionsResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPriceMoverDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioQuickInsightDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioReturnAnalysisDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioSummaryKpiDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTimelineStepDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradeDetailDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradeItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradesResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTransactionItemDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTransactionResponseDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTrendPointDto.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\PortfolioService.java
-C:\Users\divya\Downloads\Trading-Backend\src\main\java\com\atirath\trading\TradingBackendApplication.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\AccountLockedException.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\AccountStatus.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\AccountType.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\ApiException.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\ApiResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\ClientType.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\DocumentType.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\GlobalExceptionHandler.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\InvalidCredentialsException.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\OtpChannel.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\OtpExpiredException.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\OtpPurpose.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\ResourceNotFoundException.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\UserRole.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\UserStatus.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\util\AESEncryptionUtil.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\util\BiometricCryptoUtil.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\util\HashUtil.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\AppProperties.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\AsyncConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\CustomAccessDeniedHandler.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\DataInitializer.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\JwtAuthenticationEntryPoint.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\JwtAuthenticationFilter.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\JwtTokenProvider.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\MarketRawWebSocketHandler.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\OpenApiConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\RawWebSocketConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\RedisConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\SecurityConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\WebSocketConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\controller\ParentCompanyAdminController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddApprovalRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddEscrowRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddInvestorRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddShareholderRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddSubsidiaryRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AdminUserHeaderDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\ApprovalDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\ApprovalsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\EscrowSettlementGroupPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\ExternalInvestorRequestsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\GroupHoldingsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\GroupReportsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\GroupShareCapitalPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\GroupShareholdersPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\GroupTradeMonitoringPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\InvestorRequestDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\KpiCardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\MarketActivityGroupPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\ParentDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\SubsidiariesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\SubsidiarySummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\UpdateCompanyInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\service\ParentCompanyAdminService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\controller\SubsidiaryAdminController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\controller\SubsidiaryComplianceController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddCapTableTransactionRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddCompanyApproverRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddShareClassRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddShareTransferRuleRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddSubsidiaryShareholderRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddTradingRuleRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CompanyApproverDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CompanyDocumentDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CompanyTransactionDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ComplianceAlertDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ComplianceCaseDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ComplianceCasesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CreateComplianceAlertRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CreateComplianceCaseRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\CreateKycRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\FlagSuspiciousTransactionRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\GenerateSubsidiaryReportRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\KycDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\MonitoredTransactionDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RecordCompanyTransactionRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictedShareDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictedSharesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictedUserDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictedUsersPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictSharesRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RestrictUserRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\RunTransactionScreeningRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ShareClassDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ShareholderDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\ShareTransferRuleDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubmitShareIssuanceRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryAdminDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryApproversPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryCapTablePageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryCompanyProfileDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryComplianceAlertsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryComplianceDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryDocumentsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryKycReviewPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryReportsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareClassesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareholdersPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareIssuancePageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareTransferRulesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryTradingRulesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryTransactionMonitoringPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryTransactionsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SuspiciousTransactionDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\SuspiciousTransactionsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\TradingRuleDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\UpdateSubsidiaryCompanyProfileDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\UploadCompanyDocumentRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\controller\SubsidiaryOperationsController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\AddTradeRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\CreateEscrowRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\CreateTicketRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\DisputeDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\DisputesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowMonitoringPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\FailedTransactionDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\FailedTransactionsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\InitiateTransferRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\OperationsDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTradesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTransfersPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\RaiseDisputeRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\ReconciliationDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\ReconciliationPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\RunReconciliationRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\SettlementDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\SettlementMonitoringPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\SupportTicketDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\SupportTicketsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\TradeDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\dto\TransferDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\operations\service\SubsidiaryOperationsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\service\SubsidiaryAdminService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\service\SubsidiaryComplianceService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\controller\SystemAdminController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AccessControlPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AccessDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AddSystemSettingRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\ApprovalWorkflowPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AssignPermissionRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AuditActivityLogsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\AuditLogDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\CreateNotificationRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\CreateRoleRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\CreateTradingRuleRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\CreateUserRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\CreateWorkflowRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\GrantAccessRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\NotificationConfigPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\NotificationDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\PermissionDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\PermissionManagementPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\RoleDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\RoleManagementPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\SystemSettingDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\SystemSettingsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\TradingRuleConfigPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\TradingRuleDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\UpdateSystemSettingRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\UserDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\UserManagementPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\dto\WorkflowDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\system\service\SystemAdminService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\AuthController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\MobileAuthController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\controller\WebAuthController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\BankDetailsSubmitRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricEnrollRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricInitiateRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricInitiateResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricStatusResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\biometric\BiometricVerifyRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\AuthResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\LogoutRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\RefreshTokenRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\common\UserSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\CorporateRegisterRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\DocumentUploadRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordEmailRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordMobileRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ForgotPasswordResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\IndividualRegisterRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\KycSubmitRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\LoginRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileAuthResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileProfileDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\mobile\MobileUserDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpSendRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\OtpVerifyRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\ResetPasswordWithTokenRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserAccountSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserProfileDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\AccountDocument.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\BankDetail.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\CorporateProfile.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\IdentityKycDetail.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\IndividualProfile.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\PasswordResetToken.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserAccount.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserBiometricCredential.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserCredential.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\AccountDocumentRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\BankDetailRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\CorporateProfileRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\IdentityKycDetailRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\IndividualProfileRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\PasswordResetTokenRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserAccountRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserBiometricCredentialRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserCredentialRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\AuthService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\BiometricService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\CustomUserDetailsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\gateway\EmailService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\gateway\SmsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\OtpService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\TokenBlacklistService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\controller\EscrowController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\CreateEscrowRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowListItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowPipelineDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusBreakdownDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowStatusPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowSummaryMetricsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\EscrowValueTrendDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ProceedPaymentRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\SettlementConfirmationDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\SettlementTrendDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareLockItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareLockStatusPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareTransferItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\ShareTransferStatusPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\dto\TransferFundsRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\escrow\service\EscrowService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\controller\ExternalRequestController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\ActivityDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\AddNoteRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\ChecklistItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\DecisionRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\ExternalAccessRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\ExternalRequestListItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\KycDocumentDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\KycReviewDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\NoteDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\RequestMoreInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\RequestStatusDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\RequiredDocumentDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\SubmitExternalAccessRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\TimelineStepDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\UpdateDocumentStatusDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\VerificationHistoryItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\dto\VerificationProgressItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\externalrequest\service\ExternalRequestService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketCompanyController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketTradeController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MarketWebSocketController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MobileMarketController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\MobileTradeOrderController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\TradeOrderController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\controller\WatchlistController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\CompanyOverviewDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\CompanySummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\LiveTradeDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketActivitySummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTickDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTradeDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketWebSocketMessage.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileHoldingSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileMyOrdersResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderConfirmationDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderLifecycleDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderPreviewDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobilePlaceOrderRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileTradeScreenDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileWalletSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MobileStockDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MyOrdersResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderBookUpdateDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderConfirmationDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderListItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderPreviewRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderPreviewResponse.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\OrderStatusDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\PlaceOrderRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\PriceCandleDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\UserHoldingDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\UserWalletDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\WatchlistDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\AppNotification.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyAnnouncement.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyAnnualFinancial.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyDocument.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyFinancialRatio.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyHighlight.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyLeadership.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyQuarterlyFinancial.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\CompanyShareholding.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\Escrow.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\EscrowAccount.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketCompany.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketOrder.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketOrderMatch.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketPriceHistory.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MarketTrade.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\MemberWatchlist.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\OrderEvent.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\ShareLock.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\ShareTransfer.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\TradeOrderCharge.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\TradeOrderDocument.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\model\UserShareHolding.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\AppNotificationRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyAnnouncementRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyAnnualFinancialRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyDocumentRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyFinancialRatioRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyHighlightRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyLeadershipRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyQuarterlyFinancialRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\CompanyShareholdingRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\EscrowAccountRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\EscrowRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketCompanyRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketOrderMatchRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketOrderRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketPriceHistoryRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MarketTradeRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\MemberWatchlistRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\OrderEventRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\ShareLockRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\ShareTransferRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\TradeOrderChargeRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\TradeOrderDocumentRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\repository\UserShareHoldingRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketBroadcastService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketCompanyService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketPriceHistoryService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\MarketTradeService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\TradeOrderService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\service\WatchlistService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\controller\NegotiationController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\CounterOfferRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\InitiateNegotiationRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationHistoryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationInsightDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationListItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationMessageRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationNotificationSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationStatusBreakdownDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\NegotiationSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\TradeAgreementConfirmRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\dto\TradeAgreementDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\Negotiation.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\NegotiationMessage.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\NegotiationOffer.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\model\TradeAgreement.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationMessageRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationOfferRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\NegotiationRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\repository\TradeAgreementRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\negotiation\service\NegotiationService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\controller\NotificationController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\FrequencyOptionDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\MemberNotificationsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationChannelStatusDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationListItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationPreferenceRowDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationPreferencesResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationsResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationSummaryKpiDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\NotificationTabCountDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\QuietHoursDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\RelatedLinkDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\dto\UpdateNotificationPreferencesRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\model\MemberNotificationPreference.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\repository\MemberNotificationPreferenceRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\service\MemberNotificationsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\notification\service\NotificationService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\controller\PortfolioController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\MemberDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\MemberPendingActionsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\MemberTransactionsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioActivityItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAllocationSliceDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAnalyticsPerformanceRowDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioAnalyticsResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioCompanyOwnershipRowDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioCompanyPnlRowDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDashboardDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDayMovementDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioDistributionItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioHoldingItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioHoldingsResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrderDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrderItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOrdersResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOverviewDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOwnershipResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioOwnershipSummaryDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPerformanceDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlSummaryDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPnlTrendPointDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPositionItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPositionsResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioPriceMoverDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioQuickInsightDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioReturnAnalysisDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioSummaryKpiDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTimelineStepDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradeDetailDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradeItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTradesResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTransactionItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTransactionResponseDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\dto\PortfolioTrendPointDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\MemberDashboardService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\MemberPendingActionsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\MemberTransactionsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\PortfolioDataHelper.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\PortfolioOverviewService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\portfolio\service\PortfolioService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\controller\ProfileSettingsController.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ActiveDevicesPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ActiveSessionDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\AddBankAccountRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\AdditionalInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\AddressInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\AppearanceSettingsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\BankAccountItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\BankAccountsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ChangePasswordRequestDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ContactInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\DeviceItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\DocumentRecordDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\DocumentsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ExpiryAlertDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\GeneralSettingsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\KycDocumentItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\KycVerificationPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\LanguageRegionDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\LoginHistoryItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\MemberProfileDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\NotificationChannelsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\NotificationItemDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\NotificationPreferencesDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\NotificationsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\OrganizationInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\PersonalInfoDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\PlatformPreferencesDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\PlatformSettingsPageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\ProfessionalDetailsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\SecurityOverviewDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\SecurityPreferencesDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\StorageUsageDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\TwoFactorSettingsDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\dto\VerificationHistoryLogDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\profile\service\ProfileSettingsService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\TradingBackendApplication.java

@@ -3,10 +3,13 @@ package com.atirath.trading.modules.auth.service;
 import com.atirath.trading.common.AccountStatus;
 import com.atirath.trading.common.AccountType;
 import com.atirath.trading.common.ApiException;
+import com.atirath.trading.common.DocumentType;
 import com.atirath.trading.common.InvalidCredentialsException;
+import com.atirath.trading.common.OtpPurpose;
 import com.atirath.trading.common.ResourceNotFoundException;
 import com.atirath.trading.common.util.AESEncryptionUtil;
 import com.atirath.trading.common.util.HashUtil;
+import com.atirath.trading.config.AppProperties;
 import com.atirath.trading.config.JwtTokenProvider;
 import com.atirath.trading.modules.auth.dto.*;
 import com.atirath.trading.modules.auth.dto.common.AuthResponse;
@@ -14,14 +17,26 @@ import com.atirath.trading.modules.auth.dto.common.RefreshTokenRequest;
 import com.atirath.trading.modules.auth.dto.mobile.*;
 import com.atirath.trading.modules.auth.model.*;
 import com.atirath.trading.modules.auth.repository.*;
+import com.atirath.trading.modules.auth.service.gateway.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Period;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +56,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AESEncryptionUtil aesEncryptionUtil;
+    private final EmailService emailService;
+    private final AppProperties appProperties;
+    private final OtpService otpService;
+    private final TokenBlacklistService tokenBlacklistService;
+
+    private static final long MAX_DOCUMENT_SIZE_BYTES = 5L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/webp"
+    );
 
     // =========================================================================
     // 1. REGISTRATION - INDIVIDUAL
@@ -189,12 +217,15 @@ public class AuthService {
                 .build();
         passwordResetTokenRepository.save(resetToken);
 
-        log.info("Password reset token generated for user ID: {}, Email: {}", account.getUserId(), email);
+        // Dispatch real-time password reset email via SMTP
+        emailService.sendPasswordResetEmail(account.getEmail(), rawToken);
+
+        log.info("Password reset token generated and email dispatched for user ID: {}, Email: {}", account.getUserId(), email);
 
         return ForgotPasswordResponse.builder()
                 .success(true)
-                .message("Password reset token generated. Use this token to reset your password.")
-                .resetToken(rawToken) // Returned for convenient dev/client testing
+                .message("Password reset link has been sent to your email.")
+                .resetToken(appProperties.getOtp().isDevModeEnabled() ? rawToken : null)
                 .build();
     }
 
@@ -255,6 +286,31 @@ public class AuthService {
         userCredentialRepository.save(credential);
 
         log.info("Password reset completed successfully via mobile for User ID: {}", account.getUserId());
+    }
+
+    // =========================================================================
+    // 6B. FORGOT PASSWORD - WEB MOBILE (Requires Verified OTP)
+    // =========================================================================
+    @Transactional
+    public void resetPasswordForMobileVerified(ForgotPasswordMobileRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ApiException("New password and confirm password do not match");
+        }
+
+        String mobile = request.getMobileNumber().trim();
+        otpService.consumeVerifiedOtp(mobile, OtpPurpose.PASSWORD_RESET);
+
+        UserAccount account = userAccountRepository.findByMobileNumber(mobile)
+                .orElseThrow(() -> new ResourceNotFoundException("No account found with mobile number: " + mobile));
+
+        UserCredential credential = userCredentialRepository.findByUserAccount_UserId(account.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Credentials record not found"));
+
+        credential.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        credential.setPasswordChangedAt(OffsetDateTime.now());
+        userCredentialRepository.save(credential);
+
+        log.info("Web password reset completed successfully via verified mobile OTP for User ID: {}", account.getUserId());
     }
 
     // =========================================================================
@@ -327,6 +383,75 @@ public class AuthService {
         log.info("Document registered for User ID: {}, Type: {}", userId, request.getDocumentType());
     }
 
+    @Transactional
+    public UserProfileDto.DocumentSummaryDto uploadDocumentFile(Long userId, DocumentType documentType, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ApiException("Document file cannot be empty");
+        }
+        if (file.getSize() > MAX_DOCUMENT_SIZE_BYTES) {
+            throw new ApiException("Document file size exceeds the 5 MB limit");
+        }
+
+        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "application/octet-stream";
+        String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename().trim() : documentType.name().toLowerCase();
+        String safeFilename = Paths.get(originalFilename).getFileName().toString().replaceAll("[^A-Za-z0-9._-]", "_");
+        if (safeFilename.isBlank()) {
+            safeFilename = documentType.name().toLowerCase();
+        }
+
+        if (!ALLOWED_MIME_TYPES.contains(contentType)) {
+            String lowerName = safeFilename.toLowerCase();
+            if (lowerName.endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else if (lowerName.endsWith(".png")) {
+                contentType = "image/png";
+            } else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else {
+                throw new ApiException("Unsupported file type. Allowed formats: PDF, JPG, PNG.");
+            }
+        }
+
+        UserAccount account = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + userId));
+
+        String storedFileName = UUID.randomUUID() + "_" + safeFilename;
+        Path uploadDir = Paths.get("uploads", "kyc", String.valueOf(userId)).toAbsolutePath().normalize();
+        Path targetPath = uploadDir.resolve(storedFileName).normalize();
+        if (!targetPath.startsWith(uploadDir)) {
+            throw new ApiException("Invalid document file name");
+        }
+
+        try {
+            Files.createDirectories(uploadDir);
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ex) {
+            throw new ApiException("Failed to store uploaded document: " + ex.getMessage());
+        }
+
+        AccountDocument doc = AccountDocument.builder()
+                .userAccount(account)
+                .documentType(documentType)
+                .documentName(safeFilename)
+                .filePath("/uploads/kyc/" + userId + "/" + storedFileName)
+                .mimeType(contentType)
+                .fileSizeBytes(file.getSize())
+                .build();
+
+        AccountDocument saved = accountDocumentRepository.save(doc);
+        log.info("Multipart document uploaded for User ID: {}, Type: {}, File: {}", userId, documentType, safeFilename);
+
+        return UserProfileDto.DocumentSummaryDto.builder()
+                .documentId(saved.getDocumentId())
+                .documentType(saved.getDocumentType())
+                .documentName(saved.getDocumentName())
+                .filePath(saved.getFilePath())
+                .mimeType(saved.getMimeType())
+                .fileSizeBytes(saved.getFileSizeBytes())
+                .uploadedAt(saved.getUploadedAt())
+                .build();
+    }
+
     // =========================================================================
     // 10. GET AUTHENTICATED USER PROFILE
     // =========================================================================
@@ -342,6 +467,8 @@ public class AuthService {
                 .mobileNumber(account.getMobileNumber())
                 .referralCode(account.getReferralCode())
                 .accountStatus(account.getAccountStatus())
+                .role(resolveRole(account))
+                .tradingEligible(true)
                 .createdAt(account.getCreatedAt());
 
         // Individual Profile
@@ -367,6 +494,9 @@ public class AuthService {
         // KYC Details (Masked)
         identityKycDetailRepository.findByUserAccount_UserId(userId).ifPresent(k -> {
             String decryptedAadhaar = aesEncryptionUtil.decrypt(k.getAadhaarNumberEncrypted());
+            Integer age = calculateAge(k.getDateOfBirth());
+            builder.age(age);
+            builder.tradingEligible(age == null || age >= 18);
             builder.kycDetails(UserProfileDto.KycSummaryDto.builder()
                     .kycId(k.getKycId())
                     .panNumber(k.getPanNumber())
@@ -411,12 +541,14 @@ public class AuthService {
     }
 
     // =========================================================================
-    // 11. REFRESH TOKEN
+    // 11. REFRESH TOKEN & LOGOUT
     // =========================================================================
     @Transactional(readOnly = true)
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String token = request.getRefreshToken();
-        if (!jwtTokenProvider.validateToken(token)) {
+        if (!jwtTokenProvider.validateToken(token)
+                || tokenBlacklistService.isBlacklisted(token)
+                || !jwtTokenProvider.isRefreshToken(token)) {
             throw new ApiException("Invalid or expired refresh token");
         }
 
@@ -430,6 +562,46 @@ public class AuthService {
 
         String displayName = getDisplayName(account);
         return buildAuthResponse(account, displayName);
+    }
+
+    public void logout(String accessToken, String refreshToken) {
+        revokeIfPresent(accessToken);
+        revokeIfPresent(refreshToken);
+    }
+
+    private void revokeIfPresent(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        String clean = token.replace("Bearer ", "").trim();
+        if (clean.isEmpty()) {
+            return;
+        }
+        Instant expiry = null;
+        if (jwtTokenProvider.validateToken(clean)) {
+            expiry = jwtTokenProvider.getExpirationFromToken(clean);
+        }
+        tokenBlacklistService.revokeToken(clean, expiry);
+    }
+
+    public boolean isMinor(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return identityKycDetailRepository.findByUserAccount_UserId(userId)
+                .map(IdentityKycDetail::getDateOfBirth)
+                .map(dob -> {
+                    Integer age = calculateAge(dob);
+                    return age != null && age < 18;
+                })
+                .orElse(false);
+    }
+
+    public Integer calculateAge(LocalDate dob) {
+        if (dob == null) {
+            return null;
+        }
+        return Period.between(dob, LocalDate.now()).getYears();
     }
 
     // =========================================================================
@@ -535,6 +707,11 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(account);
         String refreshToken = jwtTokenProvider.generateRefreshToken(account);
 
+        Optional<IdentityKycDetail> kycOpt = identityKycDetailRepository.findByUserAccount_UserId(account.getUserId());
+        LocalDate dob = kycOpt.map(IdentityKycDetail::getDateOfBirth).orElse(null);
+        Integer age = calculateAge(dob);
+        boolean tradingEligible = age == null || age >= 18;
+
         UserAccountSummaryDto summary = UserAccountSummaryDto.builder()
                 .userId(account.getUserId())
                 .accountType(account.getAccountType())
@@ -543,6 +720,11 @@ public class AuthService {
                 .referralCode(account.getReferralCode())
                 .accountStatus(account.getAccountStatus())
                 .displayName(displayName)
+                .role(resolveRole(account))
+                .dateOfBirth(dob)
+                .age(age)
+                .kycCompleted(kycOpt.isPresent())
+                .tradingEligible(tradingEligible)
                 .createdAt(account.getCreatedAt())
                 .build();
 
@@ -553,6 +735,13 @@ public class AuthService {
                 .expiresInSeconds(jwtTokenProvider.getAccessTokenExpirationSeconds())
                 .user(summary)
                 .build();
+    }
+
+    private String resolveRole(UserAccount account) {
+        if (account != null && "admin@atirathgroup.com".equalsIgnoreCase(account.getEmail())) {
+            return "ADMIN";
+        }
+        return "MEMBER";
     }
 
     private String getDisplayName(UserAccount account) {

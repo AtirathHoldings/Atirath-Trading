@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Data
@@ -22,5 +23,10 @@ public class UserAccountSummaryDto {
     private String referralCode;
     private AccountStatus accountStatus;
     private String displayName; // Full Name or Company Name
+    private String role;
+    private LocalDate dateOfBirth;
+    private Integer age;
+    private Boolean kycCompleted;
+    private Boolean tradingEligible;
     private OffsetDateTime createdAt;
 }

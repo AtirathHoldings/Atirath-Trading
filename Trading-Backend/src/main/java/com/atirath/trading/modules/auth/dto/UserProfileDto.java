@@ -24,6 +24,9 @@ public class UserProfileDto {
     private String mobileNumber;
     private String referralCode;
     private AccountStatus accountStatus;
+    private String role;
+    private Boolean tradingEligible;
+    private Integer age;
     private OffsetDateTime createdAt;
 
     // Individual Profile (if INDIVIDUAL)

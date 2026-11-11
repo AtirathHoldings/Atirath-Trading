@@ -94,4 +94,18 @@ public class JwtTokenProvider {
     public long getAccessTokenExpirationSeconds() {
         return appProperties.getJwt().getAccessTokenExpirationMs() / 1000;
     }
+
+    public java.time.Instant getExpirationFromToken(String token) {
+        Date exp = getClaims(token).getExpiration();
+        return exp != null ? exp.toInstant() : null;
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = getClaims(token);
+            return "REFRESH".equals(claims.get("tokenType", String.class));
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
 }

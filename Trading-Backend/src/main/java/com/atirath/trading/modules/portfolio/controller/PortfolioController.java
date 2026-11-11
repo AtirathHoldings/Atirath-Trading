@@ -1,8 +1,13 @@
 package com.atirath.trading.modules.portfolio.controller;
 
+import com.atirath.trading.common.ApiException;
 import com.atirath.trading.common.ApiResponse;
 import com.atirath.trading.config.JwtTokenProvider;
 import com.atirath.trading.modules.portfolio.dto.*;
+import com.atirath.trading.modules.portfolio.service.MemberDashboardService;
+import com.atirath.trading.modules.portfolio.service.MemberPendingActionsService;
+import com.atirath.trading.modules.portfolio.service.MemberTransactionsService;
+import com.atirath.trading.modules.portfolio.service.PortfolioOverviewService;
 import com.atirath.trading.modules.portfolio.service.PortfolioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,8 +15,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -25,18 +34,103 @@ import java.util.Map;
 public class PortfolioController {
 
     private final PortfolioService portfolioService;
+    private final MemberDashboardService memberDashboardService;
+    private final MemberPendingActionsService memberPendingActionsService;
+    private final MemberTransactionsService memberTransactionsService;
+    private final PortfolioOverviewService portfolioOverviewService;
     private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping("/dashboard")
-    @Operation(summary = "Get Portfolio Dashboard", description = "Returns complete Portfolio Dashboard data (Screen 1): KPI cards, value trend chart, allocation donut, portfolio performance metrics, top holdings, and recent activity.")
+    @Operation(summary = "Get Portfolio Dashboard", description = "Returns complete Portfolio Dashboard data for the authenticated member: KPI cards, value trend chart, allocation donut, portfolio performance metrics, top holdings, and recent activity.")
     public ResponseEntity<ApiResponse<PortfolioDashboardDto>> getDashboard(
             @Parameter(description = "Trend period: 1M, 3M, 6M, 1Y, ALL (default 6M)")
             @RequestParam(required = false, defaultValue = "6M") String period,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long userId = extractUserId(authHeader);
+        Long userId = requireAuthenticatedUserId(authHeader, "portfolio dashboard");
         PortfolioDashboardDto dashboard = portfolioService.getDashboard(userId, period);
         return ResponseEntity.ok(ApiResponse.success(dashboard, "Portfolio dashboard retrieved successfully"));
+    }
+
+    @GetMapping("/overview")
+    @Operation(summary = "Get Portfolio Overview", description = "Returns complete Portfolio Overview data for the authenticated member: KPI cards, trend chart, company allocation, asset breakdown, return summary, top gainers, and top losers.")
+    public ResponseEntity<ApiResponse<PortfolioOverviewDto>> getPortfolioOverview(
+            @Parameter(description = "Trend period: 1M, 3M, 6M, 1Y, ALL (default 1M)")
+            @RequestParam(required = false, defaultValue = "1M") String period,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader, "portfolio overview");
+        PortfolioOverviewDto overview = portfolioOverviewService.getPortfolioOverview(userId, period);
+        return ResponseEntity.ok(ApiResponse.success(overview, "Portfolio overview retrieved successfully"));
+    }
+
+    @GetMapping("/member-dashboard")
+    @Operation(summary = "Get Member Dashboard", description = "Returns real authenticated per-user data for the web Member Dashboard.")
+    public ResponseEntity<ApiResponse<MemberDashboardDto>> getMemberDashboard(
+            @Parameter(description = "Trend period: 1M, 3M, 6M, 1Y, ALL (default 1M)")
+            @RequestParam(required = false, defaultValue = "1M") String period,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader, "member dashboard");
+        MemberDashboardDto dashboard = memberDashboardService.getMemberDashboard(userId, period);
+        return ResponseEntity.ok(ApiResponse.success(dashboard, "Member dashboard retrieved successfully"));
+    }
+
+    @GetMapping("/member-transactions")
+    @Operation(summary = "Get Member Transactions", description = "Returns real authenticated Buy, Sell, and Share Transfer transactions, insights, and recent activity.")
+    public ResponseEntity<ApiResponse<MemberTransactionsDto>> getMemberTransactions(
+            @RequestParam(required = false, defaultValue = "3M") String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false, defaultValue = "All Companies") String company,
+            @RequestParam(required = false, defaultValue = "All Types") String type,
+            @RequestParam(required = false, defaultValue = "All Status") String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "10") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader, "member transactions");
+        MemberTransactionsDto result = memberTransactionsService.getMemberTransactions(
+                userId, period, startDate, endDate, company, type, status, search, page, size
+        );
+        return ResponseEntity.ok(ApiResponse.success(result, "Member transactions retrieved successfully"));
+    }
+
+    @GetMapping("/download/member-transactions")
+    @Operation(summary = "Export Member Transactions CSV", description = "Exports filtered real Buy, Sell, and Transfer transactions in CSV format for the authenticated member.")
+    public ResponseEntity<byte[]> downloadMemberTransactions(
+            @RequestParam(required = false, defaultValue = "3M") String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false, defaultValue = "All Companies") String company,
+            @RequestParam(required = false, defaultValue = "All Types") String type,
+            @RequestParam(required = false, defaultValue = "All Status") String status,
+            @RequestParam(required = false) String search,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader, "transactions export");
+        String csv = memberTransactionsService.buildTransactionsCsv(
+                userId, period, startDate, endDate, company, type, status, search
+        );
+        byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"transactions_ATG" + userId + ".csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(bytes);
+    }
+
+    @GetMapping("/member-pending-actions")
+    @Operation(summary = "Get Member Pending Actions", description = "Returns real authenticated pending actions across KYC, Orders, Negotiations, Escrow, and Account.")
+    public ResponseEntity<ApiResponse<MemberPendingActionsDto>> getMemberPendingActions(
+            @RequestParam(required = false, defaultValue = "All") String category,
+            @RequestParam(required = false, defaultValue = "Priority") String sortBy,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader, "pending actions");
+        MemberPendingActionsDto actions = memberPendingActionsService.getMemberPendingActions(userId, category, sortBy);
+        return ResponseEntity.ok(ApiResponse.success(actions, "Member pending actions retrieved successfully"));
     }
 
     @GetMapping("/holdings")
@@ -223,38 +317,36 @@ public class PortfolioController {
     // EXPORT & REPORT DOWNLOAD ENDPOINTS
     // =========================================================================
     @GetMapping("/download/report")
-    @Operation(summary = "Download Portfolio Report", description = "Generates and downloads full portfolio summary report in CSV/PDF format")
-    public ResponseEntity<byte[]> downloadReport() {
-        String csv = "Company,Shares Held,Avg Price,Current Price,Current Value,Unrealized PnL,Allocation\n" +
-                "Atirath Holdings India Limited,3500,150.00,230.00,805000.00,+280000.00,35.5%\n" +
-                "Atirath Technologies,2000,120.00,180.00,360000.00,+120000.00,20.6%\n" +
-                "Farm Vantara,1800,100.00,135.00,243000.00,+63000.00,15.7%\n" +
-                "Tri Energy Battery,1200,200.00,225.00,270000.00,+30000.00,10.9%\n" +
-                "Royal One Heating,900,180.00,235.00,211500.00,+49500.00,8.5%\n" +
-                "CS Interio,600,160.00,145.00,87000.00,-9000.00,5.8%\n";
+    @Operation(summary = "Download Portfolio Report", description = "Generates and downloads full portfolio summary report in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadReport(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "portfolio report");
+        String csv = portfolioOverviewService.buildPortfolioReportCsv(userId);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"portfolio_report_18Sep2025.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"portfolio_report_ATG" + userId + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(bytes);
     }
 
     @GetMapping("/download/holdings")
     @Operation(summary = "Download Holdings", description = "Generates and downloads current shareholdings statement in CSV format")
-    public ResponseEntity<byte[]> downloadHoldings() {
-        return downloadReport();
+    public ResponseEntity<byte[]> downloadHoldings(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return downloadReport(authHeader);
     }
 
     @GetMapping("/download/statement")
-    @Operation(summary = "Download Statement", description = "Generates and downloads user account ownership statement in CSV format")
-    public ResponseEntity<byte[]> downloadStatement() {
-        String csv = "Account Holder,Sairam Vempati\nMember ID,ATG10027\nTotal Portfolio Value,₹ 24,80,000\nTotal Shares,10,250\n" +
-                "Statement Date,18 Sep 2025\nStatus,ACTIVE\n";
+    @Operation(summary = "Download Statement", description = "Generates and downloads user account ownership statement in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadStatement(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "portfolio statement");
+        String csv = portfolioOverviewService.buildStatementCsv(userId);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ownership_statement_ATG10027.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ownership_statement_ATG" + userId + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(bytes);
     }
@@ -297,8 +389,9 @@ public class PortfolioController {
 
     @GetMapping("/download/ownership-statement")
     @Operation(summary = "Download Ownership Certificate & Statement", description = "Generates official shareholding ownership certificate and statement in CSV/PDF format")
-    public ResponseEntity<byte[]> downloadOwnershipStatement() {
-        return downloadStatement();
+    public ResponseEntity<byte[]> downloadOwnershipStatement(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return downloadStatement(authHeader);
     }
 
     @GetMapping("/download/transaction-statement")
@@ -345,6 +438,18 @@ public class PortfolioController {
                 "downloadUrl", "/api/v1/portfolio/download/statement",
                 "message", "Trade receipt generated successfully"
         ));
+    }
+
+    private Long requireAuthenticatedUserId(String authHeader, String resourceLabel) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof AnonymousAuthenticationToken) {
+            throw new ApiException("Authentication required to access " + resourceLabel, HttpStatus.UNAUTHORIZED);
+        }
+        Long userId = extractUserId(authHeader);
+        if (userId == null) {
+            throw new ApiException("Authentication required to access " + resourceLabel, HttpStatus.UNAUTHORIZED);
+        }
+        return userId;
     }
 
     private Long extractUserId(String authHeader) {

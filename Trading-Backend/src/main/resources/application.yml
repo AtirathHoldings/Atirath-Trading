@@ -8,6 +8,10 @@ spring:
     name: trading-backend
   profiles:
     active: postgres
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
 
   # Dev profile uses H2 in-memory DB by default so it runs immediately
   # Switch to 'postgres' profile or set SPRING_PROFILES_ACTIVE=postgres to use PostgreSQL
@@ -32,8 +36,26 @@ spring:
       hibernate:
         format_sql: true
 
+  # Email SMTP Gateway Settings (SendGrid / AWS SES / Gmail / Corporate SMTP)
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:noreply@atirathgroup.com}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 # Security & App Configuration
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   jwt:
     # 256-bit base64 secret for HMAC-SHA256
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
@@ -41,8 +63,8 @@ app:
     refresh-token-expiration-ms: 604800000    # 7 days
     mobile-refresh-token-expiration-ms: 2592000000 # 30 days for mobile
   otp:
-    expiration-seconds: 90                    # 90 seconds for Web
-    mobile-expiration-seconds: 60             # 60 seconds for Mobile
+    expiration-seconds: 60                    # 60 seconds (1 min) for Web
+    mobile-expiration-seconds: 60             # 60 seconds (1 min) for Mobile
     length: 6
     max-resend-attempts: 3
     # When true, OTP is logged to console and test OTP "123456" is accepted
@@ -54,19 +76,6 @@ app:
     gateway-url: ${SMS_GATEWAY_URL:}
     api-key: ${SMS_API_KEY:}
     sender-id: ${SMS_SENDER_ID:ATIRTH}
-
-# Email SMTP Gateway Settings (SendGrid / AWS SES / Gmail / Corporate SMTP)
-spring.mail:
-  host: ${SMTP_HOST:smtp.gmail.com}
-  port: ${SMTP_PORT:587}
-  username: ${SMTP_USERNAME:noreply@atirathgroup.com}
-  password: ${SMTP_PASSWORD:}
-  properties:
-    mail:
-      smtp:
-        auth: true
-        starttls:
-          enable: true
 
 # Swagger / OpenAPI documentation
 springdoc:

@@ -1,15 +1,21 @@
 package com.atirath.trading.modules.notification.controller;
 
+import com.atirath.trading.common.ApiException;
 import com.atirath.trading.common.ApiResponse;
 import com.atirath.trading.config.JwtTokenProvider;
 import com.atirath.trading.modules.notification.dto.*;
+import com.atirath.trading.modules.notification.service.MemberNotificationsService;
 import com.atirath.trading.modules.notification.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -20,7 +26,51 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final MemberNotificationsService memberNotificationsService;
     private final JwtTokenProvider jwtTokenProvider;
+
+    @GetMapping("/member")
+    @Operation(summary = "Get Web Member Notifications", description = "Returns real per-user DB notifications and activity alerts without mock items.")
+    public ResponseEntity<ApiResponse<MemberNotificationsDto>> getMemberNotifications(
+            @RequestParam(required = false, defaultValue = "All") String category,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader);
+        MemberNotificationsDto response = memberNotificationsService.getMemberNotifications(userId, category);
+        return ResponseEntity.ok(ApiResponse.success(response, "Member notifications retrieved successfully"));
+    }
+
+    @PatchMapping("/member/{itemId}/read")
+    @Operation(summary = "Mark Member Notification as Read")
+    public ResponseEntity<ApiResponse<String>> markMemberNotificationAsRead(
+            @PathVariable("itemId") String itemId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader);
+        memberNotificationsService.markItemAsRead(userId, itemId);
+        return ResponseEntity.ok(ApiResponse.success("Notification marked as read", "Success"));
+    }
+
+    @PostMapping("/member/mark-all-read")
+    @Operation(summary = "Mark All Member Notifications as Read")
+    public ResponseEntity<ApiResponse<String>> markAllMemberNotificationsAsRead(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader);
+        memberNotificationsService.markAllAsRead(userId);
+        return ResponseEntity.ok(ApiResponse.success("All notifications marked as read", "Success"));
+    }
+
+    @DeleteMapping("/member/{itemId}")
+    @Operation(summary = "Dismiss Member Notification")
+    public ResponseEntity<ApiResponse<String>> dismissMemberNotification(
+            @PathVariable("itemId") String itemId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = requireAuthenticatedUserId(authHeader);
+        memberNotificationsService.dismissItem(userId, itemId);
+        return ResponseEntity.ok(ApiResponse.success("Notification removed", "Success"));
+    }
 
     @GetMapping
     @Operation(summary = "Get Notifications Center", description = "Returns notifications list, summary KPI cards (Total, Unread, Action Required, Important), category tabs, and selected detail drawer.")
@@ -141,6 +191,18 @@ public class NotificationController {
 
         NotificationPreferencesResponseDto reset = notificationService.resetPreferences(effectiveUserId);
         return ResponseEntity.ok(ApiResponse.success(reset, "Preferences reset to default successfully"));
+    }
+
+    private Long requireAuthenticatedUserId(String authHeader) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof AnonymousAuthenticationToken) {
+            throw new ApiException("Authentication required to access notifications", HttpStatus.UNAUTHORIZED);
+        }
+        Long userId = extractUserId(authHeader);
+        if (userId == null) {
+            throw new ApiException("Authentication required to access notifications", HttpStatus.UNAUTHORIZED);
+        }
+        return userId;
     }
 
     private Long extractUserId(String authHeader) {

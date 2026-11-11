@@ -1,7 +1,12 @@
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\AuthFlowIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\EscrowIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\MobileMarketIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\MobileTradeIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\NegotiationIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\TradeTerminalIntegrationTest.java
-C:\Users\divya\Downloads\Trading-Backend\src\test\java\com\atirath\trading\TradingBackendApplicationTests.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\AuthFlowIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\EscrowIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberDashboardIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberNotificationsIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberPendingActionsIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberTransactionsIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileMarketIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileTradeIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\NegotiationIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\PortfolioScreenIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\TradeTerminalIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\TradingBackendApplicationTests.java
