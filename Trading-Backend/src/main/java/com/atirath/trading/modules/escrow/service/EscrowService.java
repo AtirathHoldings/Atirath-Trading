@@ -569,11 +569,21 @@ public class EscrowService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
+        // Dynamic counts computed from liveEscrowsList (initial seed matches 24 / 6 / 5 / 4 / 3 / 4 / 2)
+        int totalTx = liveEscrowsList.size();
+        int pendingCount = (int) liveEscrowsList.stream().filter(i -> "Pending Funding".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int fundsInEscrowCount = (int) liveEscrowsList.stream().filter(i -> "Funds in Escrow".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int sharesLockedCount = (int) liveEscrowsList.stream().filter(i -> "Shares Locked".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int transferCount = (int) liveEscrowsList.stream().filter(i -> "Transfer in Progress".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int completedCount = (int) liveEscrowsList.stream().filter(i -> "Completed".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int cancelledCount = (int) liveEscrowsList.stream().filter(i -> "Cancelled".equalsIgnoreCase(i.getCurrentStatus()) || "Cancelled / Failed".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int denom = Math.max(1, totalTx);
+
         // KPI Summary Metrics (Image 7 Top Cards)
         EscrowSummaryMetricsDto summary = EscrowSummaryMetricsDto.builder()
-                .totalTransactions(24)
+                .totalTransactions(totalTx)
                 .totalTransactionsChange("↑ 20% vs last month")
-                .pendingFunding(6)
+                .pendingFunding(pendingCount)
                 .pendingFundingChange("↑ 50% vs last month")
                 .fundsInEscrow(new BigDecimal("12450000.00"))
                 .fundsInEscrowFormatted("₹ 1,24,50,000")
@@ -581,50 +591,50 @@ public class EscrowService {
                 .sharesLocked(45000L)
                 .sharesLockedFormatted("45,000")
                 .sharesLockedChange("↑ 18% vs last month")
-                .completedSettlements(12)
+                .completedSettlements(12 + Math.max(0, completedCount - 4))
                 .completedSettlementsChange("↑ 33% vs last month")
-                .failedCancelled(2)
+                .failedCancelled(cancelledCount)
                 .failedCancelledChange("↓ 50% vs last month")
                 .build();
 
         // Escrow Transaction Status (Donut Chart)
         EscrowStatusBreakdownDto statusBreakdown = EscrowStatusBreakdownDto.builder()
-                .total(24)
+                .total(totalTx)
                 .items(List.of(
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Pending Funding")
-                                .count(6)
-                                .percentage(25.0)
+                                .count(pendingCount)
+                                .percentage(Math.round((pendingCount * 100.0) / denom))
                                 .color("#3B82F6")
                                 .build(),
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Funds in Escrow")
-                                .count(5)
-                                .percentage(21.0)
+                                .count(fundsInEscrowCount)
+                                .percentage(Math.round((fundsInEscrowCount * 100.0) / denom))
                                 .color("#1D4ED8")
                                 .build(),
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Shares Locked")
-                                .count(4)
-                                .percentage(17.0)
+                                .count(sharesLockedCount)
+                                .percentage(Math.round((sharesLockedCount * 100.0) / denom))
                                 .color("#8B5CF6")
                                 .build(),
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Transfer In Progress")
-                                .count(3)
-                                .percentage(13.0)
+                                .count(transferCount)
+                                .percentage(Math.round((transferCount * 100.0) / denom))
                                 .color("#F59E0B")
                                 .build(),
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Completed")
-                                .count(4)
-                                .percentage(17.0)
+                                .count(completedCount)
+                                .percentage(Math.round((completedCount * 100.0) / denom))
                                 .color("#10B981")
                                 .build(),
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Cancelled / Failed")
-                                .count(2)
-                                .percentage(8.0)
+                                .count(cancelledCount)
+                                .percentage(Math.round((cancelledCount * 100.0) / denom))
                                 .color("#EF4444")
                                 .build()
                 ))
@@ -654,13 +664,13 @@ public class EscrowService {
 
         // Tab counts matching UI
         Map<String, Integer> tabCounts = new LinkedHashMap<>();
-        tabCounts.put("All", 24);
-        tabCounts.put("Pending Funding", 6);
-        tabCounts.put("Funds in Escrow", 5);
-        tabCounts.put("Shares Locked", 4);
-        tabCounts.put("Transfer in Progress", 3);
-        tabCounts.put("Completed", 4);
-        tabCounts.put("Cancelled", 2);
+        tabCounts.put("All", totalTx);
+        tabCounts.put("Pending Funding", pendingCount);
+        tabCounts.put("Funds in Escrow", fundsInEscrowCount);
+        tabCounts.put("Shares Locked", sharesLockedCount);
+        tabCounts.put("Transfer in Progress", transferCount);
+        tabCounts.put("Completed", completedCount);
+        tabCounts.put("Cancelled", cancelledCount);
 
         return EscrowDashboardDto.builder()
                 .summary(summary)
@@ -773,45 +783,41 @@ public class EscrowService {
      */
     public byte[] downloadDocument(String escrowId, String docType) {
         EscrowDetailDto detail = getEscrowDetail(escrowId);
-        StringBuilder sb = new StringBuilder();
-        sb.append("=================================================================\n");
-        sb.append("                     ATIRATH GROUP                               \n");
-        sb.append("          ESCROW & SETTLEMENT OFFICIAL DOCUMENT                  \n");
-        sb.append("=================================================================\n\n");
-        sb.append("Document Type:    ").append(docType.toUpperCase().replace("-", " ")).append("\n");
-        sb.append("Escrow Reference: ").append(detail.getEscrowId()).append("\n");
-        sb.append("Trade Reference:  ").append(detail.getTradeId()).append("\n");
-        sb.append("Agreement Ref:    ").append(detail.getAgreementId()).append("\n");
-        sb.append("Created On:       ").append(detail.getCreatedOn()).append("\n");
-        sb.append("Current Status:   ").append(detail.getStatus()).append("\n\n");
-
-        sb.append("PARTIES INVOLVED:\n");
-        sb.append("-----------------------------------------------------------------\n");
-        sb.append("Buyer:  ").append(detail.getBuyer().getMemberName()).append(" (ID: ").append(detail.getBuyer().getMemberId()).append(")\n");
-        sb.append("Seller: ").append(detail.getSeller().getMemberName()).append(" (ID: ").append(detail.getSeller().getMemberId()).append(")\n\n");
-
-        sb.append("TRADE SPECIFICATIONS:\n");
-        sb.append("-----------------------------------------------------------------\n");
-        sb.append("Company:             ").append(detail.getTradeAndEscrowInfo().getCompany()).append("\n");
-        sb.append("Security Type:       ").append(detail.getTradeAndEscrowInfo().getSecurityType()).append("\n");
-        sb.append("Quantity:            ").append(SHARES_FMT.format(detail.getTradeAndEscrowInfo().getQuantity())).append(" shares\n");
-        sb.append("Agreed Price/Share:  ₹ ").append(CURRENCY_FMT.format(detail.getTradeAndEscrowInfo().getAgreedPricePerShare())).append("\n");
-        sb.append("Total Trade Value:   ₹ ").append(CURRENCY_FMT.format(detail.getTradeAndEscrowInfo().getTotalTradeValue())).append("\n");
-        sb.append("Payment Mode:        ").append(detail.getTradeAndEscrowInfo().getPaymentMode()).append("\n");
-        sb.append("Expected Settlement: ").append(detail.getTradeAndEscrowInfo().getExpectedSettlement()).append("\n\n");
-
-        sb.append("ESCROW ACCOUNT DETAILS:\n");
-        sb.append("-----------------------------------------------------------------\n");
-        sb.append("Bank:                ").append(detail.getEscrowAccountDetails().getBankName()).append("\n");
-        sb.append("Account Name:        ").append(detail.getEscrowAccountDetails().getAccountName()).append("\n");
-        sb.append("Account Number:      ").append(detail.getEscrowAccountDetails().getAccountNumber()).append("\n");
-        sb.append("IFSC Code:           ").append(detail.getEscrowAccountDetails().getIfscCode()).append("\n");
-        sb.append("Branch:              ").append(detail.getEscrowAccountDetails().getBranch()).append("\n\n");
-
-        sb.append("Digital Certificate Hash: ATG-ESC-VERIFIED-").append(UUID.randomUUID().toString().toUpperCase()).append("\n");
-        sb.append("=================================================================\n");
-
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
+        List<String> lines = new ArrayList<>();
+        lines.add("ATIRATH GROUP - ESCROW & SETTLEMENT OFFICIAL DOCUMENT");
+        lines.add("================================================================");
+        lines.add("Document Type:    " + docType.toUpperCase().replace("-", " "));
+        lines.add("Escrow Reference: " + detail.getEscrowId());
+        lines.add("Trade Reference:  " + detail.getTradeId());
+        lines.add("Agreement Ref:    " + detail.getAgreementId());
+        lines.add("Created On:       " + detail.getCreatedOn());
+        lines.add("Current Status:   " + detail.getStatus());
+        lines.add("");
+        lines.add("PARTIES INVOLVED");
+        lines.add("----------------------------------------------------------------");
+        lines.add("Buyer:  " + detail.getBuyer().getMemberName() + " (ID: " + detail.getBuyer().getMemberId() + ")");
+        lines.add("Seller: " + detail.getSeller().getMemberName() + " (ID: " + detail.getSeller().getMemberId() + ")");
+        lines.add("");
+        lines.add("TRADE SPECIFICATIONS");
+        lines.add("----------------------------------------------------------------");
+        lines.add("Company:             " + detail.getTradeAndEscrowInfo().getCompany());
+        lines.add("Security Type:       " + detail.getTradeAndEscrowInfo().getSecurityType());
+        lines.add("Quantity:            " + SHARES_FMT.format(detail.getTradeAndEscrowInfo().getQuantity()) + " shares");
+        lines.add("Agreed Price/Share:  INR " + CURRENCY_FMT.format(detail.getTradeAndEscrowInfo().getAgreedPricePerShare()));
+        lines.add("Total Trade Value:   INR " + CURRENCY_FMT.format(detail.getTradeAndEscrowInfo().getTotalTradeValue()));
+        lines.add("Payment Mode:        " + detail.getTradeAndEscrowInfo().getPaymentMode());
+        lines.add("Expected Settlement: " + detail.getTradeAndEscrowInfo().getExpectedSettlement());
+        lines.add("");
+        lines.add("ESCROW ACCOUNT DETAILS");
+        lines.add("----------------------------------------------------------------");
+        lines.add("Bank:           " + detail.getEscrowAccountDetails().getBankName());
+        lines.add("Account Name:   " + detail.getEscrowAccountDetails().getAccountName());
+        lines.add("Account Number: " + detail.getEscrowAccountDetails().getAccountNumber());
+        lines.add("IFSC Code:      " + detail.getEscrowAccountDetails().getIfscCode());
+        lines.add("Branch:         " + detail.getEscrowAccountDetails().getBranch());
+        lines.add("");
+        lines.add("Digital Certificate Hash: ATG-ESC-VERIFIED-" + UUID.randomUUID().toString().toUpperCase());
+        return buildSimplePdf(lines);
     }
 
     private String mapTabToStatus(String tab) {
@@ -1302,6 +1308,184 @@ public class EscrowService {
      * Image 16: View Escrow Details
      */
     public EscrowStatusDetailDto getEscrowStatusDetail(String escrowId, String tab) {
+        String targetId = (escrowId != null && !escrowId.isBlank()) ? escrowId : "ESC250918001";
+        if (!"ESC250918001".equalsIgnoreCase(targetId)) {
+            Optional<EscrowStatusItemDto> statusOpt = liveEscrowStatusList.stream()
+                    .filter(e -> e.getEscrowId().equalsIgnoreCase(targetId))
+                    .findFirst();
+            EscrowDetailDto base = liveEscrowDetails.get(targetId);
+            if (base == null && liveEscrowsList.stream().anyMatch(e -> e.getEscrowId().equalsIgnoreCase(targetId))) {
+                base = getEscrowDetail(targetId);
+            }
+            if (statusOpt.isPresent()) {
+                EscrowStatusItemDto sItem = statusOpt.get();
+                EscrowStatusItemDto.EscrowStatusItemDetailDto d = sItem.getDetail();
+                Long qty = d != null && d.getQuantity() != null ? d.getQuantity() : sItem.getQuantity();
+                BigDecimal pps = d != null && d.getPricePerShare() != null ? d.getPricePerShare() : new BigDecimal("242.00");
+                BigDecimal totalAmt = d != null && d.getTotalAmount() != null ? d.getTotalAmount() : sItem.getAmount();
+                String statusStr = d != null && d.getStatus() != null ? d.getStatus() : sItem.getStatus();
+                boolean isDone = "Completed".equalsIgnoreCase(statusStr);
+                List<EscrowStatusItemDto.ProgressEventDto> prog = d != null && d.getProgress() != null
+                        ? d.getProgress()
+                        : Collections.emptyList();
+                List<EscrowStatusDetailDto.ProgressStepDetailDto> stepDetails = new ArrayList<>();
+                for (int i = 0; i < prog.size(); i++) {
+                    EscrowStatusItemDto.ProgressEventDto ev = prog.get(i);
+                    stepDetails.add(EscrowStatusDetailDto.ProgressStepDetailDto.builder()
+                            .stepNumber(i + 1)
+                            .title(ev.getTitle())
+                            .description(ev.isCompleted() ? "Completed" : "Pending")
+                            .timestamp(ev.getTimestamp())
+                            .completed(ev.isCompleted())
+                            .viewActionUrl("/api/v1/escrow/" + targetId + "/pipeline")
+                            .build());
+                }
+                List<EscrowStatusDetailDto.HorizontalStepDto> horiz = List.of(
+                        EscrowStatusDetailDto.HorizontalStepDto.builder().stepNumber(1).title("1. Fund Escrow").status(isDone ? "Completed" : "Pending").timestamp(sItem.getUpdatedOn()).build(),
+                        EscrowStatusDetailDto.HorizontalStepDto.builder().stepNumber(2).title("2. Payment Verification").status(isDone ? "Completed" : "Pending").timestamp(sItem.getUpdatedOn()).build(),
+                        EscrowStatusDetailDto.HorizontalStepDto.builder().stepNumber(3).title("3. Share Lock").status(isDone ? "Completed" : "Pending").timestamp(sItem.getUpdatedOn()).build(),
+                        EscrowStatusDetailDto.HorizontalStepDto.builder().stepNumber(4).title("4. Share Transfer").status(isDone ? "Completed" : "Pending").timestamp(sItem.getUpdatedOn()).build(),
+                        EscrowStatusDetailDto.HorizontalStepDto.builder().stepNumber(5).title("5. Settlement").status(statusStr).timestamp(sItem.getUpdatedOn()).build()
+                );
+                return EscrowStatusDetailDto.builder()
+                        .escrowId(sItem.getEscrowId())
+                        .tradeId(sItem.getTradeId())
+                        .companyName(sItem.getCompanyName())
+                        .companySymbol("ATG-H")
+                        .type(sItem.getType())
+                        .quantity(qty)
+                        .pricePerShare(pps)
+                        .totalAmount(totalAmt)
+                        .buyerName("Buy".equalsIgnoreCase(sItem.getType()) ? "Sairam Vempati" : "Counterparty")
+                        .buyerMemberId("ATG10027")
+                        .sellerName("Buy".equalsIgnoreCase(sItem.getType()) ? "Counterparty" : "Sairam Vempati")
+                        .sellerMemberId("ATG10056")
+                        .status(statusStr)
+                        .statusMessage("Escrow status: " + statusStr)
+                        .createdOn(d != null ? d.getCreatedOn() : sItem.getUpdatedOn())
+                        .completedOn(isDone ? sItem.getUpdatedOn() : "-")
+                        .lastUpdated(d != null ? d.getLastUpdated() : sItem.getUpdatedOn())
+                        .horizontalSteps(horiz)
+                        .escrowSummary(EscrowStatusDetailDto.EscrowSummaryCardDto.builder()
+                                .escrowId(sItem.getEscrowId())
+                                .tradeId(sItem.getTradeId())
+                                .companyName(sItem.getCompanyName())
+                                .type(sItem.getType())
+                                .quantity(qty)
+                                .pricePerShare(pps)
+                                .totalEscrowAmount(totalAmt)
+                                .buyer("Sairam Vempati (ATG10027)")
+                                .seller("Counterparty (ATG10056)")
+                                .status(statusStr)
+                                .createdOn(d != null ? d.getCreatedOn() : sItem.getUpdatedOn())
+                                .completedOn(isDone ? sItem.getUpdatedOn() : "-")
+                                .build())
+                        .progressSteps(stepDetails)
+                        .quickActions(List.of(
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("download_report").title("Download Escrow Report").actionType("DOWNLOAD").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("view_trade").title("View Trade Details").actionType("LINK").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("view_portfolio").title("View Shares in Portfolio").actionType("LINK").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("raise_ticket").title("Raise a Support Ticket").actionType("SUPPORT").build()
+                        ))
+                        .transactionHistory(EscrowStatusDetailDto.TransactionHistoryTabDto.builder()
+                                .events(stepDetails.stream().map(st -> EscrowStatusDetailDto.HistoryItemDto.builder()
+                                        .event(st.getTitle()).timestamp(st.getTimestamp()).actor("System")
+                                        .status(st.isCompleted() ? "Completed" : "Pending").build()).toList())
+                                .build())
+                        .paymentDetails(EscrowStatusDetailDto.PaymentDetailsTabDto.builder()
+                                .paymentId("PAY-" + sItem.getEscrowId())
+                                .paymentMethod("UPI / Bank Escrow")
+                                .amount(totalAmt)
+                                .gatewayRef("ATG/PAY/" + sItem.getEscrowId())
+                                .status(statusStr)
+                                .paidAt(sItem.getUpdatedOn())
+                                .build())
+                        .shareDetails(EscrowStatusDetailDto.ShareDetailsTabDto.builder()
+                                .lockId("LOCK-" + sItem.getEscrowId())
+                                .transferId("TRF-" + sItem.getEscrowId())
+                                .isin("INE012A01025")
+                                .shares(qty)
+                                .fromDemat("120856300482 (NSDL)")
+                                .toDemat("120987654321 (NSDL)")
+                                .build())
+                        .settlementDetails(EscrowStatusDetailDto.SettlementDetailsTabDto.builder()
+                                .settlementId("SET-" + sItem.getEscrowId())
+                                .payoutAmount(totalAmt)
+                                .payoutBank("HDFC Bank •••• 3045")
+                                .referenceNo("PAYOUT-" + sItem.getEscrowId())
+                                .completedAt(isDone ? sItem.getUpdatedOn() : "Pending")
+                                .build())
+                        .documents(List.of(
+                                EscrowStatusDetailDto.EscrowDocumentTabDto.builder().name("Escrow Agreement").size("2.4 MB").date(sItem.getUpdatedOn()).downloadUrl("/api/v1/escrow/" + sItem.getEscrowId() + "/documents/agreement").build(),
+                                EscrowStatusDetailDto.EscrowDocumentTabDto.builder().name("Payment Confirmation Receipt").size("1.1 MB").date(sItem.getUpdatedOn()).downloadUrl("/api/v1/escrow/" + sItem.getEscrowId() + "/documents/payment").build(),
+                                EscrowStatusDetailDto.EscrowDocumentTabDto.builder().name("Demat Transfer Slip").size("1.8 MB").date(sItem.getUpdatedOn()).downloadUrl("/api/v1/escrow/" + sItem.getEscrowId() + "/documents/demat").build(),
+                                EscrowStatusDetailDto.EscrowDocumentTabDto.builder().name("Settlement Statement").size("950 KB").date(sItem.getUpdatedOn()).downloadUrl("/api/v1/escrow/" + sItem.getEscrowId() + "/documents/settlement").build()
+                        ))
+                        .build();
+            } else if (base != null) {
+                final EscrowDetailDto resolvedBase = base;
+                return EscrowStatusDetailDto.builder()
+                        .escrowId(resolvedBase.getEscrowId())
+                        .tradeId(resolvedBase.getTradeId())
+                        .companyName(resolvedBase.getCompany().getCompanyName())
+                        .companySymbol(resolvedBase.getCompany().getSymbol())
+                        .type(resolvedBase.getBuyer().isCurrentUser() ? "Buy" : "Sell")
+                        .quantity(resolvedBase.getTradeAndEscrowInfo().getQuantity())
+                        .pricePerShare(resolvedBase.getTradeAndEscrowInfo().getAgreedPricePerShare())
+                        .totalAmount(resolvedBase.getTradeAndEscrowInfo().getTotalTradeValue())
+                        .buyerName(resolvedBase.getBuyer().getMemberName())
+                        .buyerMemberId(resolvedBase.getBuyer().getMemberId())
+                        .sellerName(resolvedBase.getSeller().getMemberName())
+                        .sellerMemberId(resolvedBase.getSeller().getMemberId())
+                        .status(resolvedBase.getStatus())
+                        .statusMessage(resolvedBase.getStatusDescription())
+                        .createdOn(resolvedBase.getCreatedOn())
+                        .completedOn("Completed".equalsIgnoreCase(resolvedBase.getStatus()) ? "Completed" : "-")
+                        .lastUpdated(resolvedBase.getCreatedOn())
+                        .horizontalSteps(resolvedBase.getEscrowProgress().stream().map(p -> EscrowStatusDetailDto.HorizontalStepDto.builder()
+                                .stepNumber(p.getStepNumber()).title(p.getStepNumber() + ". " + p.getTitle())
+                                .status(p.getStatus()).timestamp(resolvedBase.getCreatedOn()).build()).toList())
+                        .escrowSummary(EscrowStatusDetailDto.EscrowSummaryCardDto.builder()
+                                .escrowId(resolvedBase.getEscrowId()).tradeId(resolvedBase.getTradeId())
+                                .companyName(resolvedBase.getCompany().getCompanyName())
+                                .type(resolvedBase.getBuyer().isCurrentUser() ? "Buy" : "Sell")
+                                .quantity(resolvedBase.getTradeAndEscrowInfo().getQuantity())
+                                .pricePerShare(resolvedBase.getTradeAndEscrowInfo().getAgreedPricePerShare())
+                                .totalEscrowAmount(resolvedBase.getTradeAndEscrowInfo().getTotalTradeValue())
+                                .buyer(resolvedBase.getBuyer().getMemberName() + " (" + resolvedBase.getBuyer().getMemberId() + ")")
+                                .seller(resolvedBase.getSeller().getMemberName() + " (" + resolvedBase.getSeller().getMemberId() + ")")
+                                .status(resolvedBase.getStatus()).createdOn(resolvedBase.getCreatedOn()).completedOn("-").build())
+                        .progressSteps(resolvedBase.getEscrowProgress().stream().map(p -> EscrowStatusDetailDto.ProgressStepDetailDto.builder()
+                                .stepNumber(p.getStepNumber()).title(p.getTitle()).description(p.getSubtext())
+                                .timestamp(resolvedBase.getCreatedOn()).completed(p.isCompleted())
+                                .viewActionUrl("/api/v1/escrow/" + resolvedBase.getEscrowId() + "/pipeline").build()).toList())
+                        .quickActions(List.of(
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("download_report").title("Download Escrow Report").actionType("DOWNLOAD").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("view_trade").title("View Trade Details").actionType("LINK").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("view_portfolio").title("View Shares in Portfolio").actionType("LINK").build(),
+                                EscrowStatusDetailDto.QuickActionDto.builder().id("raise_ticket").title("Raise a Support Ticket").actionType("SUPPORT").build()
+                        ))
+                        .transactionHistory(EscrowStatusDetailDto.TransactionHistoryTabDto.builder()
+                                .events(resolvedBase.getRecentActivity().stream().map(a -> EscrowStatusDetailDto.HistoryItemDto.builder()
+                                        .event(a.getTitle()).timestamp(a.getTimestamp()).actor("System").status(resolvedBase.getStatus()).build()).toList())
+                                .build())
+                        .paymentDetails(EscrowStatusDetailDto.PaymentDetailsTabDto.builder()
+                                .paymentId("PAY-" + base.getEscrowId()).paymentMethod(base.getTradeAndEscrowInfo().getPaymentMode())
+                                .amount(base.getTradeAndEscrowInfo().getTotalTradeValue()).gatewayRef(base.getEscrowAccountDetails().getReferenceNo())
+                                .status(base.getStatus()).paidAt(base.getCreatedOn()).build())
+                        .shareDetails(EscrowStatusDetailDto.ShareDetailsTabDto.builder()
+                                .lockId("LOCK-" + base.getEscrowId()).transferId("TRF-" + base.getEscrowId())
+                                .isin("INE012A01025").shares(base.getTradeAndEscrowInfo().getQuantity())
+                                .fromDemat("120856300482 (NSDL)").toDemat("120987654321 (NSDL)").build())
+                        .settlementDetails(EscrowStatusDetailDto.SettlementDetailsTabDto.builder()
+                                .settlementId("SET-" + base.getEscrowId()).payoutAmount(base.getTradeAndEscrowInfo().getTotalTradeValue())
+                                .payoutBank(base.getEscrowAccountDetails().getBankName()).referenceNo(base.getEscrowAccountDetails().getReferenceNo())
+                                .completedAt(base.getTradeAndEscrowInfo().getExpectedSettlement()).build())
+                        .documents(base.getDocuments().stream().map(doc -> EscrowStatusDetailDto.EscrowDocumentTabDto.builder()
+                                .name(doc.getTitle()).size(doc.getFileSize()).date(doc.getDate()).downloadUrl(doc.getDownloadUrl()).build()).toList())
+                        .build();
+            }
+        }
         return EscrowStatusDetailDto.builder()
                 .escrowId("ESC250918001")
                 .tradeId("TRD250918004")
@@ -1621,27 +1805,74 @@ public class EscrowService {
     }
 
     public byte[] downloadSettlementDocument(String settlementId, String docType) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("=================================================================\n");
-        sb.append("                     ATIRATH GROUP                               \n");
-        sb.append("             OFFICIAL SETTLEMENT DOCUMENT                        \n");
-        sb.append("=================================================================\n\n");
-        sb.append("Document: ").append(docType.toUpperCase().replace("-", " ")).append("\n");
-        sb.append("Settlement ID: ").append(settlementId).append("\n");
-        sb.append("Trade Reference: TRD250918004\n");
-        sb.append("Escrow Reference: ESC250918001\n");
-        sb.append("Company: Atirath Holdings India Limited (ATG-H)\n");
-        sb.append("Buyer: Sairam Vempati (ATG10027)\n");
-        sb.append("Seller: Rakesh Mehta (ATG10056)\n");
-        sb.append("Shares Settled: 1,000 @ ₹ 242.00\n");
-        sb.append("Total Trade Value: ₹ 2,42,000.00\n");
-        sb.append("Settlement Reference No: NSDL250918123456\n");
-        sb.append("Payment Reference No: PAY250918789012\n");
-        sb.append("Settlement Date: 18 Sep 2025, 11:28 AM\n");
-        sb.append("Status: COMPLETED\n\n");
-        sb.append("Trade Completed. Trust Delivered.\n");
-        sb.append("=================================================================\n");
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
+        List<String> lines = new ArrayList<>();
+        lines.add("ATIRATH GROUP - OFFICIAL SETTLEMENT DOCUMENT");
+        lines.add("================================================================");
+        lines.add("Document:                " + docType.toUpperCase().replace("-", " "));
+        lines.add("Settlement ID:           " + settlementId);
+        lines.add("Trade Reference:         TRD250918004");
+        lines.add("Escrow Reference:        ESC250918001");
+        lines.add("Company:                 Atirath Holdings India Limited (ATG-H)");
+        lines.add("Buyer:                   Sairam Vempati (ATG10027)");
+        lines.add("Seller:                  Rakesh Mehta (ATG10056)");
+        lines.add("Shares Settled:          1,000 @ INR 242.00");
+        lines.add("Total Trade Value:       INR 2,42,000.00");
+        lines.add("Settlement Reference No: NSDL250918123456");
+        lines.add("Payment Reference No:    PAY250918789012");
+        lines.add("Settlement Date:         18 Sep 2025, 11:28 AM");
+        lines.add("Status:                  COMPLETED");
+        lines.add("");
+        lines.add("Trade Completed. Trust Delivered.");
+        return buildSimplePdf(lines);
+    }
+
+    private byte[] buildSimplePdf(List<String> lines) {
+        StringBuilder stream = new StringBuilder();
+        stream.append("BT\n/F1 10 Tf\n14 TL\n40 770 Td\n");
+        int count = 0;
+        for (String line : lines) {
+            if (count >= 48) {
+                break;
+            }
+            String safe = line.replace("₹", "INR ")
+                    .replaceAll("[^\\x20-\\x7E]", " ")
+                    .replace("\\", "\\\\")
+                    .replace("(", "\\(")
+                    .replace(")", "\\)");
+            stream.append("(").append(safe).append(") Tj T*\n");
+            count++;
+        }
+        stream.append("ET\n");
+        byte[] contentBytes = stream.toString().getBytes(StandardCharsets.US_ASCII);
+
+        StringBuilder pdf = new StringBuilder();
+        List<Integer> offsets = new ArrayList<>();
+        pdf.append("%PDF-1.4\n");
+
+        offsets.add(pdf.length());
+        pdf.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("5 0 obj\n<< /Length ").append(contentBytes.length).append(" >>\nstream\n")
+                .append(new String(contentBytes, StandardCharsets.US_ASCII))
+                .append("endstream\nendobj\n");
+
+        int xrefOffset = pdf.length();
+        pdf.append("xref\n0 6\n0000000000 65535 f \n");
+        for (int off : offsets) {
+            pdf.append(String.format("%010d 00000 n \n", off));
+        }
+        pdf.append("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n").append(xrefOffset).append("\n%%EOF");
+        return pdf.toString().getBytes(StandardCharsets.US_ASCII);
     }
 }
 

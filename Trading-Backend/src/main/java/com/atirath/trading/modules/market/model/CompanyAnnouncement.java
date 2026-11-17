@@ -1,5 +1,6 @@
 package com.atirath.trading.modules.market.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,7 @@ public class CompanyAnnouncement {
     @Column(name = "announcement_id")
     private Long announcementId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private MarketCompany company;
@@ -35,6 +37,7 @@ public class CompanyAnnouncement {
     @Column(name = "announcement_date", nullable = false)
     private LocalDate announcementDate;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id")
     private CompanyDocument document;

@@ -1,5 +1,6 @@
 package com.atirath.trading.modules.market.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,7 @@ public class CompanyShareholding {
     @Column(name = "shareholding_id")
     private Long shareholdingId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private MarketCompany company;

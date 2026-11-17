@@ -13,10 +13,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -102,60 +106,79 @@ public class MarketCompanyController {
 
     @GetMapping("/{id}/leadership")
     @Operation(summary = "Get Company Leadership", description = "Returns executive board and management leadership team")
-    public ResponseEntity<ApiResponse<List<CompanyLeadership>>> getLeadership(@PathVariable("id") Long companyId) {
-        List<CompanyLeadership> leadership = marketCompanyService.getLeadership(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.LeadershipItemDto>>> getLeadership(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.LeadershipItemDto> leadership = marketCompanyService.getLeadership(companyId);
         return ResponseEntity.ok(ApiResponse.success(leadership, "Leadership details retrieved successfully"));
     }
 
     @GetMapping("/{id}/highlights")
     @Operation(summary = "Get Key Highlights", description = "Returns business highlights and milestones")
-    public ResponseEntity<ApiResponse<List<CompanyHighlight>>> getHighlights(@PathVariable("id") Long companyId) {
-        List<CompanyHighlight> highlights = marketCompanyService.getHighlights(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.HighlightItemDto>>> getHighlights(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.HighlightItemDto> highlights = marketCompanyService.getHighlights(companyId);
         return ResponseEntity.ok(ApiResponse.success(highlights, "Company highlights retrieved successfully"));
     }
 
     @GetMapping("/{id}/shareholding")
     @Operation(summary = "Get Shareholding Pattern", description = "Returns percentage shareholding by Promoters, Group Companies, Employees, Others")
-    public ResponseEntity<ApiResponse<List<CompanyShareholding>>> getShareholding(@PathVariable("id") Long companyId) {
-        List<CompanyShareholding> shareholding = marketCompanyService.getShareholding(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.ShareholdingItemDto>>> getShareholding(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.ShareholdingItemDto> shareholding = marketCompanyService.getShareholding(companyId);
         return ResponseEntity.ok(ApiResponse.success(shareholding, "Shareholding pattern retrieved successfully"));
     }
 
     @GetMapping("/{id}/financials/annual")
     @Operation(summary = "Get Annual Financials", description = "Returns annual historical financial performance (Revenue, EBITDA, Net Profit, Ratios)")
-    public ResponseEntity<ApiResponse<List<CompanyAnnualFinancial>>> getAnnualFinancials(@PathVariable("id") Long companyId) {
-        List<CompanyAnnualFinancial> annuals = marketCompanyService.getAnnualFinancials(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.AnnualFinancialItemDto>>> getAnnualFinancials(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.AnnualFinancialItemDto> annuals = marketCompanyService.getAnnualFinancials(companyId);
         return ResponseEntity.ok(ApiResponse.success(annuals, "Annual financials retrieved successfully"));
     }
 
     @GetMapping("/{id}/financials/quarterly")
     @Operation(summary = "Get Quarterly Financials", description = "Returns quarterly historical financial reports (Q1, Q2, etc.)")
-    public ResponseEntity<ApiResponse<List<CompanyQuarterlyFinancial>>> getQuarterlyFinancials(@PathVariable("id") Long companyId) {
-        List<CompanyQuarterlyFinancial> quarterlies = marketCompanyService.getQuarterlyFinancials(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.QuarterlyFinancialItemDto>>> getQuarterlyFinancials(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.QuarterlyFinancialItemDto> quarterlies = marketCompanyService.getQuarterlyFinancials(companyId);
         return ResponseEntity.ok(ApiResponse.success(quarterlies, "Quarterly financials retrieved successfully"));
     }
 
     @GetMapping("/{id}/ratios")
     @Operation(summary = "Get Key Financial Ratios", description = "Returns latest key ratios: EPS, P/E, Book Value, Debt/Equity, ROE, ROCE")
-    public ResponseEntity<ApiResponse<List<CompanyFinancialRatio>>> getFinancialRatios(@PathVariable("id") Long companyId) {
-        List<CompanyFinancialRatio> ratios = marketCompanyService.getFinancialRatios(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.FinancialRatioItemDto>>> getFinancialRatios(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.FinancialRatioItemDto> ratios = marketCompanyService.getFinancialRatios(companyId);
         return ResponseEntity.ok(ApiResponse.success(ratios, "Financial ratios retrieved successfully"));
     }
 
     @GetMapping("/{id}/announcements")
     @Operation(summary = "Get Company Announcements", description = "Returns corporate actions, board updates, results announcements")
-    public ResponseEntity<ApiResponse<List<CompanyAnnouncement>>> getAnnouncements(@PathVariable("id") Long companyId) {
-        List<CompanyAnnouncement> announcements = marketCompanyService.getAnnouncements(companyId);
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.AnnouncementItemDto>>> getAnnouncements(@PathVariable("id") Long companyId) {
+        List<CompanyOverviewDto.AnnouncementItemDto> announcements = marketCompanyService.getAnnouncements(companyId);
         return ResponseEntity.ok(ApiResponse.success(announcements, "Announcements retrieved successfully"));
     }
 
     @GetMapping("/{id}/documents")
     @Operation(summary = "Get Company Disclosures & Documents", description = "Returns official published annual reports, financial statements, and regulatory filings")
-    public ResponseEntity<ApiResponse<List<CompanyDocument>>> getDocuments(
+    public ResponseEntity<ApiResponse<List<CompanyOverviewDto.DocumentItemDto>>> getDocuments(
             @PathVariable("id") Long companyId,
             @RequestParam(required = false) String category) {
-        List<CompanyDocument> documents = marketCompanyService.getDocuments(companyId, category);
+        List<CompanyOverviewDto.DocumentItemDto> documents = marketCompanyService.getDocuments(companyId, category);
         return ResponseEntity.ok(ApiResponse.success(documents, "Documents retrieved successfully"));
+    }
+
+    @GetMapping("/{id}/documents/{documentId}/download")
+    @Operation(summary = "View or Download Company Document", description = "Streams an official company disclosure document inline (view) or as an attachment (download)")
+    public ResponseEntity<byte[]> downloadCompanyDocument(
+            @PathVariable("id") Long companyId,
+            @PathVariable("documentId") Long documentId,
+            @RequestParam(defaultValue = "false") boolean inline) {
+        MarketCompanyService.DocumentDownloadPayload payload =
+                marketCompanyService.getCompanyDocumentDownload(companyId, documentId);
+
+        ContentDisposition disposition = (inline ? ContentDisposition.inline() : ContentDisposition.attachment())
+                .filename(payload.fileName(), StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.parseMediaType(payload.mimeType()))
+                .body(payload.content());
     }
 
     private Long extractOptionalUserId(String authHeader) {

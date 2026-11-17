@@ -278,6 +278,60 @@ class PortfolioScreenIntegrationTest {
                 .andExpect(content().string(containsString("Ananya Rao")))
                 .andExpect(content().string(containsString("Total Shares,100")))
                 .andExpect(content().string(not(containsString("ATG10027"))));
+
+        mockMvc.perform(get("/api/v1/portfolio/holdings")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.holdings", hasSize(1)))
+                .andExpect(jsonPath("$.data.holdings[0].sharesHeld").value(100))
+                .andExpect(jsonPath("$.data.holdings[0].lockedShares").value(20));
+
+        mockMvc.perform(get("/api/v1/portfolio/positions")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.positions", hasSize(1)))
+                .andExpect(jsonPath("$.data.positions[0].quantity").value(100));
+
+        mockMvc.perform(get("/api/v1/portfolio/trade-history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.trades", hasSize(1)))
+                .andExpect(jsonPath("$.data.trades[0].tradeNo").value("TRD-PORT-" + suffix))
+                .andExpect(jsonPath("$.data.selectedTradeDetail.tradeNo").value("TRD-PORT-" + suffix));
+
+        mockMvc.perform(get("/api/v1/portfolio/analytics")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.companyPerformance", hasSize(1)))
+                .andExpect(jsonPath("$.data.allocationByCompany", hasSize(1)));
+
+        mockMvc.perform(get("/api/v1/portfolio/pnl-report")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.companyPnl", hasSize(1)))
+                .andExpect(jsonPath("$.data.pnlSummary.realizedPnl").value(500.0));
+
+        mockMvc.perform(get("/api/v1/portfolio/ownership-statement")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.statementSummary.memberName").value("Ananya Rao"))
+                .andExpect(jsonPath("$.data.companies", hasSize(1)));
+
+        mockMvc.perform(get("/api/v1/portfolio/download/analytics")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(comp.getCompanyName())))
+                .andExpect(content().string(not(containsString("24,80,000"))));
+
+        mockMvc.perform(get("/api/v1/portfolio/download/pnl-report")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(comp.getCompanyName())));
+
+        mockMvc.perform(get("/api/v1/portfolio/download/trade-history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("TRD-PORT-" + suffix)));
     }
 }
 

@@ -25,4 +25,6 @@ public class MarketTradeDto {
     private String status;
     private String orderSide;
     private Boolean isBuy;
+    private String buyerName;
+    private String sellerName;
 }

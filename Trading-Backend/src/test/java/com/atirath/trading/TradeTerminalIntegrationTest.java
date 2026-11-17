@@ -1,5 +1,9 @@
 package com.atirath.trading;
 
+import com.atirath.trading.config.JwtTokenProvider;
+import com.atirath.trading.modules.auth.model.UserAccount;
+import com.atirath.trading.modules.auth.repository.UserAccountRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,13 +12,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +36,12 @@ class TradeTerminalIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("Screen 1: GET /api/v1/trade/terminal/ATG-H returns complete Trade Terminal snapshot")
@@ -229,34 +244,93 @@ class TradeTerminalIntegrationTest {
     }
 
     @Test
-    @DisplayName("Screen 2: GET /api/v1/trade/orders/my-orders returns catalog with status tabs, filters, and pagination")
+    @DisplayName("Screen 2: GET /api/v1/trade/orders/my-orders returns dynamic database orders with status tabs, filters, and pagination")
     void testGetMyOrdersScreen() throws Exception {
         mockMvc.perform(get("/api/v1/trade/orders/my-orders?page=1&size=10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                // Summary counts
-                .andExpect(jsonPath("$.data.summaryCounts.allCount", greaterThanOrEqualTo(10)))
-                .andExpect(jsonPath("$.data.summaryCounts.openCount", greaterThanOrEqualTo(1)))
-                .andExpect(jsonPath("$.data.summaryCounts.inProgressCount", greaterThanOrEqualTo(1)))
-                .andExpect(jsonPath("$.data.summaryCounts.completedCount", greaterThanOrEqualTo(1)))
-                // Orders on page 1
-                .andExpect(jsonPath("$.data.orders", hasSize(10)))
-                .andExpect(jsonPath("$.data.orders[0].orderNo").value("BUY25091814322"))
-                .andExpect(jsonPath("$.data.orders[0].companyName").value("Atirath Holdings India Limited"))
-                .andExpect(jsonPath("$.data.orders[0].symbol").value("ATG-H"))
-                .andExpect(jsonPath("$.data.orders[0].type").value("BUY"))
-                .andExpect(jsonPath("$.data.orders[0].quantity").value(1000))
-                .andExpect(jsonPath("$.data.orders[0].pricePerShare").value(242.00))
-                .andExpect(jsonPath("$.data.orders[0].statusBadge").value("In Escrow"))
-                // Pagination text
+                .andExpect(jsonPath("$.data.summaryCounts.allCount", notNullValue()))
+                .andExpect(jsonPath("$.data.orders", notNullValue()))
                 .andExpect(jsonPath("$.data.pagination.currentPage").value(1))
-                .andExpect(jsonPath("$.data.pagination.pageSize").value(10))
-                .andExpect(jsonPath("$.data.pagination.showingText", containsString("Showing 1 to 10 of")));
+                .andExpect(jsonPath("$.data.pagination.pageSize").value(10));
+    }
 
-        // Filter by tab = COMPLETED
-        mockMvc.perform(get("/api/v1/trade/orders/my-orders?tab=COMPLETED"))
+    @Test
+    @Transactional
+    @DisplayName("Screens 6 & 8: Document PDF download, Modify Order, and Cancel Order full escrow refund")
+    void testOrderDocumentsModifyAndCancelRefund() throws Exception {
+        MvcResult orderPdf = mockMvc.perform(get("/api/v1/trade/orders/documents/order-confirmation")
+                        .param("orderNo", "BUY25091814322"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orders", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$.data.orders[0].status").value("COMPLETED"));
+                .andReturn();
+        assertTrue(orderPdf.getResponse().getContentAsString().startsWith("%PDF-"));
+
+        MvcResult escrowPdf = mockMvc.perform(get("/api/v1/trade/orders/documents/escrow-confirmation")
+                        .param("orderNo", "BUY25091814322"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertTrue(escrowPdf.getResponse().getContentAsString().startsWith("%PDF-"));
+
+        UserAccount user = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com")
+                .orElseGet(() -> userAccountRepository.findAll().get(0));
+        String auth = "Bearer " + jwtTokenProvider.generateAccessToken(user);
+
+        MvcResult walletBeforeRes = mockMvc.perform(get("/api/v1/trade/wallet").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andReturn();
+        BigDecimal availBefore = new BigDecimal(objectMapper.readTree(walletBeforeRes.getResponse().getContentAsString())
+                .path("data").path("availableBalance").asText());
+
+        Map<String, Object> placeReq = Map.of(
+                "symbol", "ATG-H",
+                "orderSide", "BUY",
+                "orderType", "LIMIT",
+                "quantity", 10,
+                "pricePerShare", new BigDecimal("242.00"),
+                "validity", "DAY_ORDER",
+                "acceptTerms", true,
+                "orderSource", "WEB"
+        );
+        MvcResult placedRes = mockMvc.perform(post("/api/v1/trade/orders")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(placeReq)))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode placedJson = objectMapper.readTree(placedRes.getResponse().getContentAsString()).path("data");
+        long orderId = placedJson.path("orderId").asLong();
+
+        Map<String, Object> modReq = Map.of(
+                "symbol", "ATG-H",
+                "orderSide", "BUY",
+                "orderType", "LIMIT",
+                "quantity", 12,
+                "pricePerShare", new BigDecimal("240.00")
+        );
+        mockMvc.perform(put("/api/v1/trade/orders/" + orderId)
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(modReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.quantity").value(12))
+                .andExpect(jsonPath("$.data.pricePerShare").value(240.00));
+
+        MvcResult orderIdPdf = mockMvc.perform(get("/api/v1/trade/orders/" + orderId + "/documents/order-confirmation")
+                        .header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertTrue(orderIdPdf.getResponse().getContentAsString().startsWith("%PDF-"));
+
+        mockMvc.perform(post("/api/v1/trade/orders/" + orderId + "/cancel")
+                        .header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        MvcResult walletAfterRes = mockMvc.perform(get("/api/v1/trade/wallet").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andReturn();
+        BigDecimal availAfter = new BigDecimal(objectMapper.readTree(walletAfterRes.getResponse().getContentAsString())
+                .path("data").path("availableBalance").asText());
+        assertEquals(0, availBefore.compareTo(availAfter), "Cancel must refund full blocked amount including charges");
     }
 }

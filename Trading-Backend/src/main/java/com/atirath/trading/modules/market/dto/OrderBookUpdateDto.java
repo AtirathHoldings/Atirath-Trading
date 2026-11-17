@@ -18,6 +18,9 @@ public class OrderBookUpdateDto {
     private Long companyId;
     private BigDecimal currentPrice;
     private BigDecimal spread;
+    private BigDecimal spreadPercentage;
+    private Long totalBidQuantity;
+    private Long totalAskQuantity;
     private List<OrderBookLevelDto> bids;
     private List<OrderBookLevelDto> asks;
     private OffsetDateTime timestamp;

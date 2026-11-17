@@ -29,10 +29,12 @@ import java.util.List;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -181,6 +183,53 @@ class MemberNotificationsIntegrationTest {
                         .header("Authorization", "Bearer " + tokenA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].id", not(hasItem(dbItemId))));
+    }
+
+    @Test
+    @DisplayName("Notification preferences reject unauthenticated requests and persist per-user toggles & reset")
+    void shouldPersistAndResetNotificationPreferences() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/preferences"))
+                .andExpect(status().isUnauthorized());
+
+        long suffix = System.nanoTime() % 1_000_000_000L;
+        UserAccount user = userAccountRepository.save(UserAccount.builder()
+                .accountType(AccountType.INDIVIDUAL)
+                .email("pref.notif." + suffix + "@test.com")
+                .mobileNumber("7" + String.format("%09d", suffix))
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+        entityManager.flush();
+
+        String token = jwtTokenProvider.generateAccessToken(user);
+
+        mockMvc.perform(get("/api/v1/notifications/preferences")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.channelStatuses.length()").value(4))
+                .andExpect(jsonPath("$.data.preferenceRows.length()").value(11));
+
+        String updatePayload = """
+                {
+                  "preferenceRows": [
+                    { "id": "trade", "title": "Trade Notifications", "inApp": true, "email": false, "sms": false, "push": false, "frequency": "Daily Summary" }
+                  ],
+                  "quietHours": { "enabled": true, "fromTime": "10:00 PM", "toTime": "06:00 AM" }
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/notifications/preferences")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updatePayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.quietHours.enabled").value(true))
+                .andExpect(jsonPath("$.data.preferenceRows[0].email").value(false));
+
+        mockMvc.perform(post("/api/v1/notifications/preferences/reset")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.quietHours.enabled").value(false))
+                .andExpect(jsonPath("$.data.preferenceRows.length()").value(11));
     }
 }
 

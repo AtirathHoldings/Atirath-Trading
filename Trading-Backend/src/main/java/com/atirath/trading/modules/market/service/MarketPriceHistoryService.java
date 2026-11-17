@@ -29,9 +29,17 @@ public class MarketPriceHistoryService {
             throw new ResourceNotFoundException("Company not found with id: " + companyId);
         }
 
-        String interval = (intervalType != null && !intervalType.trim().isEmpty())
+        String rawInterval = (intervalType != null && !intervalType.trim().isEmpty())
                 ? intervalType.trim().toUpperCase()
                 : "DAY";
+
+        String interval = switch (rawInterval) {
+            case "1D", "INTRADAY" -> "INTRADAY";
+            case "1W", "DAY" -> "DAY";
+            case "1M", "3M", "WEEK" -> "WEEK";
+            case "6M", "1Y", "ALL", "MONTH" -> "MONTH";
+            default -> rawInterval;
+        };
 
         List<MarketPriceHistory> history;
         if (from != null && to != null) {
@@ -40,6 +48,16 @@ public class MarketPriceHistoryService {
         } else {
             history = priceHistoryRepository.findByCompany_CompanyIdAndIntervalTypeOrderByPriceTimeAsc(
                     companyId, interval);
+            // Keep INTRADAY scoped to the latest trading session window so disjoint historical days never stretch 1D axis
+            if ("INTRADAY".equals(interval) && !history.isEmpty()) {
+                OffsetDateTime latest = history.get(history.size() - 1).getPriceTime();
+                if (latest != null) {
+                    OffsetDateTime sessionCutoff = latest.minusHours(36);
+                    history = history.stream()
+                            .filter(p -> p.getPriceTime() == null || !p.getPriceTime().isBefore(sessionCutoff))
+                            .collect(Collectors.toList());
+                }
+            }
         }
 
         return history.stream()

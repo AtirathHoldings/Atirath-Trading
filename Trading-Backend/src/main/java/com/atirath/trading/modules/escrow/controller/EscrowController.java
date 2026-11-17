@@ -76,7 +76,7 @@ public class EscrowController {
         byte[] pdfBytes = escrowService.downloadDocument(escrowId, docType);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + docType + "_" + escrowId + ".pdf\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
 
@@ -240,7 +240,7 @@ public class EscrowController {
         byte[] pdfBytes = escrowService.downloadSettlementDocument(settlementId, docType);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + docType + "_" + settlementId + ".pdf\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
 }

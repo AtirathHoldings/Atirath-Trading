@@ -59,7 +59,15 @@ public class MobileStockDto {
 
     // Fundamentals for company_details_screen
     private List<QuarterlyFinancialDto> quarterlyFinancials;
+    private List<AnnualFinancialDto> annualFinancials;
     private List<ShareholdingDto> shareholding;
+
+    // Company documents & disclosures
+    private List<CompanyDocumentDto> documents;
+
+    // Execution tape & Highlights
+    private List<LiveTradeItemDto> recentTrades;
+    private List<String> highlights;
 
     @Data
     @Builder
@@ -86,8 +94,50 @@ public class MobileStockDto {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class AnnualFinancialDto {
+        private String financialYear;
+        private BigDecimal revenueCr;
+        private BigDecimal netProfitCr;
+        private BigDecimal ebitdaMargin;
+        private BigDecimal eps;
+        private BigDecimal peRatio;
+        private BigDecimal bookValue;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ShareholdingDto {
         private String category;
         private BigDecimal percentage;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CompanyDocumentDto {
+        private Long documentId;
+        private String documentName;
+        private String category;
+        private String periodDate;
+        private String fileUrl;
+        private Long fileSizeBytes;
+        private String formattedFileSize;
+        private String mimeType;
+        private Boolean isVerified;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LiveTradeItemDto {
+        private String time;
+        private Boolean isBuy;
+        private BigDecimal price;
+        private Long quantity;
+        private String tradeNo;
     }
 }

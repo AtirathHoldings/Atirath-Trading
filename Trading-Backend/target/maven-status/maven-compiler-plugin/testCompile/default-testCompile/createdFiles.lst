@@ -10,8 +10,10 @@ com\atirath\trading\EscrowIntegrationTest.class
 com\atirath\trading\MemberNotificationsIntegrationTest.class
 com\atirath\trading\MobileTradeIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$1.class
+com\atirath\trading\ProfileSettingsIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest.class
 com\atirath\trading\TradeTerminalIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$3.class
+com\atirath\trading\InternalMarketWebIntegrationTest.class
 com\atirath\trading\MemberDashboardIntegrationTest.class
 com\atirath\trading\NegotiationIntegrationTest.class

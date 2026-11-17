@@ -108,4 +108,57 @@ class MobileMarketIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(7))));
     }
+
+    @Test
+    @DisplayName("Mobile API: GET /api/v1/market/mobile/overview returns complete market overview metrics")
+    void testGetMobileOverview() throws Exception {
+        mockMvc.perform(get("/api/v1/market/mobile/overview"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.formattedTotalMarketCap").isNotEmpty())
+                .andExpect(jsonPath("$.data.formattedTodayVolume").isNotEmpty())
+                .andExpect(jsonPath("$.data.marketSentiment").isNotEmpty())
+                .andExpect(jsonPath("$.data.buyOrdersCount").isNumber())
+                .andExpect(jsonPath("$.data.sellOrdersCount").isNumber())
+                .andExpect(jsonPath("$.data.tradesExecutedCount").isNumber())
+                .andExpect(jsonPath("$.data.performanceSeries").isMap())
+                .andExpect(jsonPath("$.data.companies", hasSize(greaterThanOrEqualTo(5))));
+    }
+
+    @Test
+    @DisplayName("Mobile API: GET /api/v1/market/mobile/companies/{identifier}/price-history returns OHLC candles")
+    void testGetPriceHistory() throws Exception {
+        mockMvc.perform(get("/api/v1/market/mobile/companies/ATG-H/price-history?interval=DAY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("Mobile API: GET /api/v1/market/mobile/companies/{identifier}/orderbook returns live depth")
+    void testGetCompanyOrderBook() throws Exception {
+        mockMvc.perform(get("/api/v1/market/mobile/companies/AHIL/orderbook"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.symbol").value("ATG-H"));
+    }
+
+    @Test
+    @DisplayName("Mobile API: GET /api/v1/market/mobile/companies/{identifier}/fundamentals returns financials & governance")
+    void testGetCompanyFundamentals() throws Exception {
+        mockMvc.perform(get("/api/v1/market/mobile/companies/AHIL/fundamentals"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.quarterlyFinancials").isArray())
+                .andExpect(jsonPath("$.data.shareholding").isArray());
+    }
+
+    @Test
+    @DisplayName("Mobile API: GET /api/v1/market/mobile/documents returns all statutory documents")
+    void testGetAllDocuments() throws Exception {
+        mockMvc.perform(get("/api/v1/market/mobile/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
 }

@@ -33,11 +33,17 @@ public class CompanyOverviewDto {
 
     // Price snapshot
     private BigDecimal currentPrice;
+    private BigDecimal openPrice;
+    private BigDecimal highPrice;
+    private BigDecimal lowPrice;
+    private BigDecimal previousClose;
     private BigDecimal priceChange;
     private BigDecimal priceChangePercentage;
     private BigDecimal high52Week;
     private BigDecimal low52Week;
     private Long volume24h;
+    private Long volumeShares;
+    private BigDecimal turnoverValue;
     private Boolean isWatchlisted;
 
     // Sub-modules

@@ -127,6 +127,16 @@ public class NegotiationController {
         return ResponseEntity.ok(ApiResponse.success(rejected, "Negotiation has been declined"));
     }
 
+    @PostMapping("/{negotiationNo}/request-call")
+    @Operation(summary = "Request Discussion Call",
+            description = "Records a call scheduling request with the counterparty in the negotiation timeline")
+    public ResponseEntity<ApiResponse<NegotiationDetailDto>> requestCall(
+            @PathVariable("negotiationNo") String negotiationNo) {
+
+        NegotiationDetailDto updated = negotiationService.requestCall(negotiationNo);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Call request sent to counterparty"));
+    }
+
     @GetMapping("/{negotiationNo}/history")
     @Operation(summary = "Get Negotiation History & Messages",
             description = "Returns complete timeline of offers, counter-offers and communication feed with counterparty comparison")
@@ -178,7 +188,33 @@ public class NegotiationController {
         byte[] pdfBytes = negotiationService.downloadAgreementPdf(negotiationNo);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Trade_Agreement_" + negotiationNo + ".pdf\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/{negotiationNo}/summary/download")
+    @Operation(summary = "Download Negotiation Summary PDF",
+            description = "Downloads summary PDF of current negotiation terms")
+    public ResponseEntity<byte[]> downloadSummaryPdf(
+            @PathVariable("negotiationNo") String negotiationNo) {
+
+        byte[] pdfBytes = negotiationService.downloadSummaryPdf(negotiationNo);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Negotiation_Summary_" + negotiationNo + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/{negotiationNo}/history/download")
+    @Operation(summary = "Download Negotiation History PDF",
+            description = "Downloads complete timeline of offers and messages as PDF")
+    public ResponseEntity<byte[]> downloadHistoryPdf(
+            @PathVariable("negotiationNo") String negotiationNo) {
+
+        byte[] pdfBytes = negotiationService.downloadHistoryPdf(negotiationNo);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Negotiation_History_" + negotiationNo + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
 

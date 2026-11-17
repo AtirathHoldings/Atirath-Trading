@@ -577,14 +577,31 @@ public class NegotiationService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        // KPI Counts
+        // KPI Counts computed dynamically from liveNegotiationsList
+        int activeCount = (int) liveNegotiationsList.stream()
+                .filter(n -> "Active".equalsIgnoreCase(n.getStatus()) || "Under Negotiation".equalsIgnoreCase(n.getStatus()))
+                .count();
+        int awaitingCount = (int) liveNegotiationsList.stream()
+                .filter(n -> "Awaiting Response".equalsIgnoreCase(n.getStatus()))
+                .count();
+        int acceptedCount = (int) liveNegotiationsList.stream()
+                .filter(n -> "Accepted".equalsIgnoreCase(n.getStatus()) || "Agreement Confirmed".equalsIgnoreCase(n.getStatus()))
+                .count();
+        int rejectedCount = (int) liveNegotiationsList.stream()
+                .filter(n -> "Rejected".equalsIgnoreCase(n.getStatus()))
+                .count();
+        int expiredCount = (int) liveNegotiationsList.stream()
+                .filter(n -> "Expired".equalsIgnoreCase(n.getStatus()))
+                .count();
+        int totalCount = liveNegotiationsList.size();
+
         NegotiationSummaryDto summary = NegotiationSummaryDto.builder()
-                .allNegotiations(12)
-                .active(4)
-                .awaitingResponse(3)
-                .accepted(2)
-                .rejected(1)
-                .expired(2)
+                .allNegotiations(totalCount)
+                .active(activeCount)
+                .awaitingResponse(awaitingCount)
+                .accepted(acceptedCount)
+                .rejected(rejectedCount)
+                .expired(expiredCount)
                 .build();
 
         // Negotiation Insights (Bar Chart)
@@ -605,37 +622,38 @@ public class NegotiationService {
                 .build();
 
         // Negotiation Status Breakdown (Donut Chart)
+        int denom = Math.max(1, totalCount);
         NegotiationStatusBreakdownDto statusBreakdown = NegotiationStatusBreakdownDto.builder()
-                .total(12)
+                .total(totalCount)
                 .items(List.of(
                         NegotiationStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Active")
-                                .count(4)
-                                .percentage(33.0)
+                                .count(activeCount)
+                                .percentage(Math.round((activeCount * 100.0) / denom))
                                 .color("#10B981")
                                 .build(),
                         NegotiationStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Awaiting Response")
-                                .count(3)
-                                .percentage(25.0)
+                                .count(awaitingCount)
+                                .percentage(Math.round((awaitingCount * 100.0) / denom))
                                 .color("#F59E0B")
                                 .build(),
                         NegotiationStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Accepted")
-                                .count(2)
-                                .percentage(17.0)
+                                .count(acceptedCount)
+                                .percentage(Math.round((acceptedCount * 100.0) / denom))
                                 .color("#34D399")
                                 .build(),
                         NegotiationStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Rejected")
-                                .count(1)
-                                .percentage(8.0)
+                                .count(rejectedCount)
+                                .percentage(Math.round((rejectedCount * 100.0) / denom))
                                 .color("#EF4444")
                                 .build(),
                         NegotiationStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Expired")
-                                .count(2)
-                                .percentage(17.0)
+                                .count(expiredCount)
+                                .percentage(Math.round((expiredCount * 100.0) / denom))
                                 .color("#9CA3AF")
                                 .build()
                 ))
@@ -735,12 +753,16 @@ public class NegotiationService {
                 .difference("-")
                 .highlighted(false)
                 .build());
+        BigDecimal sellerOrderValue = oldPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
+        BigDecimal valDiff = orderValue.subtract(sellerOrderValue);
+        String valDiffStr = (valDiff.compareTo(BigDecimal.ZERO) < 0 ? "- " : "+ ") + "₹ " + CURRENCY_FMT.format(valDiff.abs());
+
         updatedTerms.add(NegotiationDetailDto.NegotiationTermRowDto.builder()
                 .parameter("Order Value")
                 .buyerOffer("₹ " + CURRENCY_FMT.format(orderValue))
-                .sellerOffer("₹ " + CURRENCY_FMT.format(oldPrice.multiply(BigDecimal.valueOf(request.getQuantity()))))
+                .sellerOffer("₹ " + CURRENCY_FMT.format(sellerOrderValue))
                 .currentProposal("₹ " + CURRENCY_FMT.format(orderValue))
-                .difference(diffStr + ",000.00")
+                .difference(valDiffStr)
                 .highlighted(false)
                 .build());
         updatedTerms.add(NegotiationDetailDto.NegotiationTermRowDto.builder()
@@ -771,6 +793,22 @@ public class NegotiationService {
         detail.setNegotiationTerms(updatedTerms);
         detail.setStatus("Awaiting Counterparty Response");
 
+        List<NegotiationDetailDto.TimelineEventDto> mutableTimeline = detail.getTimeline() != null
+                ? new ArrayList<>(detail.getTimeline())
+                : new ArrayList<>();
+        mutableTimeline.add(NegotiationDetailDto.TimelineEventDto.builder()
+                .stepNumber(mutableTimeline.size() + 1)
+                .title("You sent a counter offer")
+                .description("₹ " + CURRENCY_FMT.format(request.getPricePerShare()) + " per share, " + SHARES_FMT.format(request.getQuantity()) + " shares")
+                .timestamp("Just now")
+                .senderCode("SV")
+                .senderName(detail.getBuyer().getMemberName())
+                .status("ACTIVE")
+                .price("₹ " + CURRENCY_FMT.format(request.getPricePerShare()))
+                .shares(SHARES_FMT.format(request.getQuantity()) + " shares")
+                .build());
+        detail.setTimeline(mutableTimeline);
+
         // Add to history
         List<NegotiationHistoryDto.HistoryItemDto> history = liveHistoryItems.computeIfAbsent(negotiationNo, k -> new ArrayList<>());
         long newId = history.size() + 1L;
@@ -780,7 +818,8 @@ public class NegotiationService {
                 .senderName(detail.getBuyer().getMemberName())
                 .senderMemberId(detail.getBuyer().getMemberId())
                 .title("Your Counter Offer")
-                .message("Counter offer sent: ₹ " + CURRENCY_FMT.format(request.getPricePerShare()) + " for " + SHARES_FMT.format(request.getQuantity()) + " shares. " + (request.getOtherTerms() != null ? request.getOtherTerms() : ""))
+                .message("Counter offer sent: ₹ " + CURRENCY_FMT.format(request.getPricePerShare()) + " for " + SHARES_FMT.format(request.getQuantity()) + " shares."
+                        + (request.getOtherTerms() != null && !request.getOtherTerms().isBlank() ? " " + request.getOtherTerms() : ""))
                 .price(request.getPricePerShare())
                 .shares(request.getQuantity())
                 .timestamp("Just now")
@@ -794,6 +833,7 @@ public class NegotiationService {
                 .findFirst()
                 .ifPresent(item -> {
                     item.setStatus("Awaiting Response");
+                    item.setShares(request.getQuantity());
                     item.setProposedPrice(request.getPricePerShare());
                     item.setLastUpdated("Just now");
                 });
@@ -807,6 +847,25 @@ public class NegotiationService {
     public NegotiationDetailDto acceptOffer(String negotiationNo) {
         NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
         detail.setStatus("Accepted");
+        if (detail.getAvailableActions() != null) {
+            detail.getAvailableActions().setCanAccept(false);
+            detail.getAvailableActions().setCanCounter(false);
+            detail.getAvailableActions().setCanReject(false);
+        }
+
+        List<NegotiationDetailDto.TimelineEventDto> mutableTimeline = detail.getTimeline() != null
+                ? new ArrayList<>(detail.getTimeline())
+                : new ArrayList<>();
+        mutableTimeline.add(NegotiationDetailDto.TimelineEventDto.builder()
+                .stepNumber(mutableTimeline.size() + 1)
+                .title("Offer Accepted")
+                .description("Trade agreement generated and ready for confirmation.")
+                .timestamp("Just now")
+                .senderCode("SV")
+                .senderName(detail.getBuyer().getMemberName())
+                .status("COMPLETED")
+                .build());
+        detail.setTimeline(mutableTimeline);
 
         liveNegotiationsList.stream()
                 .filter(n -> n.getNegotiationNo().equalsIgnoreCase(negotiationNo))
@@ -815,6 +874,15 @@ public class NegotiationService {
                     item.setStatus("Accepted");
                     item.setLastUpdated("Just now");
                 });
+
+        BigDecimal agreedPrice = parseMoneyFromTerms(detail, "Price per Share",
+                detail.getCompanyShareDetails() != null && detail.getCompanyShareDetails().getLastTradedPrice() != null
+                        ? detail.getCompanyShareDetails().getLastTradedPrice()
+                        : new BigDecimal("242.00"));
+        Long agreedQty = detail.getBuyer() != null && detail.getBuyer().getQuantity() != null
+                ? detail.getBuyer().getQuantity()
+                : 1000L;
+        BigDecimal totalValue = agreedPrice.multiply(BigDecimal.valueOf(agreedQty));
 
         // Initialize agreement ready
         TradeAgreementDto agreement = liveTradeAgreements.get(negotiationNo);
@@ -825,13 +893,13 @@ public class NegotiationService {
                     .status("Agreement Ready")
                     .initiatedOn(detail.getInitiatedOn())
                     .finalAgreedTerms(TradeAgreementDto.FinalAgreedTermsDto.builder()
-                            .sharePrice(new BigDecimal("242.00"))
-                            .quantity(1000L)
-                            .totalTradeValue(new BigDecimal("242000.00"))
-                            .paymentMode("Bank Transfer (Escrow)")
-                            .settlementTimeline("T+3 Days (from escrow confirmation)")
-                            .orderType("Buy (Limit)")
-                            .otherTerms("Standard (As per platform rules)")
+                            .sharePrice(agreedPrice)
+                            .quantity(agreedQty)
+                            .totalTradeValue(totalValue)
+                            .paymentMode(extractTermProposal(detail, "Payment Mode", "Bank Transfer (Escrow)"))
+                            .settlementTimeline(extractTermProposal(detail, "Settlement Timeline", "T+3 Days") + " (from escrow confirmation)")
+                            .orderType(detail.getBuyer() != null && detail.getBuyer().isCurrentUser() ? "Buy (Limit)" : "Sell (Limit)")
+                            .otherTerms(extractTermProposal(detail, "Other Terms", "Standard (As per platform rules)"))
                             .agreementDate("Today")
                             .validTill("In 2 days")
                             .build())
@@ -842,6 +910,55 @@ public class NegotiationService {
                             .downloadUrl("/api/v1/negotiations/" + negotiationNo + "/trade-agreement/download")
                             .notice("This document contains the complete terms and conditions of the trade agreement. Please review all details carefully before confirming.")
                             .build())
+                    .confirmations(new ArrayList<>(List.of(
+                            TradeAgreementDto.ConfirmationItemDto.builder()
+                                    .key("readAndUnderstood")
+                                    .text("I have read and understood the trade agreement and agree to the above terms.")
+                                    .confirmed(true)
+                                    .build(),
+                            TradeAgreementDto.ConfirmationItemDto.builder()
+                                    .key("informationAccurate")
+                                    .text("I confirm that the information provided is accurate and complete.")
+                                    .confirmed(true)
+                                    .build(),
+                            TradeAgreementDto.ConfirmationItemDto.builder()
+                                    .key("agreeToEscrowAndSettlement")
+                                    .text("I agree to proceed with escrow and subsequent settlement as per platform rules.")
+                                    .confirmed(true)
+                                    .build()
+                    )))
+                    .nextSteps(new ArrayList<>(List.of(
+                            TradeAgreementDto.NextStepDto.builder()
+                                    .stepNumber(1)
+                                    .title("1. Both parties confirm the agreement")
+                                    .statusText("Pending your confirmation")
+                                    .completed(false)
+                                    .build(),
+                            TradeAgreementDto.NextStepDto.builder()
+                                    .stepNumber(2)
+                                    .title("2. Funds to be moved to escrow")
+                                    .statusText("After both confirmations")
+                                    .completed(false)
+                                    .build(),
+                            TradeAgreementDto.NextStepDto.builder()
+                                    .stepNumber(3)
+                                    .title("3. Required approvals (if any)")
+                                    .statusText("As per company policy")
+                                    .completed(false)
+                                    .build(),
+                            TradeAgreementDto.NextStepDto.builder()
+                                    .stepNumber(4)
+                                    .title("4. Share transfer")
+                                    .statusText("On approval")
+                                    .completed(false)
+                                    .build(),
+                            TradeAgreementDto.NextStepDto.builder()
+                                    .stepNumber(5)
+                                    .title("5. Settlement completion")
+                                    .statusText("T+3 Days")
+                                    .completed(false)
+                                    .build()
+                    )))
                     .parties(TradeAgreementDto.AgreementPartiesDto.builder()
                             .buyer(detail.getBuyer())
                             .seller(detail.getSeller())
@@ -860,6 +977,25 @@ public class NegotiationService {
     public NegotiationDetailDto rejectOffer(String negotiationNo, String reason) {
         NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
         detail.setStatus("Rejected");
+        if (detail.getAvailableActions() != null) {
+            detail.getAvailableActions().setCanAccept(false);
+            detail.getAvailableActions().setCanCounter(false);
+            detail.getAvailableActions().setCanReject(false);
+        }
+
+        List<NegotiationDetailDto.TimelineEventDto> mutableTimeline = detail.getTimeline() != null
+                ? new ArrayList<>(detail.getTimeline())
+                : new ArrayList<>();
+        mutableTimeline.add(NegotiationDetailDto.TimelineEventDto.builder()
+                .stepNumber(mutableTimeline.size() + 1)
+                .title("Negotiation Rejected")
+                .description(reason != null && !reason.isBlank() ? reason : "Declined by user")
+                .timestamp("Just now")
+                .senderCode("SV")
+                .senderName(detail.getBuyer().getMemberName())
+                .status("COMPLETED")
+                .build());
+        detail.setTimeline(mutableTimeline);
 
         liveNegotiationsList.stream()
                 .filter(n -> n.getNegotiationNo().equalsIgnoreCase(negotiationNo))
@@ -873,34 +1009,127 @@ public class NegotiationService {
     }
 
     /**
+     * Request a call with the counterparty
+     */
+    public NegotiationDetailDto requestCall(String negotiationNo) {
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+
+        List<NegotiationDetailDto.TimelineEventDto> mutableTimeline = detail.getTimeline() != null
+                ? new ArrayList<>(detail.getTimeline())
+                : new ArrayList<>();
+        mutableTimeline.add(NegotiationDetailDto.TimelineEventDto.builder()
+                .stepNumber(mutableTimeline.size() + 1)
+                .title("Call Requested")
+                .description("You requested a discussion call with the counterparty.")
+                .timestamp("Just now")
+                .senderCode("SV")
+                .senderName(detail.getBuyer() != null ? detail.getBuyer().getMemberName() : "You")
+                .status("COMPLETED")
+                .build());
+        detail.setTimeline(mutableTimeline);
+
+        List<NegotiationHistoryDto.HistoryItemDto> history = liveHistoryItems.computeIfAbsent(negotiationNo, k -> new ArrayList<>());
+        history.add(NegotiationHistoryDto.HistoryItemDto.builder()
+                .id(history.size() + 1L)
+                .senderCode("SV")
+                .senderName(detail.getBuyer() != null ? detail.getBuyer().getMemberName() : "Sairam Vempati")
+                .senderMemberId(detail.getBuyer() != null ? detail.getBuyer().getMemberId() : "ATG10027")
+                .title("Call Request Sent")
+                .message("Requested a call to discuss negotiation terms.")
+                .timestamp("Just now")
+                .isCurrentUser(true)
+                .build());
+
+        return detail;
+    }
+
+    /**
      * Negotiation History Screen (Image 4)
      */
     public NegotiationHistoryDto getHistory(String negotiationNo) {
         NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
         List<NegotiationHistoryDto.HistoryItemDto> timeline = liveHistoryItems.getOrDefault(negotiationNo, Collections.emptyList());
 
+        boolean isDefaultSeed = "NEG250918001".equalsIgnoreCase(negotiationNo) && timeline.size() == 6;
+        if (isDefaultSeed) {
+            return NegotiationHistoryDto.builder()
+                    .negotiationNo(negotiationNo)
+                    .status(detail.getStatus())
+                    .initiatedOn(detail.getInitiatedOn())
+                    .lastActivity(timeline.isEmpty() ? "18 Sep 2025, 10:05 AM" : timeline.get(timeline.size() - 1).getTimestamp())
+                    .expiresIn(detail.getExpiresIn())
+                    .dealType("Buy")
+                    .quantity(1000L)
+                    .buyer(detail.getBuyer())
+                    .seller(detail.getSeller())
+                    .currentOffer("₹ 235.00 | 1,000 shares")
+                    .sellerLastOffer("₹ 250.00 | 1,000 shares")
+                    .timeline(timeline)
+                    .latestTermsComparison(NegotiationHistoryDto.LatestTermsComparisonDto.builder()
+                            .yourOfferPrice(new BigDecimal("242.00"))
+                            .sellerOfferPrice(new BigDecimal("248.00"))
+                            .yourQuantity(1000L)
+                            .sellerQuantity(1000L)
+                            .yourOrderValue(new BigDecimal("242000.00"))
+                            .sellerOrderValue(new BigDecimal("248000.00"))
+                            .priceDifference("- ₹ 6.00")
+                            .percentageDifference("-2.42%")
+                            .build())
+                    .actions(detail.getAvailableActions())
+                    .build();
+        }
+
+        Optional<NegotiationListItemDto> listOpt = liveNegotiationsList.stream()
+                .filter(n -> n.getNegotiationNo().equalsIgnoreCase(negotiationNo))
+                .findFirst();
+
+        String dealType = listOpt.map(NegotiationListItemDto::getType)
+                .orElse(detail.getBuyer() != null && detail.getBuyer().isCurrentUser() ? "Buy" : "Sell");
+        Long qty = listOpt.map(NegotiationListItemDto::getShares)
+                .orElse(detail.getBuyer() != null && detail.getBuyer().getQuantity() != null ? detail.getBuyer().getQuantity() : 1000L);
+
+        BigDecimal latestYourPrice = timeline.stream()
+                .filter(h -> h.isCurrentUser() && h.getPrice() != null)
+                .reduce((first, second) -> second)
+                .map(NegotiationHistoryDto.HistoryItemDto::getPrice)
+                .orElse(listOpt.map(NegotiationListItemDto::getProposedPrice).orElse(new BigDecimal("235.00")));
+        BigDecimal latestCounterPrice = timeline.stream()
+                .filter(h -> !h.isCurrentUser() && h.getPrice() != null)
+                .reduce((first, second) -> second)
+                .map(NegotiationHistoryDto.HistoryItemDto::getPrice)
+                .orElse(listOpt.map(NegotiationListItemDto::getCurrentPrice).orElse(new BigDecimal("248.00")));
+
+        BigDecimal yourVal = latestYourPrice.multiply(BigDecimal.valueOf(qty));
+        BigDecimal counterVal = latestCounterPrice.multiply(BigDecimal.valueOf(qty));
+        BigDecimal pDiff = latestYourPrice.subtract(latestCounterPrice);
+        BigDecimal pctDiff = latestCounterPrice.compareTo(BigDecimal.ZERO) > 0
+                ? pDiff.multiply(BigDecimal.valueOf(100)).divide(latestCounterPrice, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        String pDiffStr = (pDiff.compareTo(BigDecimal.ZERO) < 0 ? "- " : "+ ") + "₹ " + CURRENCY_FMT.format(pDiff.abs());
+        String pctStr = (pctDiff.compareTo(BigDecimal.ZERO) < 0 ? "" : "+") + pctDiff.setScale(2, RoundingMode.HALF_UP) + "%";
+
         return NegotiationHistoryDto.builder()
                 .negotiationNo(negotiationNo)
                 .status(detail.getStatus())
                 .initiatedOn(detail.getInitiatedOn())
-                .lastActivity(timeline.isEmpty() ? "18 Sep 2025, 10:05 AM" : timeline.get(timeline.size() - 1).getTimestamp())
+                .lastActivity(timeline.isEmpty() ? detail.getInitiatedOn() : timeline.get(timeline.size() - 1).getTimestamp())
                 .expiresIn(detail.getExpiresIn())
-                .dealType("Buy")
-                .quantity(1000L)
+                .dealType(dealType)
+                .quantity(qty)
                 .buyer(detail.getBuyer())
                 .seller(detail.getSeller())
-                .currentOffer("₹ 235.00 | 1,000 shares")
-                .sellerLastOffer("₹ 250.00 | 1,000 shares")
+                .currentOffer("₹ " + CURRENCY_FMT.format(latestYourPrice) + " | " + SHARES_FMT.format(qty) + " shares")
+                .sellerLastOffer("₹ " + CURRENCY_FMT.format(latestCounterPrice) + " | " + SHARES_FMT.format(qty) + " shares")
                 .timeline(timeline)
                 .latestTermsComparison(NegotiationHistoryDto.LatestTermsComparisonDto.builder()
-                        .yourOfferPrice(new BigDecimal("242.00"))
-                        .sellerOfferPrice(new BigDecimal("248.00"))
-                        .yourQuantity(1000L)
-                        .sellerQuantity(1000L)
-                        .yourOrderValue(new BigDecimal("242000.00"))
-                        .sellerOrderValue(new BigDecimal("248000.00"))
-                        .priceDifference("- ₹ 6.00")
-                        .percentageDifference("-2.42%")
+                        .yourOfferPrice(latestYourPrice)
+                        .sellerOfferPrice(latestCounterPrice)
+                        .yourQuantity(qty)
+                        .sellerQuantity(qty)
+                        .yourOrderValue(yourVal)
+                        .sellerOrderValue(counterVal)
+                        .priceDifference(pDiffStr)
+                        .percentageDifference(pctStr)
                         .build())
                 .actions(detail.getAvailableActions())
                 .build();
@@ -978,44 +1207,189 @@ public class NegotiationService {
      */
     public byte[] downloadAgreementPdf(String negotiationNo) {
         TradeAgreementDto agreement = getTradeAgreement(negotiationNo);
-        StringBuilder sb = new StringBuilder();
-        sb.append("=================================================================\n");
-        sb.append("                     ATIRATH GROUP                               \n");
-        sb.append("         OFFICIAL TRADE & SHARE NEGOTIATION AGREEMENT            \n");
-        sb.append("=================================================================\n\n");
-        sb.append("Agreement Reference: ").append(agreement.getAgreementNo()).append("\n");
-        sb.append("Negotiation Reference: ").append(agreement.getNegotiationNo()).append("\n");
-        sb.append("Status: ").append(agreement.getStatus()).append("\n");
-        sb.append("Date: ").append(agreement.getFinalAgreedTerms().getAgreementDate()).append("\n\n");
+        List<String> lines = new ArrayList<>();
+        lines.add("ATIRATH GROUP - OFFICIAL TRADE & SHARE NEGOTIATION AGREEMENT");
+        lines.add("================================================================");
+        lines.add("Agreement Reference:   " + agreement.getAgreementNo());
+        lines.add("Negotiation Reference: " + agreement.getNegotiationNo());
+        lines.add("Status:                " + agreement.getStatus());
+        lines.add("Agreement Date:        " + agreement.getFinalAgreedTerms().getAgreementDate());
+        lines.add("");
+        lines.add("PARTIES TO THE AGREEMENT");
+        lines.add("----------------------------------------------------------------");
+        lines.add("BUYER:  " + agreement.getParties().getBuyer().getCompanyName()
+                + " (" + agreement.getParties().getBuyer().getMemberName()
+                + " - " + agreement.getParties().getBuyer().getMemberId() + ")");
+        lines.add("SELLER: " + agreement.getParties().getSeller().getCompanyName()
+                + " (" + agreement.getParties().getSeller().getMemberName()
+                + " - " + agreement.getParties().getSeller().getMemberId() + ")");
+        lines.add("");
+        lines.add("FINAL AGREED TERMS");
+        lines.add("----------------------------------------------------------------");
+        lines.add("Share Price:         INR " + CURRENCY_FMT.format(agreement.getFinalAgreedTerms().getSharePrice()));
+        lines.add("Quantity:            " + SHARES_FMT.format(agreement.getFinalAgreedTerms().getQuantity()) + " shares");
+        lines.add("Total Trade Value:   INR " + CURRENCY_FMT.format(agreement.getFinalAgreedTerms().getTotalTradeValue()));
+        lines.add("Settlement Timeline: " + agreement.getFinalAgreedTerms().getSettlementTimeline());
+        lines.add("Payment Mode:        " + agreement.getFinalAgreedTerms().getPaymentMode());
+        lines.add("Order Type:          " + agreement.getFinalAgreedTerms().getOrderType());
+        lines.add("Valid Till:          " + agreement.getFinalAgreedTerms().getValidTill());
+        lines.add("");
+        lines.add("TERMS & CONDITIONS");
+        lines.add("1. All offers and agreements confirmed on Atirath Group Internal Market are binding.");
+        lines.add("2. Funds must be deposited into the verified Escrow Account within T+3 Days.");
+        lines.add("3. Share lock and ledger transfer execute automatically upon escrow clearance.");
+        lines.add("");
+        lines.add("Digital Verification Signature: ATG-SEC-SIGN-" + UUID.randomUUID().toString().toUpperCase());
+        return buildSimplePdf(lines);
+    }
 
-        sb.append("PARTIES TO THE AGREEMENT:\n");
-        sb.append("-----------------------------------------------------------------\n");
-        sb.append("BUYER:  ").append(agreement.getParties().getBuyer().getCompanyName())
-                .append(" (").append(agreement.getParties().getBuyer().getMemberName())
-                .append(" - ").append(agreement.getParties().getBuyer().getMemberId()).append(")\n");
-        sb.append("SELLER: ").append(agreement.getParties().getSeller().getCompanyName())
-                .append(" (").append(agreement.getParties().getSeller().getMemberName())
-                .append(" - ").append(agreement.getParties().getSeller().getMemberId()).append(")\n\n");
+    /**
+     * Download Negotiation Summary PDF (Counter Offer Sidebar Quick Action)
+     */
+    public byte[] downloadSummaryPdf(String negotiationNo) {
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        List<String> lines = new ArrayList<>();
+        lines.add("ATIRATH GROUP - NEGOTIATION SUMMARY");
+        lines.add("================================================================");
+        lines.add("Negotiation ID: " + detail.getNegotiationNo() + "   Status: " + detail.getStatus());
+        lines.add("Initiated On:   " + detail.getInitiatedOn() + "   Expires In: " + detail.getExpiresIn());
+        lines.add("Company:        " + detail.getCompanyShareDetails().getCompanyName()
+                + " (" + detail.getCompanyShareDetails().getSymbol() + ")");
+        lines.add("Buyer:          " + detail.getBuyer().getMemberName() + " (" + detail.getBuyer().getMemberId() + ")");
+        lines.add("Seller:         " + detail.getSeller().getMemberName() + " (" + detail.getSeller().getMemberId() + ")");
+        lines.add("");
+        lines.add("CURRENT NEGOTIATION TERMS");
+        lines.add("----------------------------------------------------------------");
+        if (detail.getNegotiationTerms() != null) {
+            for (NegotiationDetailDto.NegotiationTermRowDto row : detail.getNegotiationTerms()) {
+                lines.add(String.format("%-20s | Proposal: %-18s | Diff: %s",
+                        row.getParameter(), row.getCurrentProposal(), row.getDifference()));
+            }
+        }
+        return buildSimplePdf(lines);
+    }
 
-        sb.append("FINAL AGREED TERMS:\n");
-        sb.append("-----------------------------------------------------------------\n");
-        sb.append("Share Price:          ₹ ").append(CURRENCY_FMT.format(agreement.getFinalAgreedTerms().getSharePrice())).append("\n");
-        sb.append("Quantity:             ").append(SHARES_FMT.format(agreement.getFinalAgreedTerms().getQuantity())).append(" shares\n");
-        sb.append("Total Value:          ₹ ").append(CURRENCY_FMT.format(agreement.getFinalAgreedTerms().getTotalTradeValue())).append("\n");
-        sb.append("Settlement Timeline:  ").append(agreement.getFinalAgreedTerms().getSettlementTimeline()).append("\n");
-        sb.append("Payment Mode:         ").append(agreement.getFinalAgreedTerms().getPaymentMode()).append("\n");
-        sb.append("Order Type:           ").append(agreement.getFinalAgreedTerms().getOrderType()).append("\n");
-        sb.append("Valid Till:           ").append(agreement.getFinalAgreedTerms().getValidTill()).append("\n\n");
+    /**
+     * Download Complete Negotiation History PDF
+     */
+    public byte[] downloadHistoryPdf(String negotiationNo) {
+        NegotiationHistoryDto history = getHistory(negotiationNo);
+        List<String> lines = new ArrayList<>();
+        lines.add("ATIRATH GROUP - NEGOTIATION HISTORY & COMMUNICATION LOG");
+        lines.add("================================================================");
+        lines.add("Negotiation ID: " + history.getNegotiationNo() + "   Status: " + history.getStatus());
+        lines.add("Deal Type: " + history.getDealType() + "   Quantity: " + SHARES_FMT.format(history.getQuantity()) + " shares");
+        lines.add("Initiated On: " + history.getInitiatedOn() + "   Last Activity: " + history.getLastActivity());
+        lines.add("");
+        lines.add("TIMELINE EVENTS");
+        lines.add("----------------------------------------------------------------");
+        if (history.getTimeline() != null) {
+            for (NegotiationHistoryDto.HistoryItemDto item : history.getTimeline()) {
+                lines.add("[" + item.getTimestamp() + "] " + item.getTitle()
+                        + " - " + item.getSenderName() + " (" + item.getSenderMemberId() + ")");
+                lines.add("   " + item.getMessage());
+            }
+        }
+        return buildSimplePdf(lines);
+    }
 
-        sb.append("TERMS & CONDITIONS:\n");
-        sb.append("1. All offers and agreements confirmed on the Atirath Group Internal Market\n");
-        sb.append("   are legally binding.\n");
-        sb.append("2. Funds must be deposited into the verified Escrow Account within T+3 Days.\n");
-        sb.append("3. Share lock and ledger transfer will execute automatically upon escrow clearance.\n\n");
-        sb.append("Digital Verification Signature: ATG-SEC-SIGN-").append(UUID.randomUUID().toString().toUpperCase()).append("\n");
-        sb.append("=================================================================\n");
+    private byte[] buildSimplePdf(List<String> lines) {
+        StringBuilder stream = new StringBuilder();
+        stream.append("BT\n/F1 10 Tf\n14 TL\n40 770 Td\n");
+        int count = 0;
+        for (String line : lines) {
+            if (count >= 48) {
+                break;
+            }
+            String safe = line.replace("₹", "INR ")
+                    .replaceAll("[^\\x20-\\x7E]", " ")
+                    .replace("\\", "\\\\")
+                    .replace("(", "\\(")
+                    .replace(")", "\\)");
+            stream.append("(").append(safe).append(") Tj T*\n");
+            count++;
+        }
+        stream.append("ET\n");
+        byte[] contentBytes = stream.toString().getBytes(StandardCharsets.US_ASCII);
 
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
+        StringBuilder pdf = new StringBuilder();
+        List<Integer> offsets = new ArrayList<>();
+        pdf.append("%PDF-1.4\n");
+
+        offsets.add(pdf.length());
+        pdf.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n");
+
+        offsets.add(pdf.length());
+        pdf.append("5 0 obj\n<< /Length ").append(contentBytes.length).append(" >>\nstream\n")
+                .append(new String(contentBytes, StandardCharsets.US_ASCII))
+                .append("endstream\nendobj\n");
+
+        int xrefOffset = pdf.length();
+        pdf.append("xref\n0 6\n0000000000 65535 f \n");
+        for (int off : offsets) {
+            pdf.append(String.format("%010d 00000 n \n", off));
+        }
+        pdf.append("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n").append(xrefOffset).append("\n%%EOF");
+        return pdf.toString().getBytes(StandardCharsets.US_ASCII);
+    }
+
+    private BigDecimal parseMoneyFromTerms(NegotiationDetailDto detail, String parameter, BigDecimal fallback) {
+        if (detail.getNegotiationTerms() != null) {
+            for (NegotiationDetailDto.NegotiationTermRowDto row : detail.getNegotiationTerms()) {
+                if (parameter.equalsIgnoreCase(row.getParameter()) && row.getCurrentProposal() != null) {
+                    String cleaned = row.getCurrentProposal().replaceAll("[^0-9.]", "");
+                    if (!cleaned.isBlank()) {
+                        try {
+                            return new BigDecimal(cleaned);
+                        } catch (NumberFormatException ignored) {
+                            // fall back cleanly
+                        }
+                    }
+                }
+            }
+        }
+        return fallback;
+    }
+
+    private String extractTermProposal(NegotiationDetailDto detail, String parameter, String fallback) {
+        if (detail.getNegotiationTerms() != null) {
+            for (NegotiationDetailDto.NegotiationTermRowDto row : detail.getNegotiationTerms()) {
+                if (parameter.equalsIgnoreCase(row.getParameter()) && row.getCurrentProposal() != null) {
+                    return row.getCurrentProposal();
+                }
+            }
+        }
+        return fallback;
+    }
+
+    private String resolveCompanyName(String symbol) {
+        if (symbol == null) {
+            return "Atirath Group Company";
+        }
+        return switch (symbol.trim().toUpperCase()) {
+            case "ATG-H" -> "Atirath Holdings";
+            case "FVT" -> "Farm Vantara";
+            case "GEM" -> "Goeazymart";
+            case "CSI" -> "CS INTERIO";
+            case "TEB" -> "Tri Energy Battery";
+            case "ROHE" -> "Royal One Heating";
+            case "ATG-T" -> "Atirath Technologies";
+            case "ATG-E" -> "Atirath Green Energy";
+            case "ATG-F" -> "Atirath Financial Services";
+            case "ATG-L" -> "Atirath Logistics";
+            case "ATG-M" -> "Atirath Mining";
+            case "ATG-R" -> "Atirath Realty";
+            default -> symbol.trim();
+        };
     }
 
     /**
@@ -1023,13 +1397,20 @@ public class NegotiationService {
      */
     public NegotiationListItemDto initiateNegotiation(InitiateNegotiationRequestDto request) {
         String newNo = "NEG" + System.currentTimeMillis() % 1000000000L;
+        String symbol = request.getCompanySymbol().trim().toUpperCase();
+        String companyName = resolveCompanyName(symbol);
+        String side = "SELL".equalsIgnoreCase(request.getType()) ? "Sell" : "Buy";
+        String cpId = request.getCounterpartyMemberId() != null && !request.getCounterpartyMemberId().isBlank()
+                ? request.getCounterpartyMemberId().trim()
+                : "ATG10099";
+
         NegotiationListItemDto item = NegotiationListItemDto.builder()
                 .negotiationNo(newNo)
-                .companyName(request.getCompanySymbol())
-                .companySymbol(request.getCompanySymbol())
-                .type(request.getType().toUpperCase())
-                .counterpartyName(request.getCounterpartyMemberId() != null ? request.getCounterpartyMemberId() : "Verified Counterparty")
-                .counterpartyMemberId(request.getCounterpartyMemberId() != null ? request.getCounterpartyMemberId() : "ATG10099")
+                .companyName(companyName)
+                .companySymbol(symbol)
+                .type(side)
+                .counterpartyName("Counterparty (" + cpId + ")")
+                .counterpartyMemberId(cpId)
                 .shares(request.getShares())
                 .currentPrice(request.getProposedPrice())
                 .proposedPrice(request.getProposedPrice())
@@ -1038,6 +1419,45 @@ public class NegotiationService {
                 .build();
 
         liveNegotiationsList.add(0, item);
+
+        NegotiationDetailDto detail = buildGenericDetail(item);
+        detail.setInitiatedOn("Just now");
+        detail.setTimeline(new ArrayList<>(List.of(
+                NegotiationDetailDto.TimelineEventDto.builder()
+                        .stepNumber(1)
+                        .title("Negotiation initiated by You")
+                        .description("₹ " + CURRENCY_FMT.format(request.getProposedPrice()) + " per share, "
+                                + SHARES_FMT.format(request.getShares()) + " shares")
+                        .timestamp("Just now")
+                        .senderCode("SV")
+                        .senderName("Sairam Vempati")
+                        .status("COMPLETED")
+                        .price("₹ " + CURRENCY_FMT.format(request.getProposedPrice()))
+                        .shares(SHARES_FMT.format(request.getShares()) + " shares")
+                        .build()
+        )));
+        liveNegotiationDetails.put(newNo, detail);
+
+        liveHistoryItems.put(newNo, new ArrayList<>(List.of(
+                NegotiationHistoryDto.HistoryItemDto.builder()
+                        .id(1L)
+                        .senderCode("SV")
+                        .senderName("Sairam Vempati")
+                        .senderMemberId("ATG10027")
+                        .title("Initial Offer from You")
+                        .message(request.getMessage() != null && !request.getMessage().isBlank()
+                                ? request.getMessage()
+                                : "Initiated " + side.toLowerCase() + " negotiation for "
+                                        + SHARES_FMT.format(request.getShares()) + " shares at ₹ "
+                                        + CURRENCY_FMT.format(request.getProposedPrice()) + " per share.")
+                        .price(request.getProposedPrice())
+                        .shares(request.getShares())
+                        .timestamp("Just now")
+                        .isCurrentUser(true)
+                        .badge("Active")
+                        .build()
+        )));
+
         return item;
     }
 

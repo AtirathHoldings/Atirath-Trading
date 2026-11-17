@@ -16,4 +16,7 @@ public class MarketActivitySummaryDto {
     private BigDecimal totalTradedValue;
     private long activeCompaniesCount;
     private long todayTradesCount;
+    private BigDecimal todayTradedValue;
+    private String marketStatus;
+    private String marketHours;
 }

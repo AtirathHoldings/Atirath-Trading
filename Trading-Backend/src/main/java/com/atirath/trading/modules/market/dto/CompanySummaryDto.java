@@ -37,6 +37,8 @@ public class CompanySummaryDto {
     private BigDecimal priceChangePercentage;
     private Long volumeShares;
     private BigDecimal turnoverValue;
+    private BigDecimal high52Week;
+    private BigDecimal low52Week;
     private OffsetDateTime lastPriceTime;
 
     private Boolean isWatchlisted;

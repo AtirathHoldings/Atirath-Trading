@@ -11,9 +11,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Slf4j
@@ -148,6 +152,52 @@ public class TradeOrderController {
         Long userId = extractUserId(authHeader);
         tradeOrderService.cancelOrder(orderId, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Order cancelled successfully"));
+    }
+
+    @GetMapping("/orders/documents/{docType}")
+    @Operation(summary = "Download Order or Escrow Confirmation PDF", description = "Generates a downloadable PDF receipt for order confirmation or escrow confirmation")
+    public ResponseEntity<byte[]> downloadOrderDocumentByQuery(
+            @PathVariable("docType") String docType,
+            @RequestParam(required = false) Long orderId,
+            @RequestParam(required = false) String orderNo,
+            @RequestParam(defaultValue = "false") boolean inline,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        return buildOrderPdfResponse(orderId, orderNo, docType, inline, userId);
+    }
+
+    @GetMapping("/orders/{orderId}/documents/{docType}")
+    @Operation(summary = "Download Order Confirmation or Escrow Confirmation PDF by Order ID")
+    public ResponseEntity<byte[]> downloadOrderDocumentByOrderId(
+            @PathVariable("orderId") Long orderId,
+            @PathVariable("docType") String docType,
+            @RequestParam(defaultValue = "false") boolean inline,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        return buildOrderPdfResponse(orderId, null, docType, inline, userId);
+    }
+
+    private ResponseEntity<byte[]> buildOrderPdfResponse(
+            Long orderId, String orderNo, String docType, boolean inline, Long userId) {
+        byte[] pdfBytes = tradeOrderService.generateOrderDocumentPdf(orderId, orderNo, docType, userId);
+        String safeDoc = (docType != null && docType.toLowerCase().contains("escrow"))
+                ? "Escrow_Confirmation"
+                : "Order_Confirmation";
+        String refPart = (orderNo != null && !orderNo.isBlank())
+                ? orderNo.replaceAll("[^a-zA-Z0-9_-]", "_")
+                : (orderId != null ? "Order_" + orderId : "BUY25091814322");
+        String fileName = safeDoc + "_" + refPart + ".pdf";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(
+                (inline ? ContentDisposition.inline() : ContentDisposition.attachment())
+                        .filename(fileName, StandardCharsets.UTF_8)
+                        .build()
+        );
+        return ResponseEntity.ok().headers(headers).body(pdfBytes);
     }
 
     @GetMapping("/wallet")

@@ -199,10 +199,12 @@ public class PortfolioController {
             @RequestParam(required = false, defaultValue = "ALL") String company,
             @Parameter(description = "Search text")
             @RequestParam(required = false) String search,
+            @Parameter(description = "Trend period: 1M, 3M, 6M, 1Y, All")
+            @RequestParam(required = false, defaultValue = "6M") String period,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         Long userId = extractUserId(authHeader);
-        PortfolioPositionsResponseDto positions = portfolioService.getPositions(userId, tab, company, search);
+        PortfolioPositionsResponseDto positions = portfolioService.getPositions(userId, tab, company, search, period);
         return ResponseEntity.ok(ApiResponse.success(positions, "Portfolio positions retrieved successfully"));
     }
 
@@ -352,66 +354,83 @@ public class PortfolioController {
     }
 
     @GetMapping("/download/analytics")
-    @Operation(summary = "Download Analytics Report", description = "Generates and downloads portfolio analytics summary report in CSV format")
-    public ResponseEntity<byte[]> downloadAnalytics() {
-        String csv = "Metric,Value\n" +
-                "Total Portfolio Value,₹ 24,80,000\n" +
-                "Total Invested,₹ 18,50,000\n" +
-                "Total Return,40.5%\n" +
-                "Annualized Return,18.6%\n" +
-                "Price Appreciation,12.4%\n" +
-                "Dividend Return,6.8%\n";
+    @Operation(summary = "Download Analytics Report", description = "Generates and downloads portfolio analytics summary report in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadAnalytics(
+            @RequestParam(required = false, defaultValue = "6M") String period,
+            @RequestParam(required = false) String dateRange,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "analytics report");
+        String csv = portfolioService.buildAnalyticsCsv(userId, period, dateRange);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"portfolio_analytics_18Sep2025.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"portfolio_analytics_ATG" + userId + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(bytes);
     }
 
     @GetMapping("/download/pnl-report")
-    @Operation(summary = "Download P&L Report", description = "Generates and downloads profit & loss statement in CSV format")
-    public ResponseEntity<byte[]> downloadPnlReport() {
-        String csv = "Company,Invested Amount,Current Value,Realized PnL,Unrealized PnL,Total PnL,Return\n" +
-                "Atirath Holdings India Limited,600000,805000,50000,155000,205000,+34.2%\n" +
-                "Atirath Technologies,350000,360000,30000,80000,110000,+31.4%\n" +
-                "Farm Vantara,280000,390000,25000,85000,110000,+39.3%\n" +
-                "Tri Energy Battery,220000,270000,10000,40000,50000,+22.7%\n" +
-                "Royal One Heating,170000,211500,5000,36500,41500,+24.4%\n" +
-                "CS Interio,110000,87000,0,-23000,-23000,-20.9%\n";
+    @Operation(summary = "Download P&L Report", description = "Generates and downloads profit & loss statement in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadPnlReport(
+            @RequestParam(required = false, defaultValue = "Company-wise P&L") String tab,
+            @RequestParam(required = false, defaultValue = "ALL") String company,
+            @RequestParam(required = false, defaultValue = "ALL") String sector,
+            @RequestParam(required = false) String dateRange,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "P&L report");
+        String csv = portfolioService.buildPnlReportCsv(userId, tab, company, sector, dateRange);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pnl_report_18Sep2025.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pnl_report_ATG" + userId + ".csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(bytes);
+    }
+
+    @GetMapping("/download/trade-history")
+    @Operation(summary = "Download Trade History", description = "Generates and downloads filtered trade history in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadTradeHistory(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "ALL") String company,
+            @RequestParam(required = false, defaultValue = "ALL") String tradeType,
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "trade history");
+        String csv = portfolioService.buildTradeHistoryCsv(userId, search, company, tradeType, status, startDate, endDate);
+        byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"trade_history_ATG" + userId + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(bytes);
     }
 
     @GetMapping("/download/ownership-statement")
-    @Operation(summary = "Download Ownership Certificate & Statement", description = "Generates official shareholding ownership certificate and statement in CSV/PDF format")
+    @Operation(summary = "Download Ownership Certificate & Statement", description = "Generates official shareholding ownership certificate and statement in CSV format")
     public ResponseEntity<byte[]> downloadOwnershipStatement(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         return downloadStatement(authHeader);
     }
 
     @GetMapping("/download/transaction-statement")
-    @Operation(summary = "Download Transaction Statement", description = "Generates full portfolio transaction statement in CSV format")
-    public ResponseEntity<byte[]> downloadTransactionStatement() {
-        String csv = "Txn ID,Date,Company,Type,Quantity,Price,Amount,Payment Mode,Status,Remarks\n" +
-                "TXN250918004,18 Sep 2025 11:28 AM,Atirath Holdings,Buy,1000,230.00,230000.00,Bank Transfer,Completed,-\n" +
-                "TXN250917021,17 Sep 2025 04:15 PM,CS Interio,Sell,500,145.00,72500.00,Escrow,Completed,-\n" +
-                "TXN250915033,15 Sep 2025 12:10 PM,Tri Energy Battery,Buy,600,225.00,135000.00,UPI,Completed,-\n" +
-                "TXN250914018,14 Sep 2025 03:45 PM,Royal One Heating,Sell,400,235.00,94000.00,Escrow,Completed,-\n" +
-                "TXN250912011,12 Sep 2025 11:20 AM,Farm Vantara,Dividend,-,-,12500.00,Bank Transfer,Completed,Q1 2025\n" +
-                "TXN250910026,10 Sep 2025 02:18 PM,Atirath Technologies,Buy,800,180.00,144000.00,Bank Transfer,Completed,-\n" +
-                "TXN250908014,08 Sep 2025 10:30 AM,CS Interio,Corporate Action,-,-,-,-,Completed,Bonus Shares (1:1)\n" +
-                "TXN250905017,05 Sep 2025 04:05 PM,Atirath Holdings,Sell,300,240.00,72000.00,UPI,Completed,-\n" +
-                "TXN250902009,02 Sep 2025 01:22 PM,Tri Energy Battery,Buy,500,210.00,105000.00,Bank Transfer,Pending,Settlement in progress\n" +
-                "TXN250830012,30 Aug 2025 11:16 AM,Farm Vantara,Sell,750,140.00,105000.00,Escrow,Completed,-\n";
+    @Operation(summary = "Download Transaction Statement", description = "Generates full portfolio transaction statement in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadTransactionStatement(
+            @RequestParam(required = false, defaultValue = "ALL") String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false, defaultValue = "All Companies") String company,
+            @RequestParam(required = false, defaultValue = "All Types") String type,
+            @RequestParam(required = false, defaultValue = "All Status") String status,
+            @RequestParam(required = false) String search,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "transaction statement");
+        String csv = memberTransactionsService.buildTransactionsCsv(userId, period, startDate, endDate, company, type, status, search);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"transaction_statement_18Sep2025.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"transaction_statement_ATG" + userId + ".csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(bytes);
     }
@@ -421,7 +440,7 @@ public class PortfolioController {
     public ResponseEntity<Map<String, Object>> downloadOrderSlip(@PathVariable("orderId") Long orderId) {
         return ResponseEntity.ok(Map.of(
                 "orderId", orderId,
-                "orderNo", "ORD250918001",
+                "orderNo", "ORD" + orderId,
                 "status", "GENERATED",
                 "downloadUrl", "/api/v1/portfolio/download/statement",
                 "message", "Order slip generated successfully"
@@ -429,15 +448,18 @@ public class PortfolioController {
     }
 
     @GetMapping("/download/trade-receipt/{tradeId}")
-    @Operation(summary = "Download Trade Receipt", description = "Generates and downloads trade settlement receipt")
-    public ResponseEntity<Map<String, Object>> downloadTradeReceipt(@PathVariable("tradeId") Long tradeId) {
-        return ResponseEntity.ok(Map.of(
-                "tradeId", tradeId,
-                "tradeNo", "TRD250918004",
-                "status", "GENERATED",
-                "downloadUrl", "/api/v1/portfolio/download/statement",
-                "message", "Trade receipt generated successfully"
-        ));
+    @Operation(summary = "Download Trade Receipt", description = "Generates and downloads trade settlement receipt in CSV format for the authenticated member")
+    public ResponseEntity<byte[]> downloadTradeReceipt(
+            @PathVariable("tradeId") Long tradeId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long userId = requireAuthenticatedUserId(authHeader, "trade receipt");
+        String csv = portfolioService.buildTradeReceiptCsv(userId, tradeId);
+        byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"trade_receipt_" + tradeId + ".csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(bytes);
     }
 
     private Long requireAuthenticatedUserId(String authHeader, String resourceLabel) {

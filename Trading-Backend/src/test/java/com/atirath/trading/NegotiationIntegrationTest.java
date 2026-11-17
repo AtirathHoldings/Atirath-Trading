@@ -265,4 +265,41 @@ class NegotiationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.notifications", hasSize(0)));
     }
+
+    @Test
+    @DisplayName("Request call, Summary/History PDF downloads, and Initiate negotiation work end-to-end")
+    void testRequestCallSummaryHistoryDownloadsAndInitiate() throws Exception {
+        mockMvc.perform(post("/api/v1/negotiations/NEG250918001/request-call"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/negotiations/NEG250918001/summary/download"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("Negotiation_Summary_NEG250918001.pdf")))
+                .andExpect(content().string(containsString("%PDF-1.4")))
+                .andExpect(content().string(containsString("ATIRATH GROUP")));
+
+        mockMvc.perform(get("/api/v1/negotiations/NEG250918001/history/download"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("Negotiation_History_NEG250918001.pdf")))
+                .andExpect(content().string(containsString("%PDF-1.4")))
+                .andExpect(content().string(containsString("ATIRATH GROUP")));
+
+        String initJson = """
+                {
+                  "companySymbol": "FVT",
+                  "type": "BUY",
+                  "counterpartyMemberId": "ATG10072",
+                  "shares": 250,
+                  "proposedPrice": 185.00,
+                  "message": "Interested in 250 shares"
+                }
+                """;
+        mockMvc.perform(post("/api/v1/negotiations/initiate")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(initJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.companyName").value("Farm Vantara"))
+                .andExpect(jsonPath("$.data.shares").value(250));
+    }
 }

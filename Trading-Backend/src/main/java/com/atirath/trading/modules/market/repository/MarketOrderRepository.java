@@ -17,4 +17,8 @@ public interface MarketOrderRepository extends JpaRepository<MarketOrder, Long> 
     List<MarketOrder> findByCompany_CompanyIdOrderByPlacedAtDesc(Long companyId);
 
     List<MarketOrder> findByCompany_CompanyIdAndStatusOrderByPlacedAtDesc(Long companyId, String status);
+
+    List<MarketOrder> findByCompany_CompanyIdAndStatusInOrderByPlacedAtDesc(Long companyId, List<String> statuses);
+
+    long countByOrderSideIgnoreCaseAndStatusIn(String orderSide, List<String> statuses);
 }

@@ -7,8 +7,10 @@ import com.atirath.trading.modules.market.repository.AppNotificationRepository;
 import com.atirath.trading.modules.notification.dto.*;
 import com.atirath.trading.modules.notification.model.MemberNotificationPreference;
 import com.atirath.trading.modules.notification.repository.MemberNotificationPreferenceRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,25 @@ public class NotificationService {
     private final AppNotificationRepository appNotificationRepository;
     private final MemberNotificationPreferenceRepository preferenceRepository;
     private final UserAccountRepository userAccountRepository;
+    private final JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void ensurePreferencesTableExists() {
+        try {
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS member_notification_preferences (
+                    preference_id BIGSERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES user_accounts(user_id),
+                    mode_of_notification VARCHAR(30) NOT NULL,
+                    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE (user_id, mode_of_notification)
+                )
+            """);
+        } catch (Exception e) {
+            log.warn("Could not ensure member_notification_preferences table exists: {}", e.getMessage());
+        }
+    }
 
     // In-memory state cache for preferences per user (initialized to screen default)
     private final Map<Long, List<NotificationPreferenceRowDto>> userPreferenceRows = new ConcurrentHashMap<>();
@@ -395,28 +416,53 @@ public class NotificationService {
     // NOTIFICATION PREFERENCES (IMAGE 2)
     // ==========================================
 
+    @Transactional(readOnly = true)
     public NotificationPreferencesResponseDto getPreferences(Long userId) {
         log.info("Fetching notification preferences for userId={}", userId);
         Long uid = userId != null ? userId : 1L;
 
-        // 1. Channel status cards (Email, SMS, Push, In-App)
-        // Check DB preferences for channels if present
-        boolean emailActive = true;
-        boolean smsActive = true;
-        boolean pushActive = true;
-        boolean inAppActive = true;
-
+        List<MemberNotificationPreference> dbPrefs = List.of();
         try {
-            List<MemberNotificationPreference> dbPrefs = preferenceRepository.findByUserAccount_UserId(uid);
-            for (MemberNotificationPreference p : dbPrefs) {
-                if ("EMAIL".equalsIgnoreCase(p.getModeOfNotification())) emailActive = Boolean.TRUE.equals(p.getIsEnabled());
-                if ("SMS".equalsIgnoreCase(p.getModeOfNotification())) smsActive = Boolean.TRUE.equals(p.getIsEnabled());
-                if ("PUSH".equalsIgnoreCase(p.getModeOfNotification())) pushActive = Boolean.TRUE.equals(p.getIsEnabled());
-                if ("IN_APP".equalsIgnoreCase(p.getModeOfNotification())) inAppActive = Boolean.TRUE.equals(p.getIsEnabled());
-            }
+            dbPrefs = preferenceRepository.findByUserAccount_UserId(uid);
         } catch (Exception e) {
             log.warn("Could not query DB preferences: {}", e.getMessage());
         }
+
+        Map<String, Boolean> dbMap = new HashMap<>();
+        for (MemberNotificationPreference p : dbPrefs) {
+            if (p.getModeOfNotification() != null) {
+                dbMap.put(p.getModeOfNotification().toUpperCase(Locale.ROOT), Boolean.TRUE.equals(p.getIsEnabled()));
+            }
+        }
+
+        // Hydrate preference rows from defaults + any in-memory or DB overrides
+        List<NotificationPreferenceRowDto> baseRows = userPreferenceRows.getOrDefault(uid, getDefaultPreferenceRows());
+        List<NotificationPreferenceRowDto> rows = new ArrayList<>();
+        for (NotificationPreferenceRowDto base : baseRows) {
+            String rid = base.getId().toUpperCase(Locale.ROOT);
+            boolean inApp = dbMap.getOrDefault("R:" + rid + ":IN_APP", Boolean.TRUE.equals(base.getInApp()));
+            boolean email = dbMap.getOrDefault("R:" + rid + ":EMAIL", Boolean.TRUE.equals(base.getEmail()));
+            boolean sms = dbMap.getOrDefault("R:" + rid + ":SMS", Boolean.TRUE.equals(base.getSms()));
+            boolean push = dbMap.getOrDefault("R:" + rid + ":PUSH", Boolean.TRUE.equals(base.getPush()));
+            rows.add(NotificationPreferenceRowDto.builder()
+                    .id(base.getId())
+                    .title(base.getTitle())
+                    .description(base.getDescription())
+                    .icon(base.getIcon())
+                    .inApp(inApp)
+                    .email(email)
+                    .sms(sms)
+                    .push(push)
+                    .frequency(base.getFrequency())
+                    .build());
+        }
+        userPreferenceRows.put(uid, rows);
+
+        // Compute effective channel statuses (DB override or derived from matrix)
+        boolean emailActive = dbMap.getOrDefault("EMAIL", rows.stream().anyMatch(r -> Boolean.TRUE.equals(r.getEmail())));
+        boolean smsActive = dbMap.getOrDefault("SMS", rows.stream().anyMatch(r -> Boolean.TRUE.equals(r.getSms())));
+        boolean pushActive = dbMap.getOrDefault("PUSH", rows.stream().anyMatch(r -> Boolean.TRUE.equals(r.getPush())));
+        boolean inAppActive = dbMap.getOrDefault("IN_APP", rows.stream().anyMatch(r -> Boolean.TRUE.equals(r.getInApp())));
 
         List<NotificationChannelStatusDto> channelStatuses = List.of(
                 NotificationChannelStatusDto.builder()
@@ -449,16 +495,16 @@ public class NotificationService {
                         .build()
         );
 
-        // 2. Preference rows (11 matrix rows)
-        List<NotificationPreferenceRowDto> rows = userPreferenceRows.computeIfAbsent(uid, k -> getDefaultPreferenceRows());
-
         // 3. Quiet Hours
-        QuietHoursDto quietHours = userQuietHours.computeIfAbsent(uid, k -> QuietHoursDto.builder()
-                .enabled(false)
+        QuietHoursDto existingQh = userQuietHours.computeIfAbsent(uid, k -> QuietHoursDto.builder()
+                .enabled(dbMap.getOrDefault("QH:ENABLED", false))
                 .label("Stop non-critical notifications during specific hours.")
                 .fromTime("10:00 PM")
                 .toTime("06:00 AM")
                 .build());
+        if (dbMap.containsKey("QH:ENABLED")) {
+            existingQh.setEnabled(dbMap.get("QH:ENABLED"));
+        }
 
         // 4. Frequency Options
         List<FrequencyOptionDto> frequencyOptions = List.of(
@@ -472,7 +518,7 @@ public class NotificationService {
                 .channelStatuses(channelStatuses)
                 .preferenceRows(rows)
                 .frequencyOptions(frequencyOptions)
-                .quietHours(quietHours)
+                .quietHours(existingQh)
                 .build();
     }
 
@@ -482,20 +528,45 @@ public class NotificationService {
         Long uid = userId != null ? userId : 1L;
 
         if (request.getPreferenceRows() != null && !request.getPreferenceRows().isEmpty()) {
-            userPreferenceRows.put(uid, request.getPreferenceRows());
+            List<NotificationPreferenceRowDto> existing = userPreferenceRows.getOrDefault(uid, getDefaultPreferenceRows());
+            Map<String, NotificationPreferenceRowDto> incomingById = new LinkedHashMap<>();
+            for (NotificationPreferenceRowDto incoming : request.getPreferenceRows()) {
+                if (incoming.getId() != null) {
+                    incomingById.put(incoming.getId(), incoming);
+                }
+            }
+            List<NotificationPreferenceRowDto> merged = new ArrayList<>();
+            for (NotificationPreferenceRowDto base : existing) {
+                NotificationPreferenceRowDto patch = incomingById.get(base.getId());
+                if (patch != null) {
+                    merged.add(NotificationPreferenceRowDto.builder()
+                            .id(base.getId())
+                            .title(patch.getTitle() != null ? patch.getTitle() : base.getTitle())
+                            .description(patch.getDescription() != null ? patch.getDescription() : base.getDescription())
+                            .icon(patch.getIcon() != null ? patch.getIcon() : base.getIcon())
+                            .inApp(patch.getInApp() != null ? patch.getInApp() : base.getInApp())
+                            .email(patch.getEmail() != null ? patch.getEmail() : base.getEmail())
+                            .sms(patch.getSms() != null ? patch.getSms() : base.getSms())
+                            .push(patch.getPush() != null ? patch.getPush() : base.getPush())
+                            .frequency(patch.getFrequency() != null ? patch.getFrequency() : base.getFrequency())
+                            .build());
+                } else {
+                    merged.add(base);
+                }
+            }
+            userPreferenceRows.put(uid, merged);
         }
 
         if (request.getQuietHours() != null) {
             userQuietHours.put(uid, request.getQuietHours());
         }
 
-        // Persist channel states to member_notification_preferences table
+        // Persist channel & row-level states to member_notification_preferences table
         try {
             Optional<UserAccount> userOpt = userAccountRepository.findById(uid);
             if (userOpt.isPresent()) {
                 UserAccount user = userOpt.get();
 
-                // Compute channel active statuses from preference rows
                 List<NotificationPreferenceRowDto> rows = userPreferenceRows.get(uid);
                 if (rows != null) {
                     boolean emailAny = rows.stream().anyMatch(r -> Boolean.TRUE.equals(r.getEmail()));
@@ -507,6 +578,19 @@ public class NotificationService {
                     upsertChannelPreference(user, "SMS", smsAny);
                     upsertChannelPreference(user, "PUSH", pushAny);
                     upsertChannelPreference(user, "IN_APP", inAppAny);
+
+                    for (NotificationPreferenceRowDto row : rows) {
+                        if (row.getId() != null && !row.getId().isBlank()) {
+                            String rid = row.getId().toUpperCase(Locale.ROOT);
+                            upsertChannelPreference(user, "R:" + rid + ":IN_APP", Boolean.TRUE.equals(row.getInApp()));
+                            upsertChannelPreference(user, "R:" + rid + ":EMAIL", Boolean.TRUE.equals(row.getEmail()));
+                            upsertChannelPreference(user, "R:" + rid + ":SMS", Boolean.TRUE.equals(row.getSms()));
+                            upsertChannelPreference(user, "R:" + rid + ":PUSH", Boolean.TRUE.equals(row.getPush()));
+                        }
+                    }
+                }
+                if (request.getQuietHours() != null) {
+                    upsertChannelPreference(user, "QH:ENABLED", Boolean.TRUE.equals(request.getQuietHours().getEnabled()));
                 }
             }
         } catch (Exception e) {
@@ -521,7 +605,8 @@ public class NotificationService {
         log.info("Resetting preferences to default for userId={}", userId);
         Long uid = userId != null ? userId : 1L;
 
-        userPreferenceRows.put(uid, getDefaultPreferenceRows());
+        List<NotificationPreferenceRowDto> defaults = getDefaultPreferenceRows();
+        userPreferenceRows.put(uid, defaults);
         userQuietHours.put(uid, QuietHoursDto.builder()
                 .enabled(false)
                 .label("Stop non-critical notifications during specific hours.")
@@ -537,6 +622,14 @@ public class NotificationService {
                 upsertChannelPreference(user, "SMS", true);
                 upsertChannelPreference(user, "PUSH", true);
                 upsertChannelPreference(user, "IN_APP", true);
+                upsertChannelPreference(user, "QH:ENABLED", false);
+                for (NotificationPreferenceRowDto row : defaults) {
+                    String rid = row.getId().toUpperCase(Locale.ROOT);
+                    upsertChannelPreference(user, "R:" + rid + ":IN_APP", Boolean.TRUE.equals(row.getInApp()));
+                    upsertChannelPreference(user, "R:" + rid + ":EMAIL", Boolean.TRUE.equals(row.getEmail()));
+                    upsertChannelPreference(user, "R:" + rid + ":SMS", Boolean.TRUE.equals(row.getSms()));
+                    upsertChannelPreference(user, "R:" + rid + ":PUSH", Boolean.TRUE.equals(row.getPush()));
+                }
             }
         } catch (Exception e) {
             log.warn("Could not reset DB preferences: {}", e.getMessage());

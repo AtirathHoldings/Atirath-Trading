@@ -1,5 +1,6 @@
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\AuthFlowIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\EscrowIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\InternalMarketWebIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberDashboardIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberNotificationsIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MemberPendingActionsIntegrationTest.java
@@ -8,5 +9,6 @@ D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileMarketIn
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileTradeIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\NegotiationIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\PortfolioScreenIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\ProfileSettingsIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\TradeTerminalIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\TradingBackendApplicationTests.java

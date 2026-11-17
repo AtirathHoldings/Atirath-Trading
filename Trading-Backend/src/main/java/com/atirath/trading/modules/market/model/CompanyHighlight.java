@@ -1,5 +1,6 @@
 package com.atirath.trading.modules.market.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,6 +18,7 @@ public class CompanyHighlight {
     @Column(name = "highlight_id")
     private Long highlightId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private MarketCompany company;

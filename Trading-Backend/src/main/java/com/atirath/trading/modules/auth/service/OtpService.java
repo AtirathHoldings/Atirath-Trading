@@ -61,8 +61,12 @@ public class OtpService {
                 ? appProperties.getOtp().getExpirationSeconds()
                 : appProperties.getOtp().getMobileExpirationSeconds();
 
-        // Generate 6-digit cryptographic OTP
-        String otpCode = String.valueOf(100000 + new SecureRandom().nextInt(900000));
+        // In dev mode, use configured defaultTestOtp (e.g. "123456") so web & mobile receive consistent OTPs
+        boolean devMode = appProperties.getOtp().isDevModeEnabled();
+        String configuredTestOtp = appProperties.getOtp().getDefaultTestOtp();
+        String otpCode = (devMode && configuredTestOtp != null && !configuredTestOtp.isBlank())
+                ? configuredTestOtp.trim()
+                : String.valueOf(100000 + new SecureRandom().nextInt(900000));
         String sessionToken = UUID.randomUUID().toString();
 
         Instant expiresAt = Instant.now().plusSeconds(expirySeconds);
@@ -94,7 +98,10 @@ public class OtpService {
         OtpRecord record = otpStore.get(cacheKey);
 
         // Universal test OTP support in dev mode
-        if (appProperties.getOtp().isDevModeEnabled() && "123456".equals(request.getOtpCode().trim())) {
+        String configuredTestOtp = appProperties.getOtp().getDefaultTestOtp();
+        if (appProperties.getOtp().isDevModeEnabled()
+                && configuredTestOtp != null && !configuredTestOtp.isBlank()
+                && configuredTestOtp.trim().equals(request.getOtpCode().trim())) {
             otpStore.remove(cacheKey);
             verifiedStore.put(cacheKey, Instant.now().plusSeconds(600));
             return true;

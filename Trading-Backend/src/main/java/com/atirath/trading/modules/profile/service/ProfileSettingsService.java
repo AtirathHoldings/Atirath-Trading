@@ -1,122 +1,300 @@
 package com.atirath.trading.modules.profile.service;
 
+import com.atirath.trading.common.AccountStatus;
+import com.atirath.trading.common.AccountType;
+import com.atirath.trading.common.ApiException;
+import com.atirath.trading.common.DocumentType;
+import com.atirath.trading.common.ResourceNotFoundException;
+import com.atirath.trading.common.util.AESEncryptionUtil;
+import com.atirath.trading.modules.auth.model.*;
+import com.atirath.trading.modules.auth.repository.*;
+import com.atirath.trading.modules.market.model.AppNotification;
+import com.atirath.trading.modules.market.repository.AppNotificationRepository;
+import com.atirath.trading.modules.notification.model.MemberNotificationPreference;
+import com.atirath.trading.modules.notification.repository.MemberNotificationPreferenceRepository;
+import com.atirath.trading.modules.portfolio.service.PortfolioDataHelper;
 import com.atirath.trading.modules.profile.dto.*;
-import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProfileSettingsService {
 
-    private MemberProfileDto memberProfile;
-    private KycVerificationPageDto kycVerification;
-    private final List<BankAccountItemDto> bankAccounts = new CopyOnWriteArrayList<>();
-    private SecurityOverviewDto securityOverview;
+    private static final DateTimeFormatter DISPLAY_DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter DISPLAY_DT_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter ISO_DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
 
-    // --- New Modules Data Stores ---
-    private final List<DeviceItemDto> devices = new CopyOnWriteArrayList<>();
-    private final List<NotificationItemDto> notifications = new CopyOnWriteArrayList<>();
-    private NotificationPreferencesDto notificationPreferences;
-    private NotificationChannelsDto notificationChannels;
-    private final List<DocumentRecordDto> documents = new CopyOnWriteArrayList<>();
-    private StorageUsageDto storageUsage;
-    private final List<ExpiryAlertDto> expiryAlerts = new CopyOnWriteArrayList<>();
-    private GeneralSettingsDto generalSettings;
-    private PlatformPreferencesDto platformPreferences;
-    private AppearanceSettingsDto appearanceSettings;
-    private LanguageRegionDto languageRegion;
+    private final UserAccountRepository userAccountRepository;
+    private final IndividualProfileRepository individualProfileRepository;
+    private final CorporateProfileRepository corporateProfileRepository;
+    private final IdentityKycDetailRepository identityKycDetailRepository;
+    private final BankDetailRepository bankDetailRepository;
+    private final AccountDocumentRepository accountDocumentRepository;
+    private final UserCredentialRepository userCredentialRepository;
+    private final UserBiometricCredentialRepository userBiometricCredentialRepository;
+    private final AppNotificationRepository appNotificationRepository;
+    private final MemberNotificationPreferenceRepository memberNotificationPreferenceRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AESEncryptionUtil aesEncryptionUtil;
+    private final PortfolioDataHelper portfolioDataHelper;
 
-    private final AtomicLong bankIdCounter = new AtomicLong(10);
-    private final AtomicLong kycDocCounter = new AtomicLong(10);
-    private final AtomicLong docCounter = new AtomicLong(20);
+    private final ConcurrentHashMap<Long, UserProfileExtras> userExtrasMap = new ConcurrentHashMap<>();
+    private final AtomicLong syntheticIdGenerator = new AtomicLong(10000L);
 
-    private static final DateTimeFormatter DISPLAY_DT_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+    private static class UserProfileExtras {
+        String gender;
+        String nationality = "Indian";
+        String occupation;
+        String linkedInProfile;
+        String alternateMobile;
+        String alternateEmail;
+        String currentAddress;
 
-    @PostConstruct
-    public void init() {
-        seedProfileData();
-        seedKycData();
-        seedBankData();
-        seedSecurityData();
-        seedDevicesData();
-        seedNotificationsData();
-        seedDocumentsData();
-        seedSettingsData();
-        log.info("ProfileSettingsService initialized with in-memory data for Rohit Sharma (ATG10027)");
+        String companyIndustry;
+        String companyType;
+        String designation;
+        String companyPan;
+        String companyAddress;
+        String website;
+        String logoUrl;
+
+        String yearsOfExperience;
+        String areaOfExpertise;
+        List<String> interestedSectors = new ArrayList<>();
+        String investmentRange;
+        String investmentPurpose;
+
+        List<String> languageKnown = new ArrayList<>(Arrays.asList("English"));
+        String howDidYouHearAboutUs;
+        String profileVisibility = "Visible to verified members";
+
+        TwoFactorSettingsDto twoFactor;
+        SecurityPreferencesDto securityPreferences;
+        List<ActiveSessionDto> extraSessions = new ArrayList<>();
+        List<LoginHistoryItemDto> loginHistory = new ArrayList<>();
+        boolean currentSessionTracked = true;
+
+        List<BankAccountItemDto> extraBankAccounts = new ArrayList<>();
+        Long overridePrimaryBankId;
+        boolean primaryDbBankHidden = false;
+
+        Map<Long, KycDocOverride> kycOverrides = new ConcurrentHashMap<>();
+        List<VerificationHistoryLogDto> extraVerificationLogs = new ArrayList<>();
+
+        PlatformPreferencesDto platformPreferences;
+        AppearanceSettingsDto appearance = AppearanceSettingsDto.builder().selectedTheme("Light").build();
+        LanguageRegionDto languageRegion = LanguageRegionDto.builder().language("English (India)").timezone("(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi").build();
+
+        NotificationPreferencesDto notificationPreferences;
+        NotificationChannelsDto notificationChannels;
     }
 
-    private void seedProfileData() {
+    private static class KycDocOverride {
+        String status;
+        String uploadedOn;
+        String fileUrl;
+    }
+
+    private UserAccount loadUser(Long userId) {
+        return userAccountRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User account not found: " + userId));
+    }
+
+    private UserProfileExtras getExtras(Long userId) {
+        return userExtrasMap.computeIfAbsent(userId, id -> new UserProfileExtras());
+    }
+
+    private String resolveMemberCode(UserAccount user) {
+        if (user.getReferralCode() != null && !user.getReferralCode().isBlank()) {
+            return user.getReferralCode().trim();
+        }
+        return "ATG" + String.format("%05d", user.getUserId());
+    }
+
+    private String resolveMemberBadge(UserAccount user) {
+        if (user.getAccountStatus() == AccountStatus.ACTIVE) {
+            return "Verified Member";
+        }
+        if (user.getAccountStatus() == AccountStatus.PENDING) {
+            return "Pending Verification";
+        }
+        return user.getAccountStatus() != null ? user.getAccountStatus().name() : "Member";
+    }
+
+    private String computeInitials(String fullName) {
+        if (fullName == null || fullName.isBlank()) {
+            return "MB";
+        }
+        String[] parts = fullName.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase(Locale.ENGLISH);
+        }
+        return ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase(Locale.ENGLISH);
+    }
+
+    private String formatDate(OffsetDateTime dt) {
+        return dt != null ? dt.atZoneSameInstant(ZoneOffset.UTC).format(DISPLAY_DATE_FMT) : "-";
+    }
+
+    private String formatDateTime(OffsetDateTime dt) {
+        return dt != null ? dt.atZoneSameInstant(ZoneOffset.UTC).format(DISPLAY_DT_FMT) : "-";
+    }
+
+    private String decryptAadhaarMasked(IdentityKycDetail kyc) {
+        if (kyc == null || kyc.getAadhaarNumberEncrypted() == null || kyc.getAadhaarNumberEncrypted().isBlank()) {
+            return null;
+        }
+        try {
+            String plain = aesEncryptionUtil.decrypt(kyc.getAadhaarNumberEncrypted());
+            return AESEncryptionUtil.maskAadhaar(plain);
+        } catch (Exception e) {
+            return AESEncryptionUtil.maskAadhaar(kyc.getAadhaarNumberEncrypted());
+        }
+    }
+
+    private String decryptAccountMasked(BankDetail bank) {
+        if (bank == null || bank.getAccountNumberEncrypted() == null || bank.getAccountNumberEncrypted().isBlank()) {
+            return "-";
+        }
+        try {
+            String plain = aesEncryptionUtil.decrypt(bank.getAccountNumberEncrypted());
+            return AESEncryptionUtil.maskAccountNumber(plain);
+        } catch (Exception e) {
+            return AESEncryptionUtil.maskAccountNumber(bank.getAccountNumberEncrypted());
+        }
+    }
+
+    private String resolveCompanyName(UserAccount user, CorporateProfile corp) {
+        if (corp != null && corp.getCompanyName() != null && !corp.getCompanyName().isBlank()) {
+            return corp.getCompanyName();
+        }
+        return user.getAccountType() == AccountType.CORPORATE ? "" : "Individual Investor";
+    }
+
+    private int computeProfileCompletion(UserAccount user,
+                                         String fullName,
+                                         IdentityKycDetail kyc,
+                                         CorporateProfile corp,
+                                         BankDetail bank,
+                                         UserProfileExtras extras) {
+        int total = 10;
+        int filled = 0;
+        if (isPresent(fullName)) filled++;
+        if (isPresent(user.getEmail())) filled++;
+        if (isPresent(user.getMobileNumber())) filled++;
+        if (kyc != null && kyc.getDateOfBirth() != null) filled++;
+        if (kyc != null && isPresent(kyc.getPanNumber())) filled++;
+        if (kyc != null && isPresent(kyc.getAadhaarNumberEncrypted())) filled++;
+        if (bank != null && isPresent(bank.getIfscCode())) filled++;
+        if ((corp != null && isPresent(corp.getCompanyName())) || isPresent(extras.occupation)) filled++;
+        if (isPresent(extras.currentAddress)) filled++;
+        if (isPresent(extras.yearsOfExperience) || isPresent(extras.investmentRange)) filled++;
+        return (int) Math.round((filled * 100.0) / total);
+    }
+
+    private boolean isPresent(String val) {
+        return val != null && !val.trim().isEmpty() && !"-".equals(val.trim());
+    }
+
+    // =========================================================================
+    // 1. Profile Overview & Sections
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public MemberProfileDto getProfile(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+        IdentityKycDetail kyc = identityKycDetailRepository.findByUserAccount_UserId(userId).orElse(null);
+        BankDetail bank = bankDetailRepository.findByUserAccount_UserId(userId).orElse(null);
+
+        String maskedAadhaar = decryptAadhaarMasked(kyc);
+        String aadhaarStatus = kyc != null && isPresent(kyc.getAadhaarNumberEncrypted())
+                ? (user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Submitted")
+                : "Not Provided";
+
         PersonalInfoDto personal = PersonalInfoDto.builder()
-                .fullName("Rohit Sharma")
-                .dateOfBirth("12 Mar 1995")
-                .gender("Male")
-                .nationality("Indian")
-                .panNumber("ABCDE1234F")
-                .aadhaarNumber("1234 5678 9012")
-                .aadhaarStatus("Verified")
-                .occupation("Business Professional")
-                .linkedInProfile("https://linkedin.com/in/rohitsharma")
+                .fullName(fullName)
+                .dateOfBirth(kyc != null && kyc.getDateOfBirth() != null ? kyc.getDateOfBirth().format(DISPLAY_DATE_FMT) : "")
+                .gender(extras.gender != null ? extras.gender : "")
+                .nationality(extras.nationality != null ? extras.nationality : "Indian")
+                .panNumber(kyc != null && kyc.getPanNumber() != null ? kyc.getPanNumber() : "")
+                .aadhaarNumber(maskedAadhaar != null ? maskedAadhaar : "")
+                .aadhaarStatus(aadhaarStatus)
+                .occupation(extras.occupation != null ? extras.occupation : (user.getAccountType() == AccountType.CORPORATE ? "Corporate Member" : "Individual Investor"))
+                .linkedInProfile(extras.linkedInProfile != null ? extras.linkedInProfile : "")
                 .build();
 
         OrganizationInfoDto org = OrganizationInfoDto.builder()
-                .companyName("GreenTech Solutions Pvt Ltd")
-                .industry("Renewable Energy")
-                .companyType("Private Limited")
-                .designation("Director")
-                .companyPan("AABCG1234H")
-                .registrationNumber("U40100TG2020PTC123456")
-                .companyAddress("Plot No. 45, Tech Park, Madhapur Hyderabad, Telangana - 500081")
-                .website("www.greentechsolutions.com")
-                .logoUrl("GreenTech Solutions Renewable Energy for a Better Tomorrow")
+                .companyName(corp != null && corp.getCompanyName() != null ? corp.getCompanyName() : "")
+                .industry(extras.companyIndustry != null ? extras.companyIndustry : "")
+                .companyType(extras.companyType != null ? extras.companyType : (corp != null ? "Registered Entity" : ""))
+                .designation(extras.designation != null ? extras.designation : (corp != null && isPresent(corp.getContactPersonName()) ? "Authorized Signatory" : ""))
+                .companyPan(extras.companyPan != null ? extras.companyPan : "")
+                .registrationNumber(corp != null && corp.getRegistrationId() != null ? corp.getRegistrationId() : "")
+                .companyAddress(extras.companyAddress != null ? extras.companyAddress : "")
+                .website(extras.website != null ? extras.website : "")
+                .logoUrl(extras.logoUrl)
                 .build();
 
         ContactInfoDto contact = ContactInfoDto.builder()
-                .emailAddress("rohit.sharma@example.com")
-                .emailStatus("Verified")
-                .mobileNumber("+91 98765 43210")
-                .mobileStatus("Verified")
-                .alternateMobile("+91 91234 56789")
-                .alternateEmail("rohit.alt@example.com")
+                .emailAddress(user.getEmail())
+                .emailStatus(user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Pending")
+                .mobileNumber(user.getMobileNumber())
+                .mobileStatus(isPresent(user.getMobileNumber()) ? "Verified" : "Pending")
+                .alternateMobile(extras.alternateMobile != null ? extras.alternateMobile : "")
+                .alternateEmail(extras.alternateEmail != null ? extras.alternateEmail : "")
                 .build();
 
         ProfessionalDetailsDto prof = ProfessionalDetailsDto.builder()
-                .yearsOfExperience("8+ Years")
-                .areaOfExpertise("Renewable Energy, Project Development")
-                .interestedSectors(new ArrayList<>(Arrays.asList("Renewable Energy", "Agriculture", "Infrastructure")))
-                .investmentRange("₹10,00,000 - ₹50,00,000")
-                .investmentPurpose("Strategic Investment")
+                .yearsOfExperience(extras.yearsOfExperience != null ? extras.yearsOfExperience : "")
+                .areaOfExpertise(extras.areaOfExpertise != null ? extras.areaOfExpertise : "")
+                .interestedSectors(new ArrayList<>(extras.interestedSectors))
+                .investmentRange(extras.investmentRange != null ? extras.investmentRange : "")
+                .investmentPurpose(extras.investmentPurpose != null ? extras.investmentPurpose : "")
                 .build();
 
         AddressInfoDto addr = AddressInfoDto.builder()
-                .currentAddress("Plot No. 45, Tech Park, Madhapur Hyderabad, Telangana - 500081 India")
+                .currentAddress(extras.currentAddress != null ? extras.currentAddress : "")
                 .build();
 
         AdditionalInfoDto addl = AdditionalInfoDto.builder()
-                .languageKnown(new ArrayList<>(Arrays.asList("English", "Hindi", "Telugu")))
-                .howDidYouHearAboutUs("Referral")
-                .profileVisibility("Visible to verified members")
+                .languageKnown(new ArrayList<>(extras.languageKnown))
+                .howDidYouHearAboutUs(extras.howDidYouHearAboutUs != null ? extras.howDidYouHearAboutUs : "")
+                .profileVisibility(extras.profileVisibility)
                 .build();
 
-        memberProfile = MemberProfileDto.builder()
-                .memberId("ATG10027")
-                .fullName("Rohit Sharma")
-                .memberBadge("Verified Member")
-                .email("rohit.sharma@example.com")
-                .mobileNumber("+91 98765 43210")
-                .companyName("GreenTech Solutions Pvt Ltd")
-                .designation("Director")
-                .industry("Renewable Energy")
-                .memberSince("12 Jan 2021")
-                .profileCompletion(90)
-                .avatarInitials("RS")
+        int completion = computeProfileCompletion(user, fullName, kyc, corp, bank, extras);
+
+        return MemberProfileDto.builder()
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(org.getDesignation()) ? org.getDesignation() : personal.getOccupation())
+                .industry(isPresent(org.getIndustry()) ? org.getIndustry() : "Private Equity & Unlisted Shares")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .profileCompletion(completion)
+                .avatarInitials(computeInitials(fullName))
                 .personalInfo(personal)
                 .organizationInfo(org)
                 .contactInfo(contact)
@@ -126,854 +304,1338 @@ public class ProfileSettingsService {
                 .build();
     }
 
-    private void seedKycData() {
+    @Transactional
+    public PersonalInfoDto updatePersonalInfo(Long userId, PersonalInfoDto update) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+
+        if (isPresent(update.getFullName())) {
+            String trimmedName = update.getFullName().trim();
+            if (user.getAccountType() == AccountType.CORPORATE) {
+                corporateProfileRepository.findByUserAccount_UserId(userId).ifPresent(corp -> {
+                    corp.setContactPersonName(trimmedName);
+                    corporateProfileRepository.save(corp);
+                });
+            } else {
+                IndividualProfile indiv = individualProfileRepository.findByUserAccount_UserId(userId)
+                        .orElseGet(() -> IndividualProfile.builder().userAccount(user).fullName(trimmedName).build());
+                indiv.setFullName(trimmedName);
+                individualProfileRepository.save(indiv);
+            }
+        }
+
+        if (isPresent(update.getPanNumber()) || isPresent(update.getDateOfBirth())) {
+            identityKycDetailRepository.findByUserAccount_UserId(userId).ifPresent(kyc -> {
+                if (isPresent(update.getPanNumber())) {
+                    String normalizedPan = update.getPanNumber().trim().toUpperCase(Locale.ENGLISH);
+                    if (!normalizedPan.equalsIgnoreCase(kyc.getPanNumber())) {
+                        if (identityKycDetailRepository.existsByPanNumber(normalizedPan)) {
+                            throw new ApiException("PAN number is already registered to another account", HttpStatus.BAD_REQUEST);
+                        }
+                        kyc.setPanNumber(normalizedPan);
+                    }
+                }
+                if (isPresent(update.getDateOfBirth())) {
+                    LocalDate parsedDob = tryParseDate(update.getDateOfBirth());
+                    if (parsedDob != null) {
+                        kyc.setDateOfBirth(parsedDob);
+                    }
+                }
+                identityKycDetailRepository.save(kyc);
+            });
+        }
+
+        if (update.getGender() != null) extras.gender = update.getGender().trim();
+        if (update.getNationality() != null) extras.nationality = update.getNationality().trim();
+        if (update.getOccupation() != null) extras.occupation = update.getOccupation().trim();
+        if (update.getLinkedInProfile() != null) extras.linkedInProfile = update.getLinkedInProfile().trim();
+
+        return getProfile(userId).getPersonalInfo();
+    }
+
+    private LocalDate tryParseDate(String value) {
+        String trimmed = value.trim();
+        for (DateTimeFormatter fmt : List.of(ISO_DATE_FMT, DISPLAY_DATE_FMT, DateTimeFormatter.ofPattern("dd-MM-yyyy"), DateTimeFormatter.ofPattern("dd/MM/yyyy"))) {
+            try {
+                return LocalDate.parse(trimmed, fmt);
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    @Transactional
+    public OrganizationInfoDto updateOrganizationInfo(Long userId, OrganizationInfoDto update) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+
+        if (isPresent(update.getCompanyName()) || isPresent(update.getRegistrationNumber())) {
+            CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+            if (corp != null) {
+                if (isPresent(update.getCompanyName())) corp.setCompanyName(update.getCompanyName().trim());
+                if (isPresent(update.getRegistrationNumber())) corp.setRegistrationId(update.getRegistrationNumber().trim());
+                corporateProfileRepository.save(corp);
+            } else if (isPresent(update.getCompanyName()) && isPresent(update.getRegistrationNumber())) {
+                String regId = update.getRegistrationNumber().trim();
+                if (corporateProfileRepository.existsByRegistrationId(regId)) {
+                    throw new ApiException("Registration number already exists", HttpStatus.BAD_REQUEST);
+                }
+                CorporateProfile newCorp = CorporateProfile.builder()
+                        .userAccount(user)
+                        .companyName(update.getCompanyName().trim())
+                        .registrationId(regId)
+                        .contactPersonName(portfolioDataHelper.resolveUserFullName(user))
+                        .build();
+                corporateProfileRepository.save(newCorp);
+            }
+        }
+
+        if (update.getIndustry() != null) extras.companyIndustry = update.getIndustry().trim();
+        if (update.getCompanyType() != null) extras.companyType = update.getCompanyType().trim();
+        if (update.getDesignation() != null) extras.designation = update.getDesignation().trim();
+        if (update.getCompanyPan() != null) extras.companyPan = update.getCompanyPan().trim();
+        if (update.getCompanyAddress() != null) extras.companyAddress = update.getCompanyAddress().trim();
+        if (update.getWebsite() != null) extras.website = update.getWebsite().trim();
+        if (update.getLogoUrl() != null) extras.logoUrl = update.getLogoUrl().trim();
+
+        return getProfile(userId).getOrganizationInfo();
+    }
+
+    @Transactional
+    public ContactInfoDto updateContactInfo(Long userId, ContactInfoDto update) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+
+        if (isPresent(update.getMobileNumber())) {
+            String newMobile = update.getMobileNumber().trim();
+            if (!newMobile.equals(user.getMobileNumber())) {
+                if (userAccountRepository.existsByMobileNumber(newMobile)) {
+                    throw new ApiException("Mobile number is already associated with another account", HttpStatus.BAD_REQUEST);
+                }
+                user.setMobileNumber(newMobile);
+                userAccountRepository.save(user);
+            }
+        }
+        if (update.getAlternateMobile() != null) extras.alternateMobile = update.getAlternateMobile().trim();
+        if (update.getAlternateEmail() != null) extras.alternateEmail = update.getAlternateEmail().trim();
+
+        return getProfile(userId).getContactInfo();
+    }
+
+    public ProfessionalDetailsDto updateProfessionalDetails(Long userId, ProfessionalDetailsDto update) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (update.getYearsOfExperience() != null) extras.yearsOfExperience = update.getYearsOfExperience().trim();
+        if (update.getAreaOfExpertise() != null) extras.areaOfExpertise = update.getAreaOfExpertise().trim();
+        if (update.getInterestedSectors() != null) extras.interestedSectors = new ArrayList<>(update.getInterestedSectors());
+        if (update.getInvestmentRange() != null) extras.investmentRange = update.getInvestmentRange().trim();
+        if (update.getInvestmentPurpose() != null) extras.investmentPurpose = update.getInvestmentPurpose().trim();
+        return getProfile(userId).getProfessionalDetails();
+    }
+
+    public AddressInfoDto updateAddressInfo(Long userId, AddressInfoDto update) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (update.getCurrentAddress() != null) extras.currentAddress = update.getCurrentAddress().trim();
+        return getProfile(userId).getAddressInfo();
+    }
+
+    public AdditionalInfoDto updateAdditionalInfo(Long userId, AdditionalInfoDto update) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (update.getLanguageKnown() != null) extras.languageKnown = new ArrayList<>(update.getLanguageKnown());
+        if (update.getHowDidYouHearAboutUs() != null) extras.howDidYouHearAboutUs = update.getHowDidYouHearAboutUs().trim();
+        if (update.getProfileVisibility() != null) extras.profileVisibility = update.getProfileVisibility().trim();
+        return getProfile(userId).getAdditionalInfo();
+    }
+
+    // =========================================================================
+    // 2. KYC & Verification
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public KycVerificationPageDto getKycVerification(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+        IdentityKycDetail kyc = identityKycDetailRepository.findByUserAccount_UserId(userId).orElse(null);
+        BankDetail bank = bankDetailRepository.findByUserAccount_UserId(userId).orElse(null);
+        List<AccountDocument> dbDocs = accountDocumentRepository.findByUserAccount_UserId(userId);
+
+        Map<DocumentType, AccountDocument> latestDocByType = new EnumMap<>(DocumentType.class);
+        for (AccountDocument doc : dbDocs) {
+            if (doc.getDocumentType() != null) {
+                latestDocByType.put(doc.getDocumentType(), doc);
+            }
+        }
+
+        boolean isAccountActive = user.getAccountStatus() == AccountStatus.ACTIVE;
+
+        AccountDocument idDoc = latestDocByType.get(DocumentType.IDENTITY_PROOF);
+        AccountDocument addrDoc = latestDocByType.get(DocumentType.ADDRESS_PROOF);
+        AccountDocument bankDoc = latestDocByType.get(DocumentType.BANK_PASSBOOK);
+        AccountDocument livePhotoDoc = latestDocByType.get(DocumentType.LIVE_PHOTO);
+
         List<KycDocumentItemDto> docs = new ArrayList<>();
-        docs.add(KycDocumentItemDto.builder()
-                .id(1L)
-                .title("Identity Proof (PAN)")
-                .description("Upload your PAN card for identity verification.")
-                .documentType("PAN Card")
-                .documentNumber("ABCDE1234F")
-                .uploadedOn("15 Sep 2026")
-                .status("Verified")
-                .fileUrl("https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80")
-                .canUpload(false)
-                .build());
 
-        docs.add(KycDocumentItemDto.builder()
-                .id(2L)
-                .title("Address Proof")
-                .description("Upload address proof (Aadhaar, Passport or Voter ID).")
-                .documentType("Aadhaar Card")
-                .documentNumber("1234 5678 9012")
-                .uploadedOn("15 Sep 2026")
-                .status("Verified")
-                .fileUrl("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80")
-                .canUpload(false)
-                .build());
+        docs.add(buildKycItem(
+                1L,
+                "Identity Proof (PAN)",
+                "Upload your PAN card for identity verification.",
+                idDoc != null ? idDoc.getDocumentName() : "PAN Card",
+                kyc != null && isPresent(kyc.getPanNumber()) ? kyc.getPanNumber() : "-",
+                idDoc,
+                kyc != null && isPresent(kyc.getPanNumber()),
+                isAccountActive,
+                extras.kycOverrides.get(1L)
+        ));
 
-        docs.add(KycDocumentItemDto.builder()
-                .id(3L)
-                .title("Organization Documents")
-                .description("Upload company registration and related documents.")
-                .documentType("Certificate of Incorporation")
-                .documentNumber("U40100TG2020PTC123456")
-                .uploadedOn("12 Jan 2020")
-                .status("Verified")
-                .fileUrl("https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80")
-                .canUpload(false)
-                .build());
+        String maskedAadhaar = decryptAadhaarMasked(kyc);
+        docs.add(buildKycItem(
+                2L,
+                "Address Proof",
+                "Upload address proof (Aadhaar, Passport or Voter ID).",
+                addrDoc != null ? addrDoc.getDocumentName() : "Aadhaar / Address Proof",
+                maskedAadhaar != null ? maskedAadhaar : "-",
+                addrDoc,
+                kyc != null && isPresent(kyc.getAadhaarNumberEncrypted()),
+                isAccountActive,
+                extras.kycOverrides.get(2L)
+        ));
 
-        docs.add(KycDocumentItemDto.builder()
-                .id(4L)
-                .title("Bank Details")
-                .description("Upload bank account proof (canceled cheque or bank statement).")
-                .documentType("Cancelled Cheque")
-                .documentNumber("SBIN0001234")
-                .uploadedOn("16 Sep 2026")
-                .status("Under Review")
-                .fileUrl("https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=600&q=80")
-                .canUpload(false)
-                .build());
+        docs.add(buildKycItem(
+                3L,
+                "Organization Documents",
+                "Company registration certificate (required for Corporate members).",
+                corp != null ? "Registration Certificate" : "Corporate Incorporation",
+                corp != null && isPresent(corp.getRegistrationId()) ? corp.getRegistrationId() : "-",
+                null,
+                corp != null && isPresent(corp.getRegistrationId()),
+                corp != null && isAccountActive,
+                extras.kycOverrides.get(3L)
+        ));
 
-        docs.add(KycDocumentItemDto.builder()
-                .id(5L)
-                .title("Self Declaration")
-                .description("Upload signed self declaration form (as per compliance).")
-                .documentType("Self Declaration Form")
-                .documentNumber("-")
-                .uploadedOn("-")
-                .status("Not Verified")
-                .canUpload(true)
-                .build());
+        docs.add(buildKycItem(
+                4L,
+                "Bank Details Proof",
+                "Upload cancelled cheque or bank passbook statement.",
+                bankDoc != null ? bankDoc.getDocumentName() : "Cancelled Cheque / Passbook",
+                bank != null && isPresent(bank.getIfscCode()) ? bank.getIfscCode() : "-",
+                bankDoc,
+                bank != null && isPresent(bank.getIfscCode()),
+                isAccountActive && bankDoc != null,
+                extras.kycOverrides.get(4L)
+        ));
 
-        List<VerificationHistoryLogDto> hist = new ArrayList<>();
-        hist.add(VerificationHistoryLogDto.builder().title("PAN Verified").timestamp("15 Sep 2026, 02:15 PM").actor("Anitha Verma (Compliance)").status("Verified").build());
-        hist.add(VerificationHistoryLogDto.builder().title("Address Verified").timestamp("15 Sep 2026, 02:40 PM").actor("Anitha Verma (Compliance)").status("Verified").build());
-        hist.add(VerificationHistoryLogDto.builder().title("Organization Verified").timestamp("16 Sep 2026, 10:20 AM").actor("Suresh Kumar (Operations)").status("Verified").build());
-        hist.add(VerificationHistoryLogDto.builder().title("Bank Document Submitted").timestamp("16 Sep 2026, 11:30 AM").actor("Rohit Sharma").status("Submitted").build());
-        hist.add(VerificationHistoryLogDto.builder().title("Self Declaration Pending").timestamp("-").actor("-").status("Pending").build());
+        docs.add(buildKycItem(
+                5L,
+                "Live Photo / Self Declaration",
+                "Upload recent live photo or signed compliance declaration.",
+                livePhotoDoc != null ? livePhotoDoc.getDocumentName() : "Live Photo / Self Declaration",
+                livePhotoDoc != null ? "DOC-" + livePhotoDoc.getDocumentId() : "-",
+                livePhotoDoc,
+                livePhotoDoc != null,
+                isAccountActive && livePhotoDoc != null,
+                extras.kycOverrides.get(5L)
+        ));
 
-        kycVerification = KycVerificationPageDto.builder()
-                .memberId("ATG10027")
-                .fullName("Rohit Sharma")
-                .memberBadge("Verified Member")
-                .email("rohit.sharma@example.com")
-                .mobileNumber("+91 98765 43210")
-                .companyName("GreenTech Solutions Pvt Ltd")
-                .designation("Director")
-                .industry("Renewable Energy")
-                .memberSince("12 Jan 2021")
-                .avatarInitials("RS")
-                .activeStep(4)
-                .stepperSteps(new ArrayList<>(Arrays.asList("Identity Verification", "Address Verification", "Organization Verification", "Bank Verification", "Final Review")))
-                .completionPercentage(80)
-                .verifiedCount(4)
-                .underReviewCount(1)
-                .notVerifiedCount(1)
-                .notRequiredCount(0)
-                .statusAlertTitle("Identity, Address and Organization verification completed.")
-                .statusAlertMessage("Complete the remaining verification to access all platform features.")
-                .importantNotes(new ArrayList<>(Arrays.asList(
+        int verified = (int) docs.stream().filter(d -> "Verified".equalsIgnoreCase(d.getStatus())).count();
+        int underReview = (int) docs.stream().filter(d -> "Under Review".equalsIgnoreCase(d.getStatus())).count();
+        int notVerified = (int) docs.stream().filter(d -> "Not Verified".equalsIgnoreCase(d.getStatus())).count();
+        int notRequired = 0;
+
+        if (user.getAccountType() != AccountType.CORPORATE && corp == null && extras.kycOverrides.get(3L) == null) {
+            docs.get(2).setStatus("Not Required");
+            docs.get(2).setCanUpload(false);
+            verified = (int) docs.stream().filter(d -> "Verified".equalsIgnoreCase(d.getStatus())).count();
+            underReview = (int) docs.stream().filter(d -> "Under Review".equalsIgnoreCase(d.getStatus())).count();
+            notVerified = (int) docs.stream().filter(d -> "Not Verified".equalsIgnoreCase(d.getStatus())).count();
+            notRequired = 1;
+        }
+
+        int applicableTotal = Math.max(1, docs.size() - notRequired);
+        int completionPct = (int) Math.round(((verified + underReview * 0.5) * 100.0) / applicableTotal);
+        completionPct = Math.min(100, Math.max(0, completionPct));
+
+        int activeStep = Math.min(5, Math.max(1, verified + 1));
+        String alertTitle = verified >= applicableTotal
+                ? "All required KYC verifications are complete."
+                : "KYC verification in progress (" + verified + " of " + applicableTotal + " verified).";
+        String alertMsg = verified >= applicableTotal
+                ? "Your account has full platform trading and settlement access."
+                : "Upload or review any pending documents below to unlock full trading features.";
+
+        List<VerificationHistoryLogDto> history = new ArrayList<>(extras.extraVerificationLogs);
+        if (kyc != null) {
+            history.add(VerificationHistoryLogDto.builder()
+                    .title("Identity KYC Recorded (" + kyc.getPanNumber() + ")")
+                    .timestamp(formatDateTime(kyc.getCreatedAt()))
+                    .actor(fullName)
+                    .status(isAccountActive ? "Verified" : "Submitted")
+                    .build());
+        }
+        if (bank != null) {
+            history.add(VerificationHistoryLogDto.builder()
+                    .title("Bank Details Recorded (" + bank.getBankName() + ")")
+                    .timestamp(formatDateTime(bank.getCreatedAt()))
+                    .actor(fullName)
+                    .status(isAccountActive ? "Verified" : "Submitted")
+                    .build());
+        }
+        for (AccountDocument doc : dbDocs) {
+            history.add(VerificationHistoryLogDto.builder()
+                    .title(doc.getDocumentType().name().replace('_', ' ') + " Uploaded")
+                    .timestamp(formatDateTime(doc.getUploadedAt()))
+                    .actor(fullName)
+                    .status(isAccountActive ? "Verified" : "Submitted")
+                    .build());
+        }
+        if (history.isEmpty()) {
+            history.add(VerificationHistoryLogDto.builder()
+                    .title("KYC Onboarding Pending")
+                    .timestamp(formatDateTime(user.getCreatedAt()))
+                    .actor("System")
+                    .status("Pending")
+                    .build());
+        }
+
+        return KycVerificationPageDto.builder()
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : (user.getAccountType() == AccountType.CORPORATE ? "Authorized Signatory" : "Individual Investor"))
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
+                .activeStep(activeStep)
+                .stepperSteps(Arrays.asList("Identity Verification", "Address Verification", "Organization Verification", "Bank Verification", "Final Review"))
+                .completionPercentage(completionPct)
+                .verifiedCount(verified)
+                .underReviewCount(underReview)
+                .notVerifiedCount(notVerified)
+                .notRequiredCount(notRequired)
+                .statusAlertTitle(alertTitle)
+                .statusAlertMessage(alertMsg)
+                .importantNotes(Arrays.asList(
                         "All documents must be clear and valid.",
                         "Accepted formats: PDF, JPG, PNG (Max 5 MB).",
-                        "Ensure document details match your profile information.",
-                        "Verification may take 1-2 business days."
-                )))
+                        "Ensure document details match your registered KYC profile.",
+                        "Verification review typically completes within 1-2 business days."
+                ))
                 .documents(docs)
-                .verificationHistory(hist)
+                .verificationHistory(history)
                 .build();
     }
 
-    private void seedBankData() {
-        bankAccounts.add(BankAccountItemDto.builder()
-                .id(1L)
-                .bankName("State Bank of India")
-                .bankLogo("SBI")
-                .accountHolderName("Rohit Sharma")
-                .accountNumber("1234 5678 9012")
-                .ifscCode("SBIN0001234")
-                .isPrimary(true)
-                .status("Verified")
-                .addedOn("12 Jan 2024")
-                .build());
+    private KycDocumentItemDto buildKycItem(Long id,
+                                            String title,
+                                            String description,
+                                            String docTypeLabel,
+                                            String docNumber,
+                                            AccountDocument doc,
+                                            boolean dataSubmitted,
+                                            boolean accountVerified,
+                                            KycDocOverride override) {
+        String uploadedOn = doc != null && doc.getUploadedAt() != null ? formatDate(doc.getUploadedAt()) : "-";
+        String fileUrl = doc != null ? doc.getFilePath() : null;
+        String status;
+        boolean canUpload;
 
-        bankAccounts.add(BankAccountItemDto.builder()
-                .id(2L)
-                .bankName("HDFC Bank")
-                .bankLogo("HDFC")
-                .accountHolderName("Rohit Sharma")
-                .accountNumber("9876 5432 1012")
-                .ifscCode("HDFC0002345")
-                .isPrimary(false)
-                .status("Verified")
-                .addedOn("05 Mar 2024")
-                .build());
+        if (override != null) {
+            status = override.status;
+            uploadedOn = override.uploadedOn;
+            fileUrl = override.fileUrl;
+            canUpload = !"Verified".equalsIgnoreCase(status);
+        } else if (accountVerified && (doc != null || dataSubmitted)) {
+            status = "Verified";
+            canUpload = false;
+        } else if (doc != null || dataSubmitted) {
+            status = "Under Review";
+            canUpload = true;
+        } else {
+            status = "Not Verified";
+            canUpload = true;
+        }
 
-        bankAccounts.add(BankAccountItemDto.builder()
-                .id(3L)
-                .bankName("ICICI Bank")
-                .bankLogo("ICICI")
-                .accountHolderName("Rohit Sharma")
-                .accountNumber("4567 8901 2345")
-                .ifscCode("ICIC0003456")
-                .isPrimary(false)
-                .status("Verified")
-                .addedOn("20 Jun 2024")
-                .build());
-
-        bankAccounts.add(BankAccountItemDto.builder()
-                .id(4L)
-                .bankName("Axis Bank")
-                .bankLogo("AXIS")
-                .accountHolderName("Rohit Sharma")
-                .accountNumber("2345 6789 0123")
-                .ifscCode("UTIB0004567")
-                .isPrimary(false)
-                .status("Under Verification")
-                .addedOn("16 Sep 2026")
-                .build());
-    }
-
-    private void seedSecurityData() {
-        TwoFactorSettingsDto twoFactor = TwoFactorSettingsDto.builder()
-                .isEnabled(true)
-                .authenticatorAppStatus("Connected")
-                .authenticatorAppEnabled(true)
-                .smsPhoneNumber("+91 98765 43210")
-                .smsVerificationEnabled(false)
-                .backupCodesCount(8)
-                .build();
-
-        List<ActiveSessionDto> sessions = new ArrayList<>();
-        sessions.add(ActiveSessionDto.builder().sessionId("sess-1").device("Windows · Chrome").location("Hyderabad, India").ipAddress("103.21.45.67").isCurrentSession(true).build());
-        sessions.add(ActiveSessionDto.builder().sessionId("sess-2").device("Android · Chrome").location("Hyderabad, India").ipAddress("103.21.45.67").isCurrentSession(false).build());
-        sessions.add(ActiveSessionDto.builder().sessionId("sess-3").device("iPhone · Safari").location("Bangalore, India").ipAddress("49.36.12.89").isCurrentSession(false).build());
-
-        SecurityPreferencesDto prefs = SecurityPreferencesDto.builder()
-                .emailNotificationsForNewLogin(true)
-                .loginAlertsForUnknownDevices(true)
-                .require2faForAllLogins(true)
-                .autoLogoutForInactiveSessions(false)
-                .build();
-
-        List<LoginHistoryItemDto> history = new ArrayList<>();
-        history.add(LoginHistoryItemDto.builder().dateTime("16 Sep 2026, 10:24 AM").device("Windows · Chrome").location("Hyderabad, India").ipAddress("103.21.45.67").status("Successful").build());
-        history.add(LoginHistoryItemDto.builder().dateTime("15 Sep 2026, 08:17 PM").device("Android · Chrome").location("Hyderabad, India").ipAddress("103.21.45.67").status("Successful").build());
-        history.add(LoginHistoryItemDto.builder().dateTime("14 Sep 2026, 11:05 AM").device("Windows · Edge").location("Bangalore, India").ipAddress("49.36.12.89").status("Successful").build());
-        history.add(LoginHistoryItemDto.builder().dateTime("12 Sep 2026, 09:41 PM").device("iPhone · Safari").location("Hyderabad, India").ipAddress("103.21.45.67").status("Unsuccessful").build());
-
-        securityOverview = SecurityOverviewDto.builder()
-                .memberId("ATG10027")
-                .fullName("Rohit Sharma")
-                .memberBadge("Verified Member")
-                .email("rohit.sharma@example.com")
-                .mobileNumber("+91 98765 43210")
-                .companyName("GreenTech Solutions Pvt Ltd")
-                .designation("Director")
-                .industry("Renewable Energy")
-                .memberSince("12 Jan 2021")
-                .avatarInitials("RS")
-                .maskedPassword("••••••••••••")
-                .passwordLastChanged("12 Jan 2024")
-                .twoFactor(twoFactor)
-                .activeSessions(sessions)
-                .securityPreferences(prefs)
-                .loginHistory(history)
+        return KycDocumentItemDto.builder()
+                .id(id)
+                .title(title)
+                .description(description)
+                .documentType(docTypeLabel)
+                .documentNumber(docNumber)
+                .uploadedOn(uploadedOn)
+                .status(status)
+                .fileUrl(fileUrl)
+                .canUpload(canUpload)
                 .build();
     }
 
-    private void seedDevicesData() {
-        devices.add(DeviceItemDto.builder()
-                .id("dev-1")
-                .name("Windows - Chrome")
-                .deviceType("LAPTOP")
-                .osBrowser("Windows 11 | Chrome 128.0.6613.137")
-                .location("Hyderabad, India")
-                .ipAddress("103.21.45.67")
-                .status("Active Now")
-                .isCurrentDevice(true)
-                .canRevoke(false)
-                .build());
+    @Transactional
+    public KycDocumentItemDto uploadKycDocument(Long userId, Long docId, String fileUrl) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        KycVerificationPageDto page = getKycVerification(userId);
 
-        devices.add(DeviceItemDto.builder()
-                .id("dev-2")
-                .name("iPhone - Safari")
-                .deviceType("MOBILE")
-                .osBrowser("iOS 17.6 | Safari 17.6")
-                .location("Bangalore, India")
-                .ipAddress("49.36.12.89")
-                .status("Active")
-                .isCurrentDevice(false)
-                .lastActive("15 Sep 2026, 06:24 PM")
-                .canRevoke(false)
-                .build());
-
-        devices.add(DeviceItemDto.builder()
-                .id("dev-3")
-                .name("Android - Chrome")
-                .deviceType("MOBILE")
-                .osBrowser("Android 14 | Chrome 127.0.6533.103")
-                .location("Hyderabad, India")
-                .ipAddress("103.21.45.67")
-                .status("Inactive")
-                .isCurrentDevice(false)
-                .lastActive("12 Sep 2026, 11:18 AM")
-                .canRevoke(true)
-                .build());
-
-        devices.add(DeviceItemDto.builder()
-                .id("dev-4")
-                .name("Windows - Edge")
-                .deviceType("DESKTOP")
-                .osBrowser("Windows 10 | Edge 127.0.2651.86")
-                .location("Hyderabad, India")
-                .ipAddress("203.122.44.11")
-                .status("Inactive")
-                .isCurrentDevice(false)
-                .lastActive("05 Sep 2026, 09:41 AM")
-                .canRevoke(true)
-                .build());
-
-        devices.add(DeviceItemDto.builder()
-                .id("dev-5")
-                .name("MacBook - Chrome")
-                .deviceType("LAPTOP")
-                .osBrowser("macOS 14.5 | Chrome 126.0.6478.126")
-                .location("Chennai, India")
-                .ipAddress("49.204.18.73")
-                .status("Inactive")
-                .isCurrentDevice(false)
-                .lastActive("28 Aug 2026, 03:27 PM")
-                .canRevoke(true)
-                .build());
-    }
-
-    private void seedNotificationsData() {
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-1")
-                .title("Trade Order Approved")
-                .message("Your buy order #TRD00234 for Solar Panels has been approved.")
-                .type("TRADE")
-                .timeAgo("10 mins ago")
-                .isUnread(true)
-                .iconTheme("green")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-2")
-                .title("New Negotiation Message")
-                .message("You have received a new message from Global Renewables Ltd.")
-                .type("NEGOTIATION")
-                .timeAgo("2 hours ago")
-                .isUnread(true)
-                .iconTheme("purple")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-3")
-                .title("Settlement Completed")
-                .message("Settlement for trade #TRD00212 has been completed successfully.")
-                .type("SETTLEMENT")
-                .timeAgo("4 hours ago")
-                .isUnread(false)
-                .iconTheme("orange")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-4")
-                .title("KYC Verification Update")
-                .message("Your KYC documents have been verified successfully.")
-                .type("KYC")
-                .timeAgo("1 day ago")
-                .isUnread(false)
-                .iconTheme("red")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-5")
-                .title("New Member Request")
-                .message("A new external member request is pending your review.")
-                .type("MEMBER_REQUEST")
-                .timeAgo("1 day ago")
-                .isUnread(false)
-                .iconTheme("blue")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-6")
-                .title("System Update")
-                .message("New features have been added to the platform. Check what's new!")
-                .type("SYSTEM")
-                .timeAgo("3 days ago")
-                .isUnread(false)
-                .iconTheme("dark")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-7")
-                .title("Document Expiry Reminder")
-                .message("Your PAN card will expire in 30 days. Please update the document.")
-                .type("REMINDER")
-                .timeAgo("5 days ago")
-                .isUnread(false)
-                .iconTheme("green")
-                .build());
-
-        notifications.add(NotificationItemDto.builder()
-                .id("notif-8")
-                .title("New Login Detected")
-                .message("A new login was detected from Windows - Hyderabad, India.")
-                .type("SECURITY")
-                .timeAgo("6 days ago")
-                .isUnread(false)
-                .iconTheme("orange")
-                .build());
-
-        notificationPreferences = NotificationPreferencesDto.builder()
-                .tradeNotifications(true)
-                .negotiationMessages(true)
-                .settlementUpdates(true)
-                .kycCompliance(true)
-                .memberRequests(true)
-                .systemUpdates(true)
-                .securityAlerts(true)
-                .marketingCommunications(false)
-                .build();
-
-        notificationChannels = NotificationChannelsDto.builder()
-                .inApp(true)
-                .email(true)
-                .sms(false)
-                .build();
-    }
-
-    private void seedDocumentsData() {
-        documents.add(DocumentRecordDto.builder().id("doc-1").name("PAN Card").fileName("pan_card.pdf").category("Identity").uploadedOn("12 Jan 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-2").name("Aadhaar Card").fileName("aadhaar_card.pdf").category("Identity").uploadedOn("12 Jan 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-3").name("Voter ID").fileName("voter_id.pdf").category("Identity").uploadedOn("15 Feb 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-4").name("Certificate of Incorporation").fileName("coi.pdf").category("Organization").uploadedOn("05 Mar 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-5").name("MoA & AoA").fileName("moa_aoa.pdf").category("Organization").uploadedOn("05 Mar 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-6").name("GST Registration Certificate").fileName("gst_certificate.pdf").category("Organization").uploadedOn("10 Mar 2024").expiryDate("10 Mar 2029").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-7").name("Current Account Proof").fileName("bank_statement.pdf").category("Bank").uploadedOn("20 Mar 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-8").name("Cancelled Cheque").fileName("cancelled_cheque.pdf").category("Bank").uploadedOn("20 Mar 2024").expiryDate("-").status("Verified").build());
-        documents.add(DocumentRecordDto.builder().id("doc-9").name("Board Resolution").fileName("board_resolution.pdf").category("Other").uploadedOn("15 Apr 2024").expiryDate("-").status("Under Review").build());
-        documents.add(DocumentRecordDto.builder().id("doc-10").name("Trading Authorization").fileName("trading_authorization.pdf").category("Other").uploadedOn("15 Apr 2024").expiryDate("15 Apr 2025").status("Expired").build());
-
-        storageUsage = StorageUsageDto.builder()
-                .usedPercentage(40)
-                .usedMb("2.0 MB")
-                .totalMb("5.0 MB")
-                .availableMb("3.0 MB")
-                .build();
-
-        expiryAlerts.add(ExpiryAlertDto.builder().name("Trading Authorization").alertText("Expires in 30 days").expiryDate("15 Apr 2025").theme("red").build());
-        expiryAlerts.add(ExpiryAlertDto.builder().name("GST Registration Certificate").alertText("Expires in 180 days").expiryDate("10 Mar 2029").theme("green").build());
-        expiryAlerts.add(ExpiryAlertDto.builder().name("PAN Card").alertText("No expiry").expiryDate("-").theme("orange").build());
-    }
-
-    private void seedSettingsData() {
-        generalSettings = GeneralSettingsDto.builder()
-                .emailAddress("rohit.sharma@example.com")
-                .emailStatus("Verified")
-                .mobileNumber("+91 98765 43210")
-                .mobileStatus("Verified")
-                .company("GreenTech Solutions Pvt Ltd")
-                .designation("Director")
-                .build();
-
-        platformPreferences = PlatformPreferencesDto.builder()
-                .receiveEmailNotifications(true)
-                .receiveSmsNotifications(true)
-                .marketingCommunications(false)
-                .showPortfolioSummaryOnLogin(true)
-                .autoLogout("30 Minutes")
-                .build();
-
-        appearanceSettings = AppearanceSettingsDto.builder()
-                .selectedTheme("Light")
-                .build();
-
-        languageRegion = LanguageRegionDto.builder()
-                .language("English (India)")
-                .timezone("(UTC+05:30) Asia/Kolkata")
-                .build();
-    }
-
-    // --- Profile Screen APIs ---
-    public MemberProfileDto getProfile() {
-        return memberProfile;
-    }
-
-    public PersonalInfoDto updatePersonalInfo(PersonalInfoDto update) {
-        if (update.getFullName() != null) memberProfile.getPersonalInfo().setFullName(update.getFullName());
-        if (update.getDateOfBirth() != null) memberProfile.getPersonalInfo().setDateOfBirth(update.getDateOfBirth());
-        if (update.getGender() != null) memberProfile.getPersonalInfo().setGender(update.getGender());
-        if (update.getNationality() != null) memberProfile.getPersonalInfo().setNationality(update.getNationality());
-        if (update.getPanNumber() != null) memberProfile.getPersonalInfo().setPanNumber(update.getPanNumber());
-        if (update.getAadhaarNumber() != null) memberProfile.getPersonalInfo().setAadhaarNumber(update.getAadhaarNumber());
-        if (update.getOccupation() != null) memberProfile.getPersonalInfo().setOccupation(update.getOccupation());
-        if (update.getLinkedInProfile() != null) memberProfile.getPersonalInfo().setLinkedInProfile(update.getLinkedInProfile());
-        return memberProfile.getPersonalInfo();
-    }
-
-    public OrganizationInfoDto updateOrganizationInfo(OrganizationInfoDto update) {
-        if (update.getCompanyName() != null) memberProfile.getOrganizationInfo().setCompanyName(update.getCompanyName());
-        if (update.getIndustry() != null) memberProfile.getOrganizationInfo().setIndustry(update.getIndustry());
-        if (update.getCompanyType() != null) memberProfile.getOrganizationInfo().setCompanyType(update.getCompanyType());
-        if (update.getDesignation() != null) memberProfile.getOrganizationInfo().setDesignation(update.getDesignation());
-        if (update.getCompanyPan() != null) memberProfile.getOrganizationInfo().setCompanyPan(update.getCompanyPan());
-        if (update.getRegistrationNumber() != null) memberProfile.getOrganizationInfo().setRegistrationNumber(update.getRegistrationNumber());
-        if (update.getCompanyAddress() != null) memberProfile.getOrganizationInfo().setCompanyAddress(update.getCompanyAddress());
-        if (update.getWebsite() != null) memberProfile.getOrganizationInfo().setWebsite(update.getWebsite());
-        return memberProfile.getOrganizationInfo();
-    }
-
-    public ContactInfoDto updateContactInfo(ContactInfoDto update) {
-        if (update.getEmailAddress() != null) memberProfile.getContactInfo().setEmailAddress(update.getEmailAddress());
-        if (update.getMobileNumber() != null) memberProfile.getContactInfo().setMobileNumber(update.getMobileNumber());
-        if (update.getAlternateMobile() != null) memberProfile.getContactInfo().setAlternateMobile(update.getAlternateMobile());
-        if (update.getAlternateEmail() != null) memberProfile.getContactInfo().setAlternateEmail(update.getAlternateEmail());
-        return memberProfile.getContactInfo();
-    }
-
-    public ProfessionalDetailsDto updateProfessionalDetails(ProfessionalDetailsDto update) {
-        if (update.getYearsOfExperience() != null) memberProfile.getProfessionalDetails().setYearsOfExperience(update.getYearsOfExperience());
-        if (update.getAreaOfExpertise() != null) memberProfile.getProfessionalDetails().setAreaOfExpertise(update.getAreaOfExpertise());
-        if (update.getInterestedSectors() != null) memberProfile.getProfessionalDetails().setInterestedSectors(update.getInterestedSectors());
-        if (update.getInvestmentRange() != null) memberProfile.getProfessionalDetails().setInvestmentRange(update.getInvestmentRange());
-        if (update.getInvestmentPurpose() != null) memberProfile.getProfessionalDetails().setInvestmentPurpose(update.getInvestmentPurpose());
-        return memberProfile.getProfessionalDetails();
-    }
-
-    public AddressInfoDto updateAddressInfo(AddressInfoDto update) {
-        if (update.getCurrentAddress() != null) memberProfile.getAddressInfo().setCurrentAddress(update.getCurrentAddress());
-        return memberProfile.getAddressInfo();
-    }
-
-    public AdditionalInfoDto updateAdditionalInfo(AdditionalInfoDto update) {
-        if (update.getLanguageKnown() != null) memberProfile.getAdditionalInfo().setLanguageKnown(update.getLanguageKnown());
-        if (update.getHowDidYouHearAboutUs() != null) memberProfile.getAdditionalInfo().setHowDidYouHearAboutUs(update.getHowDidYouHearAboutUs());
-        if (update.getProfileVisibility() != null) memberProfile.getAdditionalInfo().setProfileVisibility(update.getProfileVisibility());
-        return memberProfile.getAdditionalInfo();
-    }
-
-    // --- KYC Screen APIs ---
-    public KycVerificationPageDto getKycVerification() {
-        return kycVerification;
-    }
-
-    public KycDocumentItemDto uploadKycDocument(Long docId, String fileUrl) {
-        KycDocumentItemDto doc = kycVerification.getDocuments().stream()
+        KycDocumentItemDto target = page.getDocuments().stream()
                 .filter(d -> d.getId().equals(docId))
                 .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Document not found with ID " + docId));
+                .orElseThrow(() -> new ResourceNotFoundException("KYC Document not found: " + docId));
 
-        doc.setStatus("Under Review");
-        doc.setUploadedOn(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
-        doc.setFileUrl(fileUrl != null ? fileUrl : "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80");
-        doc.setCanUpload(false);
+        String resolvedPath = isPresent(fileUrl) ? fileUrl.trim() : "kyc-upload-" + userId + "-" + docId + ".pdf";
+        String nowDate = LocalDate.now().format(DISPLAY_DATE_FMT);
 
-        kycVerification.getVerificationHistory().add(0, VerificationHistoryLogDto.builder()
-                .title(doc.getTitle() + " Submitted")
-                .timestamp(LocalDateTime.now().format(DISPLAY_DT_FMT))
-                .actor(memberProfile.getFullName())
+        DocumentType mappedType = switch (docId.intValue()) {
+            case 1 -> DocumentType.IDENTITY_PROOF;
+            case 2, 3 -> DocumentType.ADDRESS_PROOF;
+            case 4 -> DocumentType.BANK_PASSBOOK;
+            default -> DocumentType.LIVE_PHOTO;
+        };
+
+        AccountDocument savedDoc = AccountDocument.builder()
+                .userAccount(user)
+                .documentType(mappedType)
+                .documentName(target.getTitle())
+                .filePath(resolvedPath)
+                .mimeType(resolvedPath.toLowerCase(Locale.ENGLISH).endsWith(".png") ? "image/png" : "application/pdf")
+                .fileSizeBytes(245760L)
+                .build();
+        accountDocumentRepository.save(savedDoc);
+
+        KycDocOverride override = new KycDocOverride();
+        override.status = "Under Review";
+        override.uploadedOn = nowDate;
+        override.fileUrl = resolvedPath;
+        extras.kycOverrides.put(docId, override);
+
+        extras.extraVerificationLogs.add(0, VerificationHistoryLogDto.builder()
+                .title(target.getTitle() + " Submitted")
+                .timestamp(OffsetDateTime.now().format(DISPLAY_DT_FMT))
+                .actor(fullName)
                 .status("Submitted")
                 .build());
 
-        return doc;
+        target.setStatus("Under Review");
+        target.setUploadedOn(nowDate);
+        target.setFileUrl(resolvedPath);
+        target.setCanUpload(false);
+        return target;
     }
 
-    // --- Bank Accounts Screen APIs ---
-    public BankAccountsPageDto getBankAccountsPage() {
-        List<String> guidelines = Arrays.asList(
-                "Bank account must be in your name or registered organization name.",
-                "Only Indian bank accounts are supported.",
-                "Account must be verified to receive settlements.",
-                "Ensure correct IFSC and account details.",
-                "You can add multiple bank accounts and set one as primary."
-        );
+    // =========================================================================
+    // 3. Bank & Settlement Accounts
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public BankAccountsPageDto getBankAccountsPage(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+
+        List<BankAccountItemDto> list = buildBankAccountsList(user, extras);
 
         return BankAccountsPageDto.builder()
-                .memberId(memberProfile.getMemberId())
-                .fullName(memberProfile.getFullName())
-                .memberBadge(memberProfile.getMemberBadge())
-                .email(memberProfile.getEmail())
-                .mobileNumber(memberProfile.getMobileNumber())
-                .companyName(memberProfile.getCompanyName())
-                .designation(memberProfile.getDesignation())
-                .industry(memberProfile.getIndustry())
-                .memberSince(memberProfile.getMemberSince())
-                .avatarInitials(memberProfile.getAvatarInitials())
-                .bankAccounts(new ArrayList<>(bankAccounts))
-                .accountGuidelines(guidelines)
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : "Member")
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
+                .bankAccounts(list)
+                .accountGuidelines(Arrays.asList(
+                        "Bank account must be in your name or registered organization name.",
+                        "Only Indian bank accounts are supported.",
+                        "Account must be verified to receive settlements.",
+                        "Ensure correct IFSC and account details.",
+                        "You can add multiple bank accounts and set one as primary."
+                ))
                 .settlementInfo("Your primary bank account will be used for all settlements, payouts and refunds across the platform.")
                 .build();
     }
 
-    public BankAccountItemDto addBankAccount(AddBankAccountRequestDto input) {
-        boolean isPrimary = Boolean.TRUE.equals(input.getSetAsPrimary()) || bankAccounts.isEmpty();
-        if (isPrimary) {
-            bankAccounts.forEach(b -> b.setIsPrimary(false));
+    private List<BankAccountItemDto> buildBankAccountsList(UserAccount user, UserProfileExtras extras) {
+        List<BankAccountItemDto> result = new ArrayList<>();
+        Optional<BankDetail> dbBankOpt = bankDetailRepository.findByUserAccount_UserId(user.getUserId());
+        if (dbBankOpt.isPresent() && !extras.primaryDbBankHidden) {
+            BankDetail dbBank = dbBankOpt.get();
+            boolean isPrimary = extras.overridePrimaryBankId == null
+                    || Objects.equals(extras.overridePrimaryBankId, dbBank.getBankId());
+            String bankLogo = isPresent(dbBank.getBankName())
+                    ? dbBank.getBankName().trim().split("\\s+")[0].toUpperCase(Locale.ENGLISH)
+                    : "BANK";
+            result.add(BankAccountItemDto.builder()
+                    .id(dbBank.getBankId())
+                    .bankName(dbBank.getBankName())
+                    .bankLogo(bankLogo)
+                    .accountHolderName(dbBank.getAccountHolderName())
+                    .accountNumber(decryptAccountMasked(dbBank))
+                    .ifscCode(dbBank.getIfscCode())
+                    .isPrimary(isPrimary)
+                    .status(user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Under Verification")
+                    .addedOn(formatDate(dbBank.getCreatedAt()))
+                    .build());
         }
-
-        String maskedAcc = input.getAccountNumber();
-        if (maskedAcc.length() > 4) {
-            maskedAcc = "**** **** " + maskedAcc.substring(maskedAcc.length() - 4);
+        for (BankAccountItemDto extra : extras.extraBankAccounts) {
+            boolean isPrimary = extras.overridePrimaryBankId != null
+                    ? Objects.equals(extras.overridePrimaryBankId, extra.getId())
+                    : Boolean.TRUE.equals(extra.getIsPrimary());
+            extra.setIsPrimary(isPrimary);
+            result.add(extra);
         }
-
-        BankAccountItemDto newAcc = BankAccountItemDto.builder()
-                .id(bankIdCounter.incrementAndGet())
-                .bankName(input.getBankName())
-                .bankLogo(input.getBankName().split(" ")[0].toUpperCase())
-                .accountHolderName(input.getAccountHolderName())
-                .accountNumber(maskedAcc)
-                .ifscCode(input.getIfscCode())
-                .isPrimary(isPrimary)
-                .status("Under Verification")
-                .addedOn(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy")))
-                .build();
-
-        bankAccounts.add(newAcc);
-        return newAcc;
+        return result;
     }
 
-    public BankAccountItemDto setPrimaryAccount(Long accountId) {
-        BankAccountItemDto target = bankAccounts.stream()
-                .filter(b -> b.getId().equals(accountId))
-                .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Bank account not found: " + accountId));
+    @Transactional
+    public BankAccountItemDto addBankAccount(Long userId, AddBankAccountRequestDto input) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
 
-        bankAccounts.forEach(b -> b.setIsPrimary(false));
+        Optional<BankDetail> existingDb = bankDetailRepository.findByUserAccount_UserId(userId);
+        if (existingDb.isEmpty() || extras.primaryDbBankHidden) {
+            String encryptedAcc = aesEncryptionUtil.encrypt(input.getAccountNumber().trim());
+            BankDetail entity = existingDb.orElseGet(() -> BankDetail.builder().userAccount(user).build());
+            entity.setBankName(input.getBankName().trim());
+            entity.setAccountHolderName(input.getAccountHolderName().trim());
+            entity.setAccountNumberEncrypted(encryptedAcc);
+            entity.setIfscCode(input.getIfscCode().trim().toUpperCase(Locale.ENGLISH));
+            entity.setBranchName("Primary Branch");
+            BankDetail saved = bankDetailRepository.save(entity);
+            extras.primaryDbBankHidden = false;
+            if (Boolean.TRUE.equals(input.getSetAsPrimary()) || extras.extraBankAccounts.isEmpty()) {
+                extras.overridePrimaryBankId = saved.getBankId();
+            }
+            return buildBankAccountsList(user, extras).stream()
+                    .filter(b -> Objects.equals(b.getId(), saved.getBankId()))
+                    .findFirst()
+                    .orElseThrow();
+        }
+
+        long newId = syntheticIdGenerator.incrementAndGet();
+        boolean makePrimary = Boolean.TRUE.equals(input.getSetAsPrimary());
+        if (makePrimary) {
+            extras.overridePrimaryBankId = newId;
+            extras.extraBankAccounts.forEach(b -> b.setIsPrimary(false));
+        }
+
+        String rawAcc = input.getAccountNumber().trim();
+        String maskedAcc = rawAcc.length() > 4
+                ? "**** **** " + rawAcc.substring(rawAcc.length() - 4)
+                : rawAcc;
+        String logo = input.getBankName().trim().split("\\s+")[0].toUpperCase(Locale.ENGLISH);
+
+        BankAccountItemDto added = BankAccountItemDto.builder()
+                .id(newId)
+                .bankName(input.getBankName().trim())
+                .bankLogo(logo)
+                .accountHolderName(input.getAccountHolderName().trim())
+                .accountNumber(maskedAcc)
+                .ifscCode(input.getIfscCode().trim().toUpperCase(Locale.ENGLISH))
+                .isPrimary(makePrimary)
+                .status("Under Verification")
+                .addedOn(LocalDate.now().format(DISPLAY_DATE_FMT))
+                .build();
+        extras.extraBankAccounts.add(added);
+        return added;
+    }
+
+    @Transactional
+    public BankAccountItemDto setPrimaryAccount(Long userId, Long accountId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        List<BankAccountItemDto> list = buildBankAccountsList(user, extras);
+
+        BankAccountItemDto target = list.stream()
+                .filter(b -> Objects.equals(b.getId(), accountId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Bank account not found: " + accountId));
+
+        extras.overridePrimaryBankId = accountId;
+        extras.extraBankAccounts.forEach(b -> b.setIsPrimary(Objects.equals(b.getId(), accountId)));
         target.setIsPrimary(true);
         return target;
     }
 
-    public void removeBankAccount(Long accountId) {
-        bankAccounts.removeIf(b -> b.getId().equals(accountId));
-    }
+    @Transactional
+    public void removeBankAccount(Long userId, Long accountId) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
 
-    // --- Security Screen APIs ---
-    public SecurityOverviewDto getSecurityOverview() {
-        return securityOverview;
-    }
-
-    public boolean changePassword(ChangePasswordRequestDto input) {
-        if (!input.getNewPassword().equals(input.getConfirmPassword())) {
-            throw new IllegalArgumentException("New password and confirmation password do not match");
+        boolean removedExtra = extras.extraBankAccounts.removeIf(b -> Objects.equals(b.getId(), accountId));
+        if (removedExtra) {
+            if (Objects.equals(extras.overridePrimaryBankId, accountId)) {
+                extras.overridePrimaryBankId = null;
+            }
+            return;
         }
-        securityOverview.setPasswordLastChanged(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
-        return true;
-    }
 
-    public TwoFactorSettingsDto toggleTwoFactor(boolean enable) {
-        securityOverview.getTwoFactor().setIsEnabled(enable);
-        return securityOverview.getTwoFactor();
-    }
-
-    public SecurityPreferencesDto updateSecurityPreferences(SecurityPreferencesDto update) {
-        if (update.getEmailNotificationsForNewLogin() != null)
-            securityOverview.getSecurityPreferences().setEmailNotificationsForNewLogin(update.getEmailNotificationsForNewLogin());
-        if (update.getLoginAlertsForUnknownDevices() != null)
-            securityOverview.getSecurityPreferences().setLoginAlertsForUnknownDevices(update.getLoginAlertsForUnknownDevices());
-        if (update.getRequire2faForAllLogins() != null)
-            securityOverview.getSecurityPreferences().setRequire2faForAllLogins(update.getRequire2faForAllLogins());
-        if (update.getAutoLogoutForInactiveSessions() != null)
-            securityOverview.getSecurityPreferences().setAutoLogoutForInactiveSessions(update.getAutoLogoutForInactiveSessions());
-        return securityOverview.getSecurityPreferences();
-    }
-
-    public void terminateSession(String sessionId) {
-        securityOverview.getActiveSessions().removeIf(s -> s.getSessionId().equals(sessionId) && !Boolean.TRUE.equals(s.getIsCurrentSession()));
-    }
-
-    public void terminateAllOtherSessions() {
-        securityOverview.getActiveSessions().removeIf(s -> !Boolean.TRUE.equals(s.getIsCurrentSession()));
+        Optional<BankDetail> dbBankOpt = bankDetailRepository.findByUserAccount_UserId(userId);
+        if (dbBankOpt.isPresent() && Objects.equals(dbBankOpt.get().getBankId(), accountId)) {
+            extras.primaryDbBankHidden = true;
+            if (!extras.extraBankAccounts.isEmpty()) {
+                extras.overridePrimaryBankId = extras.extraBankAccounts.get(0).getId();
+                extras.extraBankAccounts.get(0).setIsPrimary(true);
+            } else {
+                extras.overridePrimaryBankId = null;
+            }
+            return;
+        }
+        throw new ResourceNotFoundException("Bank account not found: " + accountId);
     }
 
     // =========================================================================
-    // 5. Active Devices APIs (Image 1)
+    // 4. Security & Login Activity
     // =========================================================================
 
-    public ActiveDevicesPageDto getActiveDevicesPage() {
-        int activeCount = (int) devices.stream().filter(d -> !"Inactive".equalsIgnoreCase(d.getStatus())).count();
+    @Transactional(readOnly = true)
+    public SecurityOverviewDto getSecurityOverview(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
 
-        List<String> tips = Arrays.asList(
-                "Regularly review your active devices.",
-                "Revoke access for devices you no longer use.",
-                "If you notice any suspicious activity, change your password immediately.",
-                "Do not share your login credentials with anyone."
-        );
+        UserCredential cred = userCredentialRepository.findByUserAccount_UserId(userId).orElse(null);
+        String passwordChanged = cred != null && cred.getPasswordChangedAt() != null
+                ? formatDate(cred.getPasswordChangedAt())
+                : formatDate(user.getCreatedAt());
 
-        return ActiveDevicesPageDto.builder()
-                .memberId(memberProfile.getMemberId())
-                .fullName(memberProfile.getFullName())
-                .memberBadge(memberProfile.getMemberBadge())
-                .email(memberProfile.getEmail())
-                .mobileNumber(memberProfile.getMobileNumber())
-                .companyName(memberProfile.getCompanyName())
-                .designation(memberProfile.getDesignation())
-                .industry(memberProfile.getIndustry())
-                .memberSince(memberProfile.getMemberSince())
-                .avatarInitials(memberProfile.getAvatarInitials())
-                .devices(new ArrayList<>(devices))
-                .activeDevicesCount(activeCount)
-                .maxDevicesLimit(5)
-                .securityTips(tips)
-                .recentActivity(securityOverview.getLoginHistory())
+        if (extras.twoFactor == null) {
+            extras.twoFactor = TwoFactorSettingsDto.builder()
+                    .isEnabled(false)
+                    .authenticatorAppStatus("Not Configured")
+                    .authenticatorAppEnabled(false)
+                    .smsPhoneNumber(user.getMobileNumber())
+                    .smsVerificationEnabled(false)
+                    .backupCodesCount(0)
+                    .build();
+        } else {
+            extras.twoFactor.setSmsPhoneNumber(user.getMobileNumber());
+        }
+
+        if (extras.securityPreferences == null) {
+            extras.securityPreferences = SecurityPreferencesDto.builder()
+                    .emailNotificationsForNewLogin(true)
+                    .loginAlertsForUnknownDevices(true)
+                    .require2faForAllLogins(Boolean.TRUE.equals(extras.twoFactor.getIsEnabled()))
+                    .autoLogoutForInactiveSessions(false)
+                    .build();
+        }
+
+        List<ActiveSessionDto> sessions = new ArrayList<>();
+        if (extras.currentSessionTracked) {
+            sessions.add(ActiveSessionDto.builder()
+                    .sessionId("sess-current")
+                    .device("Current Web Browser Session")
+                    .location("Active Session")
+                    .ipAddress("Current Device")
+                    .isCurrentSession(true)
+                    .build());
+        }
+        List<UserBiometricCredential> biometrics = userBiometricCredentialRepository.findByUserAccount_UserId(userId);
+        for (UserBiometricCredential bio : biometrics) {
+            if (Boolean.TRUE.equals(bio.getIsActive())) {
+                sessions.add(ActiveSessionDto.builder()
+                        .sessionId("bio-" + bio.getCredentialId())
+                        .device(isPresent(bio.getDeviceName()) ? bio.getDeviceName() : "Trusted Mobile Device")
+                        .location("Enrolled " + formatDate(bio.getEnrolledAt()))
+                        .ipAddress(bio.getDeviceId())
+                        .isCurrentSession(false)
+                        .build());
+            }
+        }
+        sessions.addAll(extras.extraSessions);
+
+        List<LoginHistoryItemDto> history = new ArrayList<>(extras.loginHistory);
+        for (UserBiometricCredential bio : biometrics) {
+            OffsetDateTime activityTs = bio.getLastUsedAt() != null ? bio.getLastUsedAt() : bio.getEnrolledAt();
+            history.add(LoginHistoryItemDto.builder()
+                    .dateTime(formatDateTime(activityTs))
+                    .device(isPresent(bio.getDeviceName()) ? bio.getDeviceName() : bio.getDeviceId())
+                    .location("Trusted Device")
+                    .ipAddress(bio.getDeviceId())
+                    .status(Boolean.TRUE.equals(bio.getIsActive()) ? "Successful" : "Revoked")
+                    .build());
+        }
+        if (cred != null && cred.getPasswordChangedAt() != null) {
+            history.add(LoginHistoryItemDto.builder()
+                    .dateTime(formatDateTime(cred.getPasswordChangedAt()))
+                    .device("Web / Mobile Auth")
+                    .location("Account Security")
+                    .ipAddress("-")
+                    .status("Successful")
+                    .build());
+        }
+
+        return SecurityOverviewDto.builder()
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : "Member")
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
+                .maskedPassword("••••••••••••")
+                .passwordLastChanged(passwordChanged)
+                .twoFactor(extras.twoFactor)
+                .activeSessions(sessions)
+                .securityPreferences(extras.securityPreferences)
+                .loginHistory(history)
                 .build();
     }
 
-    public void revokeDevice(String deviceId) {
-        devices.removeIf(d -> d.getId().equals(deviceId) && !Boolean.TRUE.equals(d.getIsCurrentDevice()));
+    @Transactional
+    public boolean changePassword(Long userId, ChangePasswordRequestDto input) {
+        UserAccount user = loadUser(userId);
+        if (!Objects.equals(input.getNewPassword(), input.getConfirmPassword())) {
+            throw new ApiException("New password and confirmation password do not match", HttpStatus.BAD_REQUEST);
+        }
+        if (input.getNewPassword().length() < 8) {
+            throw new ApiException("New password must be at least 8 characters long", HttpStatus.BAD_REQUEST);
+        }
+
+        UserCredential cred = userCredentialRepository.findByUserAccount_UserId(userId)
+                .orElseThrow(() -> new ApiException("Password credentials not initialized for this account", HttpStatus.BAD_REQUEST));
+
+        if (!passwordEncoder.matches(input.getCurrentPassword(), cred.getPasswordHash())) {
+            throw new ApiException("Current password is incorrect", HttpStatus.BAD_REQUEST);
+        }
+
+        cred.setPasswordHash(passwordEncoder.encode(input.getNewPassword()));
+        cred.setPasswordChangedAt(OffsetDateTime.now());
+        userCredentialRepository.save(cred);
+
+        getExtras(userId).loginHistory.add(0, LoginHistoryItemDto.builder()
+                .dateTime(OffsetDateTime.now().format(DISPLAY_DT_FMT))
+                .device("Web Browser")
+                .location("Password Updated")
+                .ipAddress("-")
+                .status("Successful")
+                .build());
+        return true;
+    }
+
+    public TwoFactorSettingsDto toggleTwoFactor(Long userId, boolean enable) {
+        SecurityOverviewDto overview = getSecurityOverview(userId);
+        TwoFactorSettingsDto twoFactor = overview.getTwoFactor();
+        twoFactor.setIsEnabled(enable);
+        twoFactor.setAuthenticatorAppEnabled(enable);
+        twoFactor.setAuthenticatorAppStatus(enable ? "Connected" : "Not Configured");
+        twoFactor.setBackupCodesCount(enable ? 8 : 0);
+        return twoFactor;
+    }
+
+    public SecurityPreferencesDto updateSecurityPreferences(Long userId, SecurityPreferencesDto update) {
+        SecurityOverviewDto overview = getSecurityOverview(userId);
+        SecurityPreferencesDto prefs = overview.getSecurityPreferences();
+        if (update.getEmailNotificationsForNewLogin() != null)
+            prefs.setEmailNotificationsForNewLogin(update.getEmailNotificationsForNewLogin());
+        if (update.getLoginAlertsForUnknownDevices() != null)
+            prefs.setLoginAlertsForUnknownDevices(update.getLoginAlertsForUnknownDevices());
+        if (update.getRequire2faForAllLogins() != null)
+            prefs.setRequire2faForAllLogins(update.getRequire2faForAllLogins());
+        if (update.getAutoLogoutForInactiveSessions() != null)
+            prefs.setAutoLogoutForInactiveSessions(update.getAutoLogoutForInactiveSessions());
+        return prefs;
+    }
+
+    @Transactional
+    public void terminateSession(Long userId, String sessionId) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (sessionId != null && sessionId.startsWith("bio-")) {
+            Long credId = Long.parseLong(sessionId.substring(4));
+            userBiometricCredentialRepository.findById(credId)
+                    .filter(b -> Objects.equals(b.getUserAccount().getUserId(), userId))
+                    .ifPresent(b -> {
+                        b.setIsActive(false);
+                        userBiometricCredentialRepository.save(b);
+                    });
+            return;
+        }
+        extras.extraSessions.removeIf(s -> Objects.equals(s.getSessionId(), sessionId) && !Boolean.TRUE.equals(s.getIsCurrentSession()));
+    }
+
+    @Transactional
+    public void terminateAllOtherSessions(Long userId) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        extras.extraSessions.removeIf(s -> !Boolean.TRUE.equals(s.getIsCurrentSession()));
+        List<UserBiometricCredential> biometrics = userBiometricCredentialRepository.findByUserAccount_UserId(userId);
+        for (UserBiometricCredential bio : biometrics) {
+            if (Boolean.TRUE.equals(bio.getIsActive())) {
+                bio.setIsActive(false);
+                userBiometricCredentialRepository.save(bio);
+            }
+        }
     }
 
     // =========================================================================
-    // 6. Notifications Screen APIs (Image 2)
+    // 5. Active Devices
     // =========================================================================
 
-    public NotificationsPageDto getNotificationsPage(String tab, String search, String type) {
-        List<NotificationItemDto> filtered = notifications.stream()
+    @Transactional(readOnly = true)
+    public ActiveDevicesPageDto getActiveDevicesPage(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        SecurityOverviewDto sec = getSecurityOverview(userId);
+
+        List<DeviceItemDto> deviceList = new ArrayList<>();
+        deviceList.add(DeviceItemDto.builder()
+                .id("dev-current")
+                .name("Current Web Session")
+                .deviceType("LAPTOP")
+                .osBrowser("Web Browser (Active JWT Session)")
+                .location("Current Location")
+                .ipAddress("Active Session")
+                .status("Active Now")
+                .isCurrentDevice(true)
+                .lastActive("Now")
+                .canRevoke(false)
+                .build());
+
+        List<UserBiometricCredential> biometrics = userBiometricCredentialRepository.findByUserAccount_UserId(userId);
+        for (UserBiometricCredential bio : biometrics) {
+            boolean active = Boolean.TRUE.equals(bio.getIsActive());
+            deviceList.add(DeviceItemDto.builder()
+                    .id("bio-" + bio.getCredentialId())
+                    .name(isPresent(bio.getDeviceName()) ? bio.getDeviceName() : "Registered Mobile Device")
+                    .deviceType("MOBILE")
+                    .osBrowser("Device ID: " + bio.getDeviceId())
+                    .location("Biometric Enrolled")
+                    .ipAddress(bio.getDeviceId())
+                    .status(active ? "Active" : "Inactive")
+                    .isCurrentDevice(false)
+                    .lastActive(formatDateTime(bio.getLastUsedAt() != null ? bio.getLastUsedAt() : bio.getEnrolledAt()))
+                    .canRevoke(active)
+                    .build());
+        }
+
+        int activeCount = (int) deviceList.stream()
+                .filter(d -> !"Inactive".equalsIgnoreCase(d.getStatus()))
+                .count();
+
+        return ActiveDevicesPageDto.builder()
+                .memberId(sec.getMemberId())
+                .fullName(sec.getFullName())
+                .memberBadge(sec.getMemberBadge())
+                .email(sec.getEmail())
+                .mobileNumber(sec.getMobileNumber())
+                .companyName(sec.getCompanyName())
+                .designation(sec.getDesignation())
+                .industry(sec.getIndustry())
+                .memberSince(sec.getMemberSince())
+                .avatarInitials(sec.getAvatarInitials())
+                .devices(deviceList)
+                .activeDevicesCount(activeCount)
+                .maxDevicesLimit(5)
+                .securityTips(Arrays.asList(
+                        "Regularly review your active devices.",
+                        "Revoke access for devices you no longer use.",
+                        "If you notice any suspicious activity, change your password immediately.",
+                        "Do not share your login credentials with anyone."
+                ))
+                .recentActivity(sec.getLoginHistory())
+                .build();
+    }
+
+    @Transactional
+    public void revokeDevice(Long userId, String deviceId) {
+        if ("dev-current".equals(deviceId)) {
+            throw new ApiException("Cannot revoke the current active browser session", HttpStatus.BAD_REQUEST);
+        }
+        terminateSession(userId, deviceId);
+    }
+
+    // =========================================================================
+    // 6. Notifications
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public NotificationsPageDto getNotificationsPage(Long userId, String tab, String search, String type) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+
+        List<AppNotification> dbNotifs = appNotificationRepository.findByUserAccount_UserIdOrderByCreatedAtDesc(userId);
+        List<NotificationItemDto> allItems = dbNotifs.stream()
+                .map(n -> NotificationItemDto.builder()
+                        .id(String.valueOf(n.getNotificationId()))
+                        .title(n.getTitle())
+                        .message(n.getMessage())
+                        .type(n.getNotificationType() != null ? n.getNotificationType() : "SYSTEM")
+                        .timeAgo(formatRelativeTime(n.getCreatedAt()))
+                        .isUnread("UNREAD".equalsIgnoreCase(n.getStatus()))
+                        .iconTheme(resolveIconTheme(n.getNotificationType()))
+                        .build())
+                .collect(Collectors.toList());
+
+        List<NotificationItemDto> filtered = allItems.stream()
                 .filter(n -> {
-                    if ("UNREAD".equalsIgnoreCase(tab)) {
-                        return Boolean.TRUE.equals(n.getIsUnread());
-                    }
-                    if ("MENTIONS".equalsIgnoreCase(tab)) {
-                        return "NEGOTIATION".equalsIgnoreCase(n.getType());
-                    }
-                    if ("SYSTEM_UPDATES".equalsIgnoreCase(tab)) {
-                        return "SYSTEM".equalsIgnoreCase(n.getType());
-                    }
+                    if ("UNREAD".equalsIgnoreCase(tab)) return Boolean.TRUE.equals(n.getIsUnread());
+                    if ("MENTIONS".equalsIgnoreCase(tab)) return "NEGOTIATION".equalsIgnoreCase(n.getType());
+                    if ("SYSTEM_UPDATES".equalsIgnoreCase(tab)) return "SYSTEM".equalsIgnoreCase(n.getType());
                     return true;
                 })
                 .filter(n -> {
-                    if (type != null && !type.trim().isEmpty() && !"ALL".equalsIgnoreCase(type)) {
+                    if (isPresent(type) && !"ALL".equalsIgnoreCase(type)) {
                         return type.equalsIgnoreCase(n.getType());
                     }
                     return true;
                 })
                 .filter(n -> {
-                    if (search != null && !search.trim().isEmpty()) {
-                        String q = search.toLowerCase();
-                        return n.getTitle().toLowerCase().contains(q) || n.getMessage().toLowerCase().contains(q);
+                    if (isPresent(search)) {
+                        String q = search.toLowerCase(Locale.ENGLISH);
+                        return n.getTitle().toLowerCase(Locale.ENGLISH).contains(q)
+                                || n.getMessage().toLowerCase(Locale.ENGLISH).contains(q);
                     }
                     return true;
                 })
                 .collect(Collectors.toList());
 
-        int unread = (int) notifications.stream().filter(n -> Boolean.TRUE.equals(n.getIsUnread())).count();
+        int unread = (int) allItems.stream().filter(n -> Boolean.TRUE.equals(n.getIsUnread())).count();
+
+        NotificationPreferencesDto prefs = getOrInitNotificationPreferences(extras);
+        NotificationChannelsDto channels = loadNotificationChannels(userId, extras);
 
         return NotificationsPageDto.builder()
-                .memberId(memberProfile.getMemberId())
-                .fullName(memberProfile.getFullName())
-                .memberBadge(memberProfile.getMemberBadge())
-                .email(memberProfile.getEmail())
-                .mobileNumber(memberProfile.getMobileNumber())
-                .companyName(memberProfile.getCompanyName())
-                .designation(memberProfile.getDesignation())
-                .industry(memberProfile.getIndustry())
-                .memberSince(memberProfile.getMemberSince())
-                .avatarInitials(memberProfile.getAvatarInitials())
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : "Member")
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
                 .unreadCount(unread)
                 .notifications(filtered)
-                .preferences(notificationPreferences)
-                .channels(notificationChannels)
+                .preferences(prefs)
+                .channels(channels)
                 .build();
     }
 
-    public void markAllNotificationsAsRead() {
-        notifications.forEach(n -> n.setIsUnread(false));
+    private NotificationPreferencesDto getOrInitNotificationPreferences(UserProfileExtras extras) {
+        if (extras.notificationPreferences == null) {
+            extras.notificationPreferences = NotificationPreferencesDto.builder()
+                    .tradeNotifications(true)
+                    .negotiationMessages(true)
+                    .settlementUpdates(true)
+                    .kycCompliance(true)
+                    .memberRequests(true)
+                    .systemUpdates(true)
+                    .securityAlerts(true)
+                    .marketingCommunications(false)
+                    .build();
+        }
+        return extras.notificationPreferences;
     }
 
-    public void markNotificationAsRead(String id) {
-        notifications.stream()
-                .filter(n -> n.getId().equals(id))
-                .findFirst()
-                .ifPresent(n -> n.setIsUnread(false));
+    private NotificationChannelsDto loadNotificationChannels(Long userId, UserProfileExtras extras) {
+        if (extras.notificationChannels == null) {
+            extras.notificationChannels = NotificationChannelsDto.builder()
+                    .inApp(true)
+                    .email(true)
+                    .sms(false)
+                    .build();
+        }
+        List<MemberNotificationPreference> dbPrefs = memberNotificationPreferenceRepository.findByUserAccount_UserId(userId);
+        for (MemberNotificationPreference p : dbPrefs) {
+            if ("IN_APP".equalsIgnoreCase(p.getModeOfNotification())) {
+                extras.notificationChannels.setInApp(Boolean.TRUE.equals(p.getIsEnabled()));
+            } else if ("EMAIL".equalsIgnoreCase(p.getModeOfNotification())) {
+                extras.notificationChannels.setEmail(Boolean.TRUE.equals(p.getIsEnabled()));
+            } else if ("SMS".equalsIgnoreCase(p.getModeOfNotification())) {
+                extras.notificationChannels.setSms(Boolean.TRUE.equals(p.getIsEnabled()));
+            }
+        }
+        return extras.notificationChannels;
     }
 
-    public NotificationPreferencesDto updateNotificationPreferences(NotificationPreferencesDto update) {
-        if (update.getTradeNotifications() != null) notificationPreferences.setTradeNotifications(update.getTradeNotifications());
-        if (update.getNegotiationMessages() != null) notificationPreferences.setNegotiationMessages(update.getNegotiationMessages());
-        if (update.getSettlementUpdates() != null) notificationPreferences.setSettlementUpdates(update.getSettlementUpdates());
-        if (update.getKycCompliance() != null) notificationPreferences.setKycCompliance(update.getKycCompliance());
-        if (update.getMemberRequests() != null) notificationPreferences.setMemberRequests(update.getMemberRequests());
-        if (update.getSystemUpdates() != null) notificationPreferences.setSystemUpdates(update.getSystemUpdates());
-        if (update.getSecurityAlerts() != null) notificationPreferences.setSecurityAlerts(update.getSecurityAlerts());
-        if (update.getMarketingCommunications() != null) notificationPreferences.setMarketingCommunications(update.getMarketingCommunications());
-        return notificationPreferences;
+    private String formatRelativeTime(OffsetDateTime dt) {
+        if (dt == null) return "-";
+        Duration diff = Duration.between(dt, OffsetDateTime.now());
+        long mins = diff.toMinutes();
+        if (mins < 1) return "Just now";
+        if (mins < 60) return mins + " mins ago";
+        long hours = diff.toHours();
+        if (hours < 24) return hours + " hours ago";
+        long days = diff.toDays();
+        return days + " days ago";
     }
 
-    public NotificationChannelsDto updateNotificationChannels(NotificationChannelsDto update) {
-        if (update.getInApp() != null) notificationChannels.setInApp(update.getInApp());
-        if (update.getEmail() != null) notificationChannels.setEmail(update.getEmail());
-        if (update.getSms() != null) notificationChannels.setSms(update.getSms());
-        return notificationChannels;
+    private String resolveIconTheme(String notifType) {
+        if (notifType == null) return "blue";
+        String upper = notifType.toUpperCase(Locale.ENGLISH);
+        if (upper.contains("TRADE")) return "green";
+        if (upper.contains("NEGOTIATION")) return "purple";
+        if (upper.contains("SETTLEMENT") || upper.contains("ESCROW")) return "orange";
+        if (upper.contains("KYC") || upper.contains("SECURITY")) return "red";
+        return "blue";
+    }
+
+    @Transactional
+    public void markAllNotificationsAsRead(Long userId) {
+        loadUser(userId);
+        List<AppNotification> all = appNotificationRepository.findByUserAccount_UserIdOrderByCreatedAtDesc(userId);
+        OffsetDateTime now = OffsetDateTime.now();
+        for (AppNotification n : all) {
+            if (!"READ".equalsIgnoreCase(n.getStatus())) {
+                n.setStatus("READ");
+                n.setReadAt(now);
+            }
+        }
+        appNotificationRepository.saveAll(all);
+    }
+
+    @Transactional
+    public void markNotificationAsRead(Long userId, String id) {
+        loadUser(userId);
+        Long notifId = Long.parseLong(id);
+        appNotificationRepository.findById(notifId)
+                .filter(n -> Objects.equals(n.getUserAccount().getUserId(), userId))
+                .ifPresent(n -> {
+                    n.setStatus("READ");
+                    n.setReadAt(OffsetDateTime.now());
+                    appNotificationRepository.save(n);
+                });
+    }
+
+    public NotificationPreferencesDto updateNotificationPreferences(Long userId, NotificationPreferencesDto update) {
+        loadUser(userId);
+        NotificationPreferencesDto prefs = getOrInitNotificationPreferences(getExtras(userId));
+        if (update.getTradeNotifications() != null) prefs.setTradeNotifications(update.getTradeNotifications());
+        if (update.getNegotiationMessages() != null) prefs.setNegotiationMessages(update.getNegotiationMessages());
+        if (update.getSettlementUpdates() != null) prefs.setSettlementUpdates(update.getSettlementUpdates());
+        if (update.getKycCompliance() != null) prefs.setKycCompliance(update.getKycCompliance());
+        if (update.getMemberRequests() != null) prefs.setMemberRequests(update.getMemberRequests());
+        if (update.getSystemUpdates() != null) prefs.setSystemUpdates(update.getSystemUpdates());
+        if (update.getSecurityAlerts() != null) prefs.setSecurityAlerts(update.getSecurityAlerts());
+        if (update.getMarketingCommunications() != null) prefs.setMarketingCommunications(update.getMarketingCommunications());
+        return prefs;
+    }
+
+    @Transactional
+    public NotificationChannelsDto updateNotificationChannels(Long userId, NotificationChannelsDto update) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        NotificationChannelsDto channels = loadNotificationChannels(userId, extras);
+        if (update.getInApp() != null) {
+            channels.setInApp(update.getInApp());
+            saveChannelPreference(user, "IN_APP", update.getInApp());
+        }
+        if (update.getEmail() != null) {
+            channels.setEmail(update.getEmail());
+            saveChannelPreference(user, "EMAIL", update.getEmail());
+        }
+        if (update.getSms() != null) {
+            channels.setSms(update.getSms());
+            saveChannelPreference(user, "SMS", update.getSms());
+        }
+        return channels;
+    }
+
+    private void saveChannelPreference(UserAccount user, String mode, boolean enabled) {
+        MemberNotificationPreference pref = memberNotificationPreferenceRepository
+                .findByUserAccount_UserIdAndModeOfNotification(user.getUserId(), mode)
+                .orElseGet(() -> MemberNotificationPreference.builder()
+                        .userAccount(user)
+                        .modeOfNotification(mode)
+                        .build());
+        pref.setIsEnabled(enabled);
+        memberNotificationPreferenceRepository.save(pref);
     }
 
     // =========================================================================
-    // 7. Documents Screen APIs (Image 3)
+    // 7. Documents
     // =========================================================================
 
-    public DocumentsPageDto getDocumentsPage(String category, String search) {
-        List<DocumentRecordDto> filtered = documents.stream()
+    @Transactional(readOnly = true)
+    public DocumentsPageDto getDocumentsPage(Long userId, String category, String search) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+
+        List<AccountDocument> dbDocs = accountDocumentRepository.findByUserAccount_UserId(userId);
+        boolean isVerified = user.getAccountStatus() == AccountStatus.ACTIVE;
+
+        List<DocumentRecordDto> records = dbDocs.stream()
+                .map(d -> DocumentRecordDto.builder()
+                        .id(String.valueOf(d.getDocumentId()))
+                        .name(isPresent(d.getDocumentName()) ? d.getDocumentName() : d.getDocumentType().name())
+                        .fileName(extractFileName(d.getFilePath()))
+                        .category(mapDocCategory(d.getDocumentType()))
+                        .uploadedOn(formatDate(d.getUploadedAt()))
+                        .expiryDate("-")
+                        .status(isVerified ? "Verified" : "Under Review")
+                        .fileUrl(d.getFilePath())
+                        .build())
+                .collect(Collectors.toList());
+
+        long totalBytes = dbDocs.stream()
+                .mapToLong(d -> d.getFileSizeBytes() != null ? d.getFileSizeBytes() : 0L)
+                .sum();
+        double totalQuotaMb = 25.0;
+        double usedMb = totalBytes / (1024.0 * 1024.0);
+        int pct = (int) Math.min(100, Math.round((usedMb / totalQuotaMb) * 100.0));
+        double availMb = Math.max(0.0, totalQuotaMb - usedMb);
+
+        StorageUsageDto storageUsage = StorageUsageDto.builder()
+                .usedPercentage(pct)
+                .usedMb(String.format(Locale.ENGLISH, "%.2f MB", usedMb))
+                .totalMb(String.format(Locale.ENGLISH, "%.1f MB", totalQuotaMb))
+                .availableMb(String.format(Locale.ENGLISH, "%.2f MB Available", availMb))
+                .build();
+
+        List<DocumentRecordDto> filtered = records.stream()
                 .filter(d -> {
-                    if (category != null && !category.trim().isEmpty() && !"ALL".equalsIgnoreCase(category)) {
+                    if (isPresent(category) && !"ALL".equalsIgnoreCase(category)) {
                         return category.equalsIgnoreCase(d.getCategory());
                     }
                     return true;
                 })
                 .filter(d -> {
-                    if (search != null && !search.trim().isEmpty()) {
-                        String q = search.toLowerCase();
-                        return d.getName().toLowerCase().contains(q) || d.getFileName().toLowerCase().contains(q);
+                    if (isPresent(search)) {
+                        String q = search.toLowerCase(Locale.ENGLISH);
+                        return d.getName().toLowerCase(Locale.ENGLISH).contains(q)
+                                || d.getFileName().toLowerCase(Locale.ENGLISH).contains(q);
                     }
                     return true;
                 })
                 .collect(Collectors.toList());
 
-        List<String> guidelines = Arrays.asList(
-                "Supported formats: PDF, JPG, PNG (Max 5 MB).",
-                "Ensure documents are clear and legible.",
-                "File size should not exceed 5 MB per document.",
-                "Documents may be subject to verification.",
-                "Keep your documents updated, especially those with expiry dates."
-        );
+        List<ExpiryAlertDto> expiryAlerts = new ArrayList<>();
+        if (dbDocs.isEmpty()) {
+            expiryAlerts.add(ExpiryAlertDto.builder()
+                    .name("No Documents Uploaded")
+                    .alertText("Upload identity or bank documents to complete compliance")
+                    .expiryDate("-")
+                    .theme("yellow")
+                    .build());
+        }
 
         return DocumentsPageDto.builder()
-                .memberId(memberProfile.getMemberId())
-                .fullName(memberProfile.getFullName())
-                .memberBadge(memberProfile.getMemberBadge())
-                .email(memberProfile.getEmail())
-                .mobileNumber(memberProfile.getMobileNumber())
-                .companyName(memberProfile.getCompanyName())
-                .designation(memberProfile.getDesignation())
-                .industry(memberProfile.getIndustry())
-                .memberSince(memberProfile.getMemberSince())
-                .avatarInitials(memberProfile.getAvatarInitials())
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : "Member")
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
                 .documents(filtered)
                 .storageUsage(storageUsage)
-                .documentGuidelines(guidelines)
-                .expiryAlerts(new ArrayList<>(expiryAlerts))
+                .documentGuidelines(Arrays.asList(
+                        "Supported formats: PDF, JPG, PNG (Max 5 MB).",
+                        "Ensure documents are clear and legible.",
+                        "File size should not exceed 5 MB per document.",
+                        "Documents may be subject to verification.",
+                        "Keep your documents updated, especially those with expiry dates."
+                ))
+                .expiryAlerts(expiryAlerts)
                 .build();
     }
 
-    public DocumentRecordDto uploadDocument(String name, String category, String fileName, String fileUrl) {
-        DocumentRecordDto newDoc = DocumentRecordDto.builder()
-                .id("doc-" + docCounter.incrementAndGet())
-                .name(name != null ? name : "Uploaded Document")
-                .fileName(fileName != null ? fileName : "document.pdf")
-                .category(category != null ? category : "Other")
-                .uploadedOn(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy")))
+    private String extractFileName(String path) {
+        if (!isPresent(path)) return "document.pdf";
+        int idx = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return idx >= 0 && idx + 1 < path.length() ? path.substring(idx + 1) : path;
+    }
+
+    private String mapDocCategory(DocumentType type) {
+        if (type == null) return "Other";
+        return switch (type) {
+            case IDENTITY_PROOF, ADDRESS_PROOF -> "Identity";
+            case BANK_PASSBOOK -> "Bank";
+            case LIVE_PHOTO -> "Other";
+        };
+    }
+
+    @Transactional
+    public DocumentRecordDto uploadDocument(Long userId, String name, String category, String fileName, String fileUrl) {
+        UserAccount user = loadUser(userId);
+        DocumentType docType = switch (category != null ? category.trim().toLowerCase(Locale.ENGLISH) : "") {
+            case "identity" -> DocumentType.IDENTITY_PROOF;
+            case "organization" -> DocumentType.ADDRESS_PROOF;
+            case "bank" -> DocumentType.BANK_PASSBOOK;
+            default -> DocumentType.LIVE_PHOTO;
+        };
+
+        String resolvedName = isPresent(name) ? name.trim() : "Uploaded Document";
+        String resolvedFileName = isPresent(fileName) ? fileName.trim() : "document.pdf";
+        String resolvedPath = isPresent(fileUrl) ? fileUrl.trim() : "/uploads/user-" + userId + "/" + resolvedFileName;
+
+        AccountDocument saved = AccountDocument.builder()
+                .userAccount(user)
+                .documentType(docType)
+                .documentName(resolvedName)
+                .filePath(resolvedPath)
+                .mimeType(resolvedFileName.toLowerCase(Locale.ENGLISH).endsWith(".png") ? "image/png" : "application/pdf")
+                .fileSizeBytes(204800L)
+                .build();
+        AccountDocument entity = accountDocumentRepository.save(saved);
+
+        return DocumentRecordDto.builder()
+                .id(String.valueOf(entity.getDocumentId()))
+                .name(entity.getDocumentName())
+                .fileName(resolvedFileName)
+                .category(isPresent(category) ? category.trim() : mapDocCategory(docType))
+                .uploadedOn(formatDate(entity.getUploadedAt()))
                 .expiryDate("-")
-                .status("Under Review")
-                .fileUrl(fileUrl != null ? fileUrl : "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80")
+                .status(user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Under Review")
+                .fileUrl(entity.getFilePath())
                 .build();
-
-        documents.add(newDoc);
-        return newDoc;
     }
 
     // =========================================================================
-    // 8. Platform Settings APIs (Image 4)
+    // 8. Platform Settings
     // =========================================================================
 
-    public PlatformSettingsPageDto getPlatformSettingsPage() {
+    @Transactional(readOnly = true)
+    public PlatformSettingsPageDto getPlatformSettingsPage(Long userId) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        String fullName = portfolioDataHelper.resolveUserFullName(user);
+        CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
+
+        GeneralSettingsDto general = GeneralSettingsDto.builder()
+                .emailAddress(user.getEmail())
+                .emailStatus(user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Pending")
+                .mobileNumber(user.getMobileNumber())
+                .mobileStatus(isPresent(user.getMobileNumber()) ? "Verified" : "Pending")
+                .company(resolveCompanyName(user, corp))
+                .designation(isPresent(extras.designation) ? extras.designation : "Member")
+                .build();
+
+        if (extras.platformPreferences == null) {
+            NotificationChannelsDto channels = loadNotificationChannels(userId, extras);
+            extras.platformPreferences = PlatformPreferencesDto.builder()
+                    .receiveEmailNotifications(Boolean.TRUE.equals(channels.getEmail()))
+                    .receiveSmsNotifications(Boolean.TRUE.equals(channels.getSms()))
+                    .marketingCommunications(false)
+                    .showPortfolioSummaryOnLogin(true)
+                    .autoLogout("15 mins")
+                    .build();
+        }
+
         return PlatformSettingsPageDto.builder()
-                .memberId(memberProfile.getMemberId())
-                .fullName(memberProfile.getFullName())
-                .memberBadge(memberProfile.getMemberBadge())
-                .email(memberProfile.getEmail())
-                .mobileNumber(memberProfile.getMobileNumber())
-                .companyName(memberProfile.getCompanyName())
-                .designation(memberProfile.getDesignation())
-                .industry(memberProfile.getIndustry())
-                .memberSince(memberProfile.getMemberSince())
-                .avatarInitials(memberProfile.getAvatarInitials())
-                .general(generalSettings)
-                .platformPreferences(platformPreferences)
-                .appearance(appearanceSettings)
-                .languageRegion(languageRegion)
+                .memberId(resolveMemberCode(user))
+                .fullName(fullName)
+                .memberBadge(resolveMemberBadge(user))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .companyName(general.getCompany())
+                .designation(general.getDesignation())
+                .industry(isPresent(extras.companyIndustry) ? extras.companyIndustry : "Private Equity")
+                .memberSince(formatDate(user.getCreatedAt()))
+                .avatarInitials(computeInitials(fullName))
+                .general(general)
+                .platformPreferences(extras.platformPreferences)
+                .appearance(extras.appearance)
+                .languageRegion(extras.languageRegion)
                 .build();
     }
 
-    public GeneralSettingsDto updateGeneralSettings(GeneralSettingsDto update) {
-        if (update.getEmailAddress() != null) {
-            generalSettings.setEmailAddress(update.getEmailAddress());
-            memberProfile.setEmail(update.getEmailAddress());
+    @Transactional
+    public GeneralSettingsDto updateGeneralSettings(Long userId, GeneralSettingsDto update) {
+        UserAccount user = loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+
+        if (isPresent(update.getEmailAddress()) && !update.getEmailAddress().trim().equalsIgnoreCase(user.getEmail())) {
+            String newEmail = update.getEmailAddress().trim();
+            if (userAccountRepository.existsByEmailIgnoreCase(newEmail)) {
+                throw new ApiException("Email address is already in use", HttpStatus.BAD_REQUEST);
+            }
+            user.setEmail(newEmail);
+            userAccountRepository.save(user);
         }
-        if (update.getMobileNumber() != null) {
-            generalSettings.setMobileNumber(update.getMobileNumber());
-            memberProfile.setMobileNumber(update.getMobileNumber());
+        if (isPresent(update.getMobileNumber()) && !update.getMobileNumber().trim().equals(user.getMobileNumber())) {
+            String newMobile = update.getMobileNumber().trim();
+            if (userAccountRepository.existsByMobileNumber(newMobile)) {
+                throw new ApiException("Mobile number is already in use", HttpStatus.BAD_REQUEST);
+            }
+            user.setMobileNumber(newMobile);
+            userAccountRepository.save(user);
         }
-        if (update.getCompany() != null) {
-            generalSettings.setCompany(update.getCompany());
-            memberProfile.setCompanyName(update.getCompany());
+        if (isPresent(update.getCompany())) {
+            corporateProfileRepository.findByUserAccount_UserId(userId).ifPresent(corp -> {
+                corp.setCompanyName(update.getCompany().trim());
+                corporateProfileRepository.save(corp);
+            });
         }
         if (update.getDesignation() != null) {
-            generalSettings.setDesignation(update.getDesignation());
-            memberProfile.setDesignation(update.getDesignation());
+            extras.designation = update.getDesignation().trim();
         }
-        return generalSettings;
+        return getPlatformSettingsPage(userId).getGeneral();
     }
 
-    public PlatformPreferencesDto updatePlatformPreferences(PlatformPreferencesDto update) {
-        if (update.getReceiveEmailNotifications() != null) platformPreferences.setReceiveEmailNotifications(update.getReceiveEmailNotifications());
-        if (update.getReceiveSmsNotifications() != null) platformPreferences.setReceiveSmsNotifications(update.getReceiveSmsNotifications());
-        if (update.getMarketingCommunications() != null) platformPreferences.setMarketingCommunications(update.getMarketingCommunications());
-        if (update.getShowPortfolioSummaryOnLogin() != null) platformPreferences.setShowPortfolioSummaryOnLogin(update.getShowPortfolioSummaryOnLogin());
-        if (update.getAutoLogout() != null) platformPreferences.setAutoLogout(update.getAutoLogout());
-        return platformPreferences;
+    @Transactional
+    public PlatformPreferencesDto updatePlatformPreferences(Long userId, PlatformPreferencesDto update) {
+        UserAccount user = loadUser(userId);
+        PlatformPreferencesDto prefs = getPlatformSettingsPage(userId).getPlatformPreferences();
+        if (update.getReceiveEmailNotifications() != null) {
+            prefs.setReceiveEmailNotifications(update.getReceiveEmailNotifications());
+            saveChannelPreference(user, "EMAIL", update.getReceiveEmailNotifications());
+        }
+        if (update.getReceiveSmsNotifications() != null) {
+            prefs.setReceiveSmsNotifications(update.getReceiveSmsNotifications());
+            saveChannelPreference(user, "SMS", update.getReceiveSmsNotifications());
+        }
+        if (update.getMarketingCommunications() != null) prefs.setMarketingCommunications(update.getMarketingCommunications());
+        if (update.getShowPortfolioSummaryOnLogin() != null) prefs.setShowPortfolioSummaryOnLogin(update.getShowPortfolioSummaryOnLogin());
+        if (update.getAutoLogout() != null) prefs.setAutoLogout(update.getAutoLogout());
+        return prefs;
     }
 
-    public AppearanceSettingsDto updateAppearance(AppearanceSettingsDto update) {
-        if (update.getSelectedTheme() != null) appearanceSettings.setSelectedTheme(update.getSelectedTheme());
-        return appearanceSettings;
+    public AppearanceSettingsDto updateAppearance(Long userId, AppearanceSettingsDto update) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (update.getSelectedTheme() != null) extras.appearance.setSelectedTheme(update.getSelectedTheme());
+        return extras.appearance;
     }
 
-    public LanguageRegionDto updateLanguageRegion(LanguageRegionDto update) {
-        if (update.getLanguage() != null) languageRegion.setLanguage(update.getLanguage());
-        if (update.getTimezone() != null) languageRegion.setTimezone(update.getTimezone());
-        return languageRegion;
+    public LanguageRegionDto updateLanguageRegion(Long userId, LanguageRegionDto update) {
+        loadUser(userId);
+        UserProfileExtras extras = getExtras(userId);
+        if (update.getLanguage() != null) extras.languageRegion.setLanguage(update.getLanguage());
+        if (update.getTimezone() != null) extras.languageRegion.setTimezone(update.getTimezone());
+        return extras.languageRegion;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> exportAccountData(Long userId) {
+        UserAccount user = loadUser(userId);
+        String code = resolveMemberCode(user);
+        return Map.of(
+                "downloadUrl", "/api/v1/portfolio/download/report",
+                "memberId", code,
+                "status", "READY"
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> downloadStatements(Long userId) {
+        UserAccount user = loadUser(userId);
+        String code = resolveMemberCode(user);
+        return Map.of(
+                "downloadUrl", "/api/v1/portfolio/download/statement",
+                "memberId", code,
+                "status", "READY"
+        );
     }
 }

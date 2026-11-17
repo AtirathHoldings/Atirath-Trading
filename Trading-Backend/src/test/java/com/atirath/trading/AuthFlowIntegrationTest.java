@@ -139,7 +139,35 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.user.mobileNumber").value(testMobile));
 
-        // 3. Mobile Get Compact Profile
+        // 3. Mobile OTP Send & Verify must honor configured default-test-otp ("123456") in dev mode
+        OtpSendRequest mobileOtpReq = OtpSendRequest.builder()
+                .target(testMobile)
+                .channel(OtpChannel.SMS)
+                .purpose(OtpPurpose.LOGIN)
+                .build();
+
+        mockMvc.perform(post("/api/v1/auth/mobile/otp/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(mobileOtpReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.devOtp").value("123456"))
+                .andExpect(jsonPath("$.data.expiresInSeconds").value(60));
+
+        OtpVerifyRequest mobileVerifyReq = OtpVerifyRequest.builder()
+                .target(testMobile)
+                .otpCode("123456")
+                .purpose(OtpPurpose.LOGIN)
+                .build();
+
+        mockMvc.perform(post("/api/v1/auth/mobile/otp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(mobileVerifyReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(true));
+
+        // 4. Mobile Get Compact Profile
         mockMvc.perform(get("/api/v1/auth/mobile/profile")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -252,6 +280,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(otpReq)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.devOtp").value("123456"))
                 .andExpect(jsonPath("$.data.expiresInSeconds").value(60));
 
         // 3. Submit KYC with DOB < 18 years ago

@@ -69,6 +69,7 @@ public class TradeTerminalSnapshotDto {
         private BigDecimal marketCapValue;
         private BigDecimal bestAsk;
         private BigDecimal bestBid;
+        private String logoUrl;
     }
 
     @Data

@@ -18,7 +18,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,10 +37,13 @@ public class PortfolioService {
     private final MarketTradeRepository tradeRepository;
     private final MarketBroadcastService broadcastService;
     private final EscrowAccountRepository escrowAccountRepository;
+    private final EscrowRepository escrowRepository;
     private final ShareTransferRepository shareTransferRepository;
     private final PortfolioDataHelper dataHelper;
 
-    private static final DateTimeFormatter DISPLAY_DT_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+    private static final DateTimeFormatter DISPLAY_DT_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter MONTH_YEAR_FORMATTER = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH);
 
     // =========================================================================
     // 1. PORTFOLIO DASHBOARD (Real Per-User DB Aggregation)
@@ -363,118 +368,221 @@ public class PortfolioService {
     }
 
     // =========================================================================
-    // 2. PORTFOLIO HOLDINGS (Image 2)
+    // 2. PORTFOLIO HOLDINGS (Real Per-User DB Aggregation)
     // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioHoldingsResponseDto getHoldings(Long userId, String search, String company, String holdingType, String status, int page, int size) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load holdings", HttpStatus.UNAUTHORIZED);
+        }
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId).stream()
+                .filter(h -> h.getTotalShares() != null && h.getTotalShares() > 0 && h.getCompany() != null)
+                .toList();
+
+        PortfolioDataHelper.HoldingSummary summary = dataHelper.aggregateHoldings(rawHoldings);
+        BigDecimal totalValue = summary.totalValue();
+        BigDecimal investedAmount = summary.investedAmount();
+        BigDecimal unrealizedPnl = totalValue.subtract(investedAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal dayChange = totalValue.subtract(summary.prevTotalValue());
+        BigDecimal valueChangePct = dataHelper.computePercent(dayChange, summary.prevTotalValue());
+        BigDecimal unrealizedPct = dataHelper.computePercent(unrealizedPnl, investedAmount);
+
+        long totalShares = summary.totalShares();
+        long lockedShares = summary.totalLockedShares();
+        long availableShares = Math.max(0L, totalShares - lockedShares);
+        BigDecimal lockedPct = totalShares > 0
+                ? BigDecimal.valueOf(lockedShares).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalShares), 1, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        BigDecimal availablePct = totalShares > 0
+                ? BigDecimal.valueOf(availableShares).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalShares), 1, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
                 PortfolioSummaryKpiDto.builder()
                         .id("total_holdings_value")
                         .title("Total Holdings Value")
-                        .amount(new BigDecimal("2480000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("2480000.00")))
-                        .changePercentage(new BigDecimal("12.6"))
-                        .formattedChangePercentage("↑ 12.6%")
-                        .isPositive(true)
-                        .comparisonLabel("vs. previous month")
+                        .amount(totalValue)
+                        .formattedAmount(dataHelper.formatInr(totalValue))
+                        .changePercentage(valueChangePct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(valueChangePct))
+                        .isPositive(valueChangePct.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("vs. previous close")
                         .icon("file-text")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("total_shares_held")
                         .title("Total Shares Held")
-                        .count(10250L)
-                        .formattedCount("10,250")
-                        .comparisonLabel("Across 6 companies")
+                        .count(totalShares)
+                        .formattedCount(dataHelper.formatCount(totalShares))
+                        .comparisonLabel("Across " + summary.holdings().size() + (summary.holdings().size() == 1 ? " company" : " companies"))
                         .icon("pie-chart")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("invested_amount")
                         .title("Invested Amount")
-                        .amount(new BigDecimal("1850000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("1850000.00")))
-                        .changePercentage(new BigDecimal("8.3"))
-                        .formattedChangePercentage("↑ 8.3%")
-                        .isPositive(true)
-                        .comparisonLabel("vs. previous month")
+                        .amount(investedAmount)
+                        .formattedAmount(dataHelper.formatInr(investedAmount))
+                        .changePercentage(unrealizedPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPct.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("cost basis")
                         .icon("coins")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("unrealized_pnl")
                         .title("Unrealized P&L")
-                        .amount(new BigDecimal("630000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("630000.00")))
-                        .changePercentage(new BigDecimal("25.4"))
-                        .formattedChangePercentage("↑ 25.4%")
-                        .isPositive(true)
-                        .comparisonLabel("vs. previous month")
+                        .amount(unrealizedPnl)
+                        .formattedAmount(dataHelper.formatSignedInr(unrealizedPnl))
+                        .changePercentage(unrealizedPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("overall return")
                         .icon("trending-up")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("locked_shares")
                         .title("Locked Shares")
-                        .count(1750L)
-                        .formattedCount("1,750")
-                        .comparisonLabel("17.1% of total shares")
+                        .count(lockedShares)
+                        .formattedCount(dataHelper.formatCount(lockedShares))
+                        .comparisonLabel(lockedPct.toPlainString() + "% of total shares")
                         .icon("lock")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("available_shares")
                         .title("Available Shares")
-                        .count(8500L)
-                        .formattedCount("8,500")
-                        .comparisonLabel("82.9% of total shares")
+                        .count(availableShares)
+                        .formattedCount(dataHelper.formatCount(availableShares))
+                        .comparisonLabel(availablePct.toPlainString() + "% of total shares")
                         .icon("shield-check")
                         .build()
         );
 
-        List<PortfolioHoldingItemDto> allHoldings = getHoldingsList();
+        List<PortfolioHoldingItemDto> allHoldings = new ArrayList<>();
+        List<PortfolioAllocationSliceDto> allocation = new ArrayList<>();
+        for (int i = 0; i < summary.holdings().size(); i++) {
+            PortfolioDataHelper.ComputedHolding ch = summary.holdings().get(i);
+            String color = PortfolioDataHelper.CHART_COLORS.get(i % PortfolioDataHelper.CHART_COLORS.size());
+            BigDecimal allocPct = totalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? ch.currentValue().multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
 
-        // Filter by search / company
+            allocation.add(PortfolioAllocationSliceDto.builder()
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .percentage(allocPct)
+                    .formattedPercentage(allocPct.toPlainString() + "%")
+                    .value(ch.currentValue())
+                    .formattedValue(dataHelper.formatInr(ch.currentValue()))
+                    .color(color)
+                    .build());
+
+            allHoldings.add(PortfolioHoldingItemDto.builder()
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .companyCode(ch.company().getCompanyCode())
+                    .logoUrl(ch.company().getLogoUrl())
+                    .sharesHeld(ch.shares())
+                    .formattedSharesHeld(dataHelper.formatCount(ch.shares()))
+                    .averageAcquisitionPrice(ch.avgPrice())
+                    .formattedAverageAcquisitionPrice(dataHelper.formatInr(ch.avgPrice()))
+                    .currentPrice(ch.currentPrice())
+                    .formattedCurrentPrice(dataHelper.formatInr(ch.currentPrice()))
+                    .currentValue(ch.currentValue())
+                    .formattedCurrentValue(dataHelper.formatInr(ch.currentValue()))
+                    .investedValue(ch.investedValue())
+                    .formattedInvestedValue(dataHelper.formatInr(ch.investedValue()))
+                    .unrealizedPnl(ch.pnl())
+                    .formattedUnrealizedPnl(dataHelper.formatSignedInrWithPlus(ch.pnl()))
+                    .unrealizedPnlPercentage(ch.pnlPercentage())
+                    .formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(ch.pnlPercentage()))
+                    .isProfit(ch.pnl().compareTo(BigDecimal.ZERO) >= 0)
+                    .lockedShares(ch.lockedShares())
+                    .formattedLockedShares(dataHelper.formatCount(ch.lockedShares()))
+                    .availableShares(ch.availableShares())
+                    .formattedAvailableShares(dataHelper.formatCount(ch.availableShares()))
+                    .allocationPercentage(allocPct)
+                    .formattedAllocationPercentage(allocPct.toPlainString() + "%")
+                    .progressBarColor(color)
+                    .build());
+        }
+
         List<PortfolioHoldingItemDto> filtered = allHoldings.stream()
                 .filter(h -> {
                     if (search != null && !search.isBlank()) {
-                        String s = search.toLowerCase();
-                        boolean matchName = h.getCompanyName() != null && h.getCompanyName().toLowerCase().contains(s);
-                        boolean matchCode = h.getCompanyCode() != null && h.getCompanyCode().toLowerCase().contains(s);
-                        boolean matchSymbol = h.getSymbol() != null && h.getSymbol().toLowerCase().contains(s);
+                        String s = search.toLowerCase(Locale.ROOT);
+                        boolean matchName = h.getCompanyName() != null && h.getCompanyName().toLowerCase(Locale.ROOT).contains(s);
+                        boolean matchCode = h.getCompanyCode() != null && h.getCompanyCode().toLowerCase(Locale.ROOT).contains(s);
+                        boolean matchSymbol = h.getSymbol() != null && h.getSymbol().toLowerCase(Locale.ROOT).contains(s);
                         if (!matchName && !matchCode && !matchSymbol) return false;
                     }
                     if (company != null && !company.isBlank() && !"ALL".equalsIgnoreCase(company)) {
-                        boolean match = h.getCompanyName().equalsIgnoreCase(company) ||
-                                        h.getCompanyCode().equalsIgnoreCase(company) ||
-                                        (h.getSymbol() != null && h.getSymbol().equalsIgnoreCase(company));
+                        boolean match = (h.getCompanyName() != null && h.getCompanyName().equalsIgnoreCase(company))
+                                || (h.getCompanyCode() != null && h.getCompanyCode().equalsIgnoreCase(company))
+                                || (h.getSymbol() != null && h.getSymbol().equalsIgnoreCase(company));
                         if (!match) return false;
+                    }
+                    if (holdingType != null && !holdingType.isBlank() && !"ALL".equalsIgnoreCase(holdingType)) {
+                        if ("LOCKED".equalsIgnoreCase(holdingType) && (h.getLockedShares() == null || h.getLockedShares() <= 0)) {
+                            return false;
+                        }
+                        if ("AVAILABLE".equalsIgnoreCase(holdingType) && (h.getAvailableShares() == null || h.getAvailableShares() <= 0)) {
+                            return false;
+                        }
+                    }
+                    if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+                        if (("PROFIT".equalsIgnoreCase(status) || "PROFITABLE".equalsIgnoreCase(status)) && !Boolean.TRUE.equals(h.getIsProfit())) {
+                            return false;
+                        }
+                        if (("LOSS".equalsIgnoreCase(status) || "LOSS_MAKING".equalsIgnoreCase(status)) && Boolean.TRUE.equals(h.getIsProfit())) {
+                            return false;
+                        }
                     }
                     return true;
                 })
                 .collect(Collectors.toList());
 
+        Optional<PortfolioDataHelper.ComputedHolding> bestHolding = summary.holdings().stream()
+                .max(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage));
+        Optional<PortfolioDataHelper.ComputedHolding> worstHolding = summary.holdings().stream()
+                .min(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage));
+        Optional<PortfolioDataHelper.ComputedHolding> mostAllocated = summary.holdings().stream()
+                .max(Comparator.comparing(PortfolioDataHelper.ComputedHolding::currentValue));
+        Optional<PortfolioDataHelper.ComputedHolding> highestLocked = summary.holdings().stream()
+                .max(Comparator.comparing(PortfolioDataHelper.ComputedHolding::lockedShares));
+
+        String topAllocPct = mostAllocated.isPresent() && totalValue.compareTo(BigDecimal.ZERO) > 0
+                ? mostAllocated.get().currentValue().multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP).toPlainString() + "%"
+                : "0%";
+
         List<PortfolioQuickInsightDto> quickInsights = List.of(
                 PortfolioQuickInsightDto.builder()
                         .title("Best Performing Holding")
-                        .value("Atirath Holdings")
-                        .change("+53.8%")
-                        .isPositive(true)
+                        .value(bestHolding.map(h -> h.company().getCompanyName()).orElse("-"))
+                        .change(bestHolding.map(h -> dataHelper.formatSignedPercent(h.pnlPercentage())).orElse("+0.00%"))
+                        .isPositive(bestHolding.map(h -> h.pnlPercentage().compareTo(BigDecimal.ZERO) >= 0).orElse(true))
                         .icon("trending-up")
                         .build(),
                 PortfolioQuickInsightDto.builder()
                         .title("Worst Performing Holding")
-                        .value("CS Interio")
-                        .change("-9.4%")
-                        .isPositive(false)
+                        .value(worstHolding.map(h -> h.company().getCompanyName()).orElse("-"))
+                        .change(worstHolding.map(h -> dataHelper.formatSignedPercent(h.pnlPercentage())).orElse("0.00%"))
+                        .isPositive(worstHolding.map(h -> h.pnlPercentage().compareTo(BigDecimal.ZERO) >= 0).orElse(true))
                         .icon("trending-down")
                         .build(),
                 PortfolioQuickInsightDto.builder()
                         .title("Most Allocated")
-                        .value("Atirath Holdings")
-                        .change("35.5%")
+                        .value(mostAllocated.map(h -> h.company().getCompanyName()).orElse("-"))
+                        .change(topAllocPct)
                         .isPositive(true)
                         .icon("pie-chart")
                         .build(),
                 PortfolioQuickInsightDto.builder()
                         .title("Highest Locked Shares")
-                        .value("Atirath Holdings")
-                        .change("500 shares")
+                        .value(highestLocked.map(h -> h.company().getCompanyName()).orElse("-"))
+                        .change(highestLocked.map(h -> dataHelper.formatCount(h.lockedShares()) + " shares").orElse("0 shares"))
                         .isPositive(true)
                         .icon("lock")
                         .build(),
@@ -487,16 +595,30 @@ public class PortfolioService {
                         .build()
         );
 
+        String insightSummary = summary.holdings().isEmpty()
+                ? "You do not hold any active shares yet. Explore the Internal Market or Trade terminal to start building your portfolio."
+                : "Your holdings total " + dataHelper.formatInr(totalValue) + " across " + summary.holdings().size()
+                        + (summary.holdings().size() == 1 ? " company" : " companies")
+                        + " with an overall unrealized return of " + dataHelper.formatSignedPercent(unrealizedPct) + ".";
+
+        int pageSize = size > 0 ? size : 10;
+        int currentPage = Math.max(page, 1);
+        int totalCount = filtered.size();
+        int totalPages = Math.max((int) Math.ceil((double) totalCount / pageSize), 1);
+        int fromIndex = Math.min((currentPage - 1) * pageSize, totalCount);
+        int toIndex = Math.min(fromIndex + pageSize, totalCount);
+        List<PortfolioHoldingItemDto> paged = filtered.subList(fromIndex, toIndex);
+
         return PortfolioHoldingsResponseDto.builder()
-                .asOfDate("18 Sep 2025, 11:28 AM")
+                .asOfDate(OffsetDateTime.now().format(DISPLAY_DT_FORMATTER))
                 .summaryKpis(summaryKpis)
-                .holdings(filtered)
-                .allocation(getAllocationData())
+                .holdings(paged)
+                .allocation(allocation)
                 .quickInsights(quickInsights)
-                .insightSummary("Your portfolio value has increased by 12.6% compared to last month. Consider reviewing your holdings for rebalancing opportunities.")
-                .totalCount(filtered.size())
-                .currentPage(1)
-                .totalPages(1)
+                .insightSummary(insightSummary)
+                .totalCount(totalCount)
+                .currentPage(currentPage)
+                .totalPages(totalPages)
                 .build();
     }
 
@@ -677,176 +799,144 @@ public class PortfolioService {
     // =========================================================================
     // 4. PORTFOLIO POSITIONS (Image 4)
     // =========================================================================
+    // =========================================================================
+    // 4. PORTFOLIO POSITIONS (Real Per-User DB Aggregation)
+    // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioPositionsResponseDto getPositions(Long userId, String tab, String company, String search) {
-        String activeTab = (tab != null && !tab.isBlank()) ? tab.toUpperCase() : "ALL";
+        return getPositions(userId, tab, company, search, "6M");
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioPositionsResponseDto getPositions(Long userId, String tab, String company, String search, String period) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load positions", HttpStatus.UNAUTHORIZED);
+        }
+
+        String activeTab = (tab != null && !tab.isBlank()) ? tab.toUpperCase(Locale.ROOT) : "ALL";
+        String activePeriod = dataHelper.normalizePeriod(period != null && !period.isBlank() ? period : "6M");
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId).stream()
+                .filter(h -> h.getTotalShares() != null && h.getTotalShares() > 0 && h.getCompany() != null)
+                .toList();
+
+        PortfolioDataHelper.HoldingSummary summary = dataHelper.aggregateHoldings(rawHoldings);
+        BigDecimal totalValue = summary.totalValue();
+        BigDecimal investedAmount = summary.investedAmount();
+        BigDecimal unrealizedPnl = totalValue.subtract(investedAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal unrealizedPct = dataHelper.computePercent(unrealizedPnl, investedAmount);
+        BigDecimal dayPnl = totalValue.subtract(summary.prevTotalValue()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal dayPnlPct = dataHelper.computePercent(dayPnl, summary.prevTotalValue());
 
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
                 PortfolioSummaryKpiDto.builder()
                         .id("total_open_positions")
                         .title("Total Open Positions")
-                        .count(5L)
-                        .formattedCount("5")
-                        .comparisonLabel("Across 4 companies")
+                        .count((long) summary.holdings().size())
+                        .formattedCount(dataHelper.formatCount(summary.holdings().size()))
+                        .comparisonLabel("Across " + summary.holdings().size() + (summary.holdings().size() == 1 ? " company" : " companies"))
                         .icon("file-text")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("total_invested_value")
                         .title("Total Invested Value")
-                        .amount(new BigDecimal("785000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("785000.00")))
+                        .amount(investedAmount)
+                        .formattedAmount(dataHelper.formatInr(investedAmount))
                         .comparisonLabel(null)
                         .icon("coins")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("current_market_value")
                         .title("Current Market Value")
-                        .amount(new BigDecimal("867500.00"))
-                        .formattedAmount(formatInr(new BigDecimal("867500.00")))
-                        .changePercentage(new BigDecimal("10.5"))
-                        .formattedChangePercentage("↑ 10.5%")
-                        .isPositive(true)
+                        .amount(totalValue)
+                        .formattedAmount(dataHelper.formatInr(totalValue))
+                        .changePercentage(unrealizedPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPct.compareTo(BigDecimal.ZERO) >= 0)
                         .icon("trending-up")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("unrealized_pnl")
                         .title("Unrealized P&L")
-                        .amount(new BigDecimal("82500.00"))
-                        .formattedAmount(formatInr(new BigDecimal("82500.00")))
-                        .changePercentage(new BigDecimal("10.5"))
-                        .formattedChangePercentage("↑ 10.5%")
-                        .isPositive(true)
+                        .amount(unrealizedPnl)
+                        .formattedAmount(dataHelper.formatSignedInr(unrealizedPnl))
+                        .changePercentage(unrealizedPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0)
                         .icon("bar-chart")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("days_pnl")
                         .title("Day's P&L")
-                        .amount(new BigDecimal("23750.00"))
-                        .formattedAmount(formatInr(new BigDecimal("23750.00")))
-                        .changePercentage(new BigDecimal("2.8"))
-                        .formattedChangePercentage("↑ 2.8%")
-                        .isPositive(true)
+                        .amount(dayPnl)
+                        .formattedAmount(dataHelper.formatSignedInr(dayPnl))
+                        .changePercentage(dayPnlPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(dayPnlPct))
+                        .isPositive(dayPnl.compareTo(BigDecimal.ZERO) >= 0)
                         .icon("percent")
                         .build()
         );
 
-        List<PortfolioPositionItemDto> allPositions = List.of(
-                PortfolioPositionItemDto.builder()
-                        .positionId(1L)
-                        .companyId(1L)
-                        .companyName("Atirath Holdings India Limited")
-                        .companyCode("ATG")
-                        .symbol("ATG-H")
-                        .positionType("Long")
-                        .quantity(1000L)
-                        .formattedQuantity("1,000")
-                        .averagePrice(new BigDecimal("150.00"))
-                        .formattedAveragePrice("₹ 150.00")
-                        .currentPrice(new BigDecimal("230.00"))
-                        .formattedCurrentPrice("₹ 230.00")
-                        .investedValue(new BigDecimal("150000.00"))
-                        .formattedInvestedValue("₹ 1,50,000")
-                        .currentValue(new BigDecimal("230000.00"))
-                        .formattedCurrentValue("₹ 2,30,000")
-                        .unrealizedPnl(new BigDecimal("80000.00"))
-                        .formattedUnrealizedPnl("+₹ 80,000")
-                        .unrealizedPnlPercentage(new BigDecimal("53.3"))
-                        .formattedUnrealizedPnlPercentage("+53.3%")
-                        .isProfit(true)
-                        .build(),
-                PortfolioPositionItemDto.builder()
-                        .positionId(2L)
-                        .companyId(3L)
-                        .companyName("Farm Vantara Private Limited")
-                        .companyCode("FVPL")
-                        .symbol("ATG-FV")
-                        .positionType("Long")
-                        .quantity(750L)
-                        .formattedQuantity("750")
-                        .averagePrice(new BigDecimal("100.00"))
-                        .formattedAveragePrice("₹ 100.00")
-                        .currentPrice(new BigDecimal("135.00"))
-                        .formattedCurrentPrice("₹ 135.00")
-                        .investedValue(new BigDecimal("75000.00"))
-                        .formattedInvestedValue("₹ 75,000")
-                        .currentValue(new BigDecimal("101250.00"))
-                        .formattedCurrentValue("₹ 1,01,250")
-                        .unrealizedPnl(new BigDecimal("26250.00"))
-                        .formattedUnrealizedPnl("+₹ 26,250")
-                        .unrealizedPnlPercentage(new BigDecimal("35.0"))
-                        .formattedUnrealizedPnlPercentage("+35.0%")
-                        .isProfit(true)
-                        .build(),
-                PortfolioPositionItemDto.builder()
-                        .positionId(3L)
-                        .companyId(4L)
-                        .companyName("Tri Energy Battery Private Limited")
-                        .companyCode("TEB")
-                        .symbol("ATG-TEB")
-                        .positionType("Long")
-                        .quantity(600L)
-                        .formattedQuantity("600")
-                        .averagePrice(new BigDecimal("200.00"))
-                        .formattedAveragePrice("₹ 200.00")
-                        .currentPrice(new BigDecimal("225.00"))
-                        .formattedCurrentPrice("₹ 225.00")
-                        .investedValue(new BigDecimal("120000.00"))
-                        .formattedInvestedValue("₹ 1,20,000")
-                        .currentValue(new BigDecimal("135000.00"))
-                        .formattedCurrentValue("₹ 1,35,000")
-                        .unrealizedPnl(new BigDecimal("15000.00"))
-                        .formattedUnrealizedPnl("+₹ 15,000")
-                        .unrealizedPnlPercentage(new BigDecimal("12.5"))
-                        .formattedUnrealizedPnlPercentage("+12.5%")
-                        .isProfit(true)
-                        .build(),
-                PortfolioPositionItemDto.builder()
-                        .positionId(4L)
-                        .companyId(6L)
-                        .companyName("CS Interio Private Limited")
-                        .companyCode("CSI")
-                        .symbol("ATG-CSI")
-                        .positionType("Long")
-                        .quantity(500L)
-                        .formattedQuantity("500")
-                        .averagePrice(new BigDecimal("160.00"))
-                        .formattedAveragePrice("₹ 160.00")
-                        .currentPrice(new BigDecimal("145.00"))
-                        .formattedCurrentPrice("₹ 145.00")
-                        .investedValue(new BigDecimal("80000.00"))
-                        .formattedInvestedValue("₹ 80,000")
-                        .currentValue(new BigDecimal("72500.00"))
-                        .formattedCurrentValue("₹ 72,500")
-                        .unrealizedPnl(new BigDecimal("-7500.00"))
-                        .formattedUnrealizedPnl("-₹ 7,500")
-                        .unrealizedPnlPercentage(new BigDecimal("-9.4"))
-                        .formattedUnrealizedPnlPercentage("-9.4%")
-                        .isProfit(false)
-                        .build(),
-                PortfolioPositionItemDto.builder()
-                        .positionId(5L)
-                        .companyId(5L)
-                        .companyName("Royal One Heating Equipments Pvt Ltd")
-                        .companyCode("ROHE")
-                        .symbol("ATG-ROHE")
-                        .positionType("Long")
-                        .quantity(400L)
-                        .formattedQuantity("400")
-                        .averagePrice(new BigDecimal("180.00"))
-                        .formattedAveragePrice("₹ 180.00")
-                        .currentPrice(new BigDecimal("235.00"))
-                        .formattedCurrentPrice("₹ 235.00")
-                        .investedValue(new BigDecimal("72000.00"))
-                        .formattedInvestedValue("₹ 72,000")
-                        .currentValue(new BigDecimal("94000.00"))
-                        .formattedCurrentValue("₹ 94,000")
-                        .unrealizedPnl(new BigDecimal("22000.00"))
-                        .formattedUnrealizedPnl("+₹ 22,000")
-                        .unrealizedPnlPercentage(new BigDecimal("30.6"))
-                        .formattedUnrealizedPnlPercentage("+30.6%")
-                        .isProfit(true)
-                        .build()
-        );
+        List<PortfolioPositionItemDto> allPositions = new ArrayList<>();
+        List<PortfolioAllocationSliceDto> valueDistribution = new ArrayList<>();
+        List<PortfolioDayMovementDto> daysMovement = new ArrayList<>();
+
+        for (int i = 0; i < summary.holdings().size(); i++) {
+            PortfolioDataHelper.ComputedHolding ch = summary.holdings().get(i);
+            String color = PortfolioDataHelper.CHART_COLORS.get(i % PortfolioDataHelper.CHART_COLORS.size());
+            boolean isProfit = ch.pnl().compareTo(BigDecimal.ZERO) >= 0;
+
+            allPositions.add(PortfolioPositionItemDto.builder()
+                    .positionId(ch.company().getCompanyId())
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .companyCode(ch.company().getCompanyCode())
+                    .symbol(ch.company().getSymbol())
+                    .logoUrl(ch.company().getLogoUrl())
+                    .positionType("Long")
+                    .quantity(ch.shares())
+                    .formattedQuantity(dataHelper.formatCount(ch.shares()))
+                    .averagePrice(ch.avgPrice())
+                    .formattedAveragePrice(dataHelper.formatInr(ch.avgPrice()))
+                    .currentPrice(ch.currentPrice())
+                    .formattedCurrentPrice(dataHelper.formatInr(ch.currentPrice()))
+                    .investedValue(ch.investedValue())
+                    .formattedInvestedValue(dataHelper.formatInr(ch.investedValue()))
+                    .currentValue(ch.currentValue())
+                    .formattedCurrentValue(dataHelper.formatInr(ch.currentValue()))
+                    .unrealizedPnl(ch.pnl())
+                    .formattedUnrealizedPnl(dataHelper.formatSignedInrWithPlus(ch.pnl()))
+                    .unrealizedPnlPercentage(ch.pnlPercentage())
+                    .formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(ch.pnlPercentage()))
+                    .isProfit(isProfit)
+                    .build());
+
+            BigDecimal distPct = totalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? ch.currentValue().multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+            valueDistribution.add(PortfolioAllocationSliceDto.builder()
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .percentage(distPct)
+                    .formattedPercentage(distPct.toPlainString() + "%")
+                    .value(ch.currentValue())
+                    .formattedValue(dataHelper.formatInr(ch.currentValue()))
+                    .color(color)
+                    .build());
+
+            BigDecimal priceDelta = ch.currentPrice().subtract(ch.previousClose()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal priceDeltaPct = dataHelper.computePercent(priceDelta, ch.previousClose());
+            boolean movePositive = priceDelta.compareTo(BigDecimal.ZERO) >= 0;
+            daysMovement.add(PortfolioDayMovementDto.builder()
+                    .companyName(ch.company().getCompanyName())
+                    .changeAmount(priceDelta)
+                    .formattedChangeAmount((movePositive ? "+" : "") + priceDelta.toPlainString())
+                    .changePercentage(priceDeltaPct)
+                    .formattedChangePercentage(dataHelper.formatSignedPercent(priceDeltaPct))
+                    .isPositive(movePositive)
+                    .build());
+        }
 
         List<PortfolioPositionItemDto> filtered = allPositions.stream()
                 .filter(p -> {
@@ -860,43 +950,69 @@ public class PortfolioService {
                 })
                 .filter(p -> {
                     if (company != null && !company.isBlank() && !"ALL".equalsIgnoreCase(company)) {
-                        boolean match = p.getCompanyName().equalsIgnoreCase(company) ||
-                                        p.getCompanyCode().equalsIgnoreCase(company) ||
-                                        (p.getSymbol() != null && p.getSymbol().equalsIgnoreCase(company));
+                        boolean match = (p.getCompanyName() != null && p.getCompanyName().equalsIgnoreCase(company))
+                                || (p.getCompanyCode() != null && p.getCompanyCode().equalsIgnoreCase(company))
+                                || (p.getSymbol() != null && p.getSymbol().equalsIgnoreCase(company));
                         if (!match) return false;
                     }
                     if (search != null && !search.isBlank()) {
-                        String s = search.toLowerCase();
-                        boolean match = p.getCompanyName().toLowerCase().contains(s) ||
-                                        p.getCompanyCode().toLowerCase().contains(s);
+                        String s = search.toLowerCase(Locale.ROOT);
+                        boolean match = (p.getCompanyName() != null && p.getCompanyName().toLowerCase(Locale.ROOT).contains(s))
+                                || (p.getCompanyCode() != null && p.getCompanyCode().toLowerCase(Locale.ROOT).contains(s))
+                                || (p.getSymbol() != null && p.getSymbol().toLowerCase(Locale.ROOT).contains(s));
                         if (!match) return false;
                     }
                     return true;
                 })
                 .collect(Collectors.toList());
 
-        List<PortfolioAllocationSliceDto> valueDistribution = List.of(
-                PortfolioAllocationSliceDto.builder().companyName("Atirath Holdings").percentage(new BigDecimal("26.5")).formattedPercentage("26.5%").color("#1E40AF").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Farm Vantara").percentage(new BigDecimal("11.7")).formattedPercentage("11.7%").color("#F59E0B").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Tri Energy Battery").percentage(new BigDecimal("15.6")).formattedPercentage("15.6%").color("#8B5CF6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("CS Interio").percentage(new BigDecimal("8.4")).formattedPercentage("8.4%").color("#10B981").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Royal One Heating").percentage(new BigDecimal("10.8")).formattedPercentage("10.8%").color("#EF4444").build()
-        );
+        Optional<PortfolioAllocationSliceDto> largestDist = valueDistribution.stream()
+                .max(Comparator.comparing(PortfolioAllocationSliceDto::getPercentage));
+        Optional<PortfolioPositionItemDto> highestGain = allPositions.stream()
+                .max(Comparator.comparing(PortfolioPositionItemDto::getUnrealizedPnlPercentage));
+        Optional<PortfolioPositionItemDto> highestLoss = allPositions.stream()
+                .min(Comparator.comparing(PortfolioPositionItemDto::getUnrealizedPnlPercentage));
+        Optional<UserShareHolding> mostRecentHolding = rawHoldings.stream()
+                .filter(h -> h.getUpdatedAt() != null || h.getCreatedAt() != null)
+                .max(Comparator.comparing(h -> h.getUpdatedAt() != null ? h.getUpdatedAt() : h.getCreatedAt()));
 
         List<PortfolioQuickInsightDto> positionInsights = List.of(
-                PortfolioQuickInsightDto.builder().title("Largest Position").value("Atirath Holdings (26.5%)").icon("pie-chart").build(),
-                PortfolioQuickInsightDto.builder().title("Highest Gain").value("Atirath Holdings (+53.3%)").icon("trending-up").isPositive(true).build(),
-                PortfolioQuickInsightDto.builder().title("Highest Loss").value("CS Interio (-9.4%)").icon("trending-down").isPositive(false).build(),
-                PortfolioQuickInsightDto.builder().title("Most Recent Position").value("Royal One Heating (Opened 15 Sep 2025)").icon("clock").build()
+                PortfolioQuickInsightDto.builder()
+                        .title("Largest Position")
+                        .value(largestDist.map(d -> d.getCompanyName() + " (" + d.getFormattedPercentage() + ")").orElse("-"))
+                        .icon("pie-chart")
+                        .build(),
+                PortfolioQuickInsightDto.builder()
+                        .title("Highest Gain")
+                        .value(highestGain.map(p -> p.getCompanyName() + " (" + p.getFormattedUnrealizedPnlPercentage() + ")").orElse("-"))
+                        .icon("trending-up")
+                        .isPositive(highestGain.map(p -> Boolean.TRUE.equals(p.getIsProfit())).orElse(true))
+                        .build(),
+                PortfolioQuickInsightDto.builder()
+                        .title("Highest Loss")
+                        .value(highestLoss.map(p -> p.getCompanyName() + " (" + p.getFormattedUnrealizedPnlPercentage() + ")").orElse("-"))
+                        .icon("trending-down")
+                        .isPositive(highestLoss.map(p -> Boolean.TRUE.equals(p.getIsProfit())).orElse(true))
+                        .build(),
+                PortfolioQuickInsightDto.builder()
+                        .title("Most Recent Position")
+                        .value(mostRecentHolding.map(h -> {
+                            OffsetDateTime dt = h.getUpdatedAt() != null ? h.getUpdatedAt() : h.getCreatedAt();
+                            return h.getCompany().getCompanyName() + (dt != null ? " (" + dt.format(DATE_ONLY_FORMATTER) + ")" : "");
+                        }).orElse("-"))
+                        .icon("clock")
+                        .build()
         );
 
-        List<PortfolioDayMovementDto> daysMovement = List.of(
-                PortfolioDayMovementDto.builder().companyName("Atirath Holdings").changeAmount(new BigDecimal("5.00")).formattedChangeAmount("+5.00").changePercentage(new BigDecimal("2.2")).formattedChangePercentage("+2.2%").isPositive(true).build(),
-                PortfolioDayMovementDto.builder().companyName("Farm Vantara").changeAmount(new BigDecimal("3.50")).formattedChangeAmount("+3.50").changePercentage(new BigDecimal("2.7")).formattedChangePercentage("+2.7%").isPositive(true).build(),
-                PortfolioDayMovementDto.builder().companyName("Tri Energy Battery").changeAmount(new BigDecimal("2.50")).formattedChangeAmount("+2.50").changePercentage(new BigDecimal("1.1")).formattedChangePercentage("+1.1%").isPositive(true).build(),
-                PortfolioDayMovementDto.builder().companyName("CS Interio").changeAmount(new BigDecimal("-5.00")).formattedChangeAmount("-5.00").changePercentage(new BigDecimal("-3.3")).formattedChangePercentage("-3.3%").isPositive(false).build(),
-                PortfolioDayMovementDto.builder().companyName("Royal One Heating").changeAmount(new BigDecimal("8.00")).formattedChangeAmount("+8.00").changePercentage(new BigDecimal("3.5")).formattedChangePercentage("+3.5%").isPositive(true).build()
-        );
+        List<PortfolioTrendPointDto> valueTrend = dataHelper.buildPerformanceSeries(
+                rawHoldings, totalValue, investedAmount, summary.prevTotalValue(), activePeriod, OffsetDateTime.now()
+        ).stream().map(snap -> PortfolioTrendPointDto.builder()
+                .period(snap.label())
+                .date(snap.dateIso())
+                .value(snap.value())
+                .formattedValue(snap.formattedValue())
+                .isCurrent(snap.isCurrent())
+                .build()).toList();
 
         return PortfolioPositionsResponseDto.builder()
                 .summaryKpis(summaryKpis)
@@ -904,76 +1020,166 @@ public class PortfolioService {
                 .positions(filtered)
                 .valueDistribution(valueDistribution)
                 .positionInsights(positionInsights)
-                .valueTrend(getPositionTrendData())
+                .valueTrend(valueTrend)
                 .daysMovement(daysMovement)
-                .totalPositionsCount(5)
+                .totalPositionsCount(allPositions.size())
                 .build();
     }
 
     // =========================================================================
-    // 5. PORTFOLIO TRADE HISTORY (Image 5)
+    // 5. PORTFOLIO TRADE HISTORY (Real Per-User DB Aggregation)
     // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioTradesResponseDto getTradeHistory(Long userId, String search, String company, String tradeType, String status, String startDate, String endDate, Long selectedTradeId, int page, int size) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load trade history", HttpStatus.UNAUTHORIZED);
+        }
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId);
+        Map<Long, BigDecimal> avgCostByCompany = new HashMap<>();
+        for (UserShareHolding h : rawHoldings) {
+            if (h.getCompany() != null && h.getAverageBuyPrice() != null) {
+                avgCostByCompany.put(h.getCompany().getCompanyId(), h.getAverageBuyPrice());
+            }
+        }
+
+        List<MarketTrade> userTrades = tradeRepository.findUserTrades(userId);
+        BigDecimal totalBuyValue = BigDecimal.ZERO;
+        BigDecimal totalSellValue = BigDecimal.ZERO;
+        BigDecimal realizedPnl = BigDecimal.ZERO;
+        int profitableCount = 0;
+
+        LocalDate startFilter = parseIsoDate(startDate);
+        LocalDate endFilter = parseIsoDate(endDate);
+
+        List<PortfolioTradeItemDto> allTradeItems = new ArrayList<>();
+        for (MarketTrade t : userTrades) {
+            boolean isBuy = t.getBuyerUser() != null && userId.equals(t.getBuyerUser().getUserId());
+            String typeLabel = isBuy ? "Buy" : "Sell";
+            BigDecimal val = t.getTradeValue() != null ? t.getTradeValue().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal price = t.getTradePrice() != null ? t.getTradePrice().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            long qty = t.getQuantity() != null ? t.getQuantity() : 0L;
+            String rawStatus = t.getStatus() != null ? t.getStatus().toUpperCase(Locale.ROOT) : "EXECUTED";
+            boolean cancelled = "REVERSED".equals(rawStatus) || "CANCELLED".equals(rawStatus);
+            String statusLabel = cancelled ? "Cancelled" : "Settled";
+
+            if (!cancelled) {
+                if (isBuy) {
+                    totalBuyValue = totalBuyValue.add(val);
+                    if (t.getCompany() != null) {
+                        BigDecimal currentPrice = dataHelper.resolvePriceQuote(t.getCompany(), price).currentPrice();
+                        if (currentPrice.compareTo(price) >= 0) {
+                            profitableCount++;
+                        }
+                    }
+                } else {
+                    totalSellValue = totalSellValue.add(val);
+                    if (t.getCompany() != null) {
+                        BigDecimal costBasis = avgCostByCompany.getOrDefault(t.getCompany().getCompanyId(), price);
+                        BigDecimal pnl = price.subtract(costBasis).multiply(BigDecimal.valueOf(qty));
+                        realizedPnl = realizedPnl.add(pnl);
+                        if (pnl.compareTo(BigDecimal.ZERO) >= 0) {
+                            profitableCount++;
+                        }
+                    }
+                }
+            }
+
+            UserAccount counterpartyUser = isBuy ? t.getSellerUser() : t.getBuyerUser();
+            String counterpartyName = counterpartyUser != null ? dataHelper.resolveUserFullName(counterpartyUser) : "-";
+            String dateTimeLabel = t.getExecutedAt() != null ? t.getExecutedAt().format(DATE_ONLY_FORMATTER) + "\n" + t.getExecutedAt().format(DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)) : "-";
+
+            allTradeItems.add(PortfolioTradeItemDto.builder()
+                    .tradeId(t.getTradeId())
+                    .tradeNo(t.getTradeNo())
+                    .tradeDateTime(dateTimeLabel)
+                    .companyId(t.getCompany() != null ? t.getCompany().getCompanyId() : null)
+                    .companyName(t.getCompany() != null ? t.getCompany().getCompanyName() : "Atirath Group")
+                    .companyCode(t.getCompany() != null ? t.getCompany().getCompanyCode() : "ATG")
+                    .symbol(t.getCompany() != null ? t.getCompany().getSymbol() : "ATG")
+                    .logoUrl(t.getCompany() != null ? t.getCompany().getLogoUrl() : null)
+                    .tradeType(typeLabel)
+                    .quantity(qty)
+                    .formattedQuantity(dataHelper.formatCount(qty))
+                    .price(price)
+                    .formattedPrice(dataHelper.formatInr(price))
+                    .tradeValue(val)
+                    .formattedTradeValue(dataHelper.formatInr(val))
+                    .status(statusLabel)
+                    .counterparty(counterpartyName)
+                    .build());
+        }
+
+        totalBuyValue = totalBuyValue.setScale(2, RoundingMode.HALF_UP);
+        totalSellValue = totalSellValue.setScale(2, RoundingMode.HALF_UP);
+        realizedPnl = realizedPnl.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedPct = dataHelper.computePercent(realizedPnl, totalSellValue.compareTo(BigDecimal.ZERO) > 0 ? totalSellValue : totalBuyValue);
+        int winRatePct = userTrades.isEmpty() ? 0 : (int) Math.round((profitableCount * 100.0) / userTrades.size());
+
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
                 PortfolioSummaryKpiDto.builder()
                         .id("total_trades")
                         .title("Total Trades")
-                        .count(62L)
-                        .formattedCount("62")
+                        .count((long) userTrades.size())
+                        .formattedCount(dataHelper.formatCount(userTrades.size()))
                         .comparisonLabel("All time")
                         .icon("repeat")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("total_buy_value")
                         .title("Total Buy Value")
-                        .amount(new BigDecimal("3240000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("3240000.00")))
+                        .amount(totalBuyValue)
+                        .formattedAmount(dataHelper.formatInr(totalBuyValue))
                         .comparisonLabel(null)
                         .icon("dollar-sign")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("total_sell_value")
                         .title("Total Sell Value")
-                        .amount(new BigDecimal("2875000.00"))
-                        .formattedAmount(formatInr(new BigDecimal("2875000.00")))
+                        .amount(totalSellValue)
+                        .formattedAmount(dataHelper.formatInr(totalSellValue))
                         .comparisonLabel(null)
                         .icon("dollar-sign")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("realized_pnl")
                         .title("Realized P&L")
-                        .amount(new BigDecimal("562300.00"))
-                        .formattedAmount(formatInr(new BigDecimal("562300.00")))
-                        .changePercentage(new BigDecimal("24.3"))
-                        .formattedChangePercentage("↑ 24.3%")
-                        .isPositive(true)
+                        .amount(realizedPnl)
+                        .formattedAmount(dataHelper.formatSignedInr(realizedPnl))
+                        .changePercentage(realizedPct)
+                        .formattedChangePercentage(dataHelper.formatSignedPercent(realizedPct))
+                        .isPositive(realizedPnl.compareTo(BigDecimal.ZERO) >= 0)
                         .icon("trending-up")
                         .build(),
                 PortfolioSummaryKpiDto.builder()
                         .id("profitable_trades")
                         .title("Profitable Trades")
-                        .formattedCount("78%")
-                        .comparisonLabel("48 out of 62")
+                        .formattedCount(winRatePct + "%")
+                        .comparisonLabel(profitableCount + " out of " + userTrades.size())
                         .icon("check-circle")
                         .build()
         );
 
-        List<PortfolioTradeItemDto> allTrades = getTradesList();
+        Map<Long, LocalDate> tradeDates = new HashMap<>();
+        for (MarketTrade t : userTrades) {
+            if (t.getExecutedAt() != null) {
+                tradeDates.put(t.getTradeId(), t.getExecutedAt().toLocalDate());
+            }
+        }
 
-        List<PortfolioTradeItemDto> filtered = allTrades.stream()
+        List<PortfolioTradeItemDto> filtered = allTradeItems.stream()
                 .filter(t -> {
                     if (search != null && !search.isBlank()) {
-                        String s = search.toLowerCase();
-                        boolean matchName = t.getCompanyName().toLowerCase().contains(s);
-                        boolean matchNo = t.getTradeNo().toLowerCase().contains(s);
-                        boolean matchParty = t.getCounterparty() != null && t.getCounterparty().toLowerCase().contains(s);
+                        String s = search.toLowerCase(Locale.ROOT);
+                        boolean matchName = t.getCompanyName() != null && t.getCompanyName().toLowerCase(Locale.ROOT).contains(s);
+                        boolean matchNo = t.getTradeNo() != null && t.getTradeNo().toLowerCase(Locale.ROOT).contains(s);
+                        boolean matchParty = t.getCounterparty() != null && t.getCounterparty().toLowerCase(Locale.ROOT).contains(s);
                         if (!matchName && !matchNo && !matchParty) return false;
                     }
                     if (company != null && !company.isBlank() && !"ALL".equalsIgnoreCase(company)) {
-                        boolean match = t.getCompanyName().equalsIgnoreCase(company) ||
-                                        t.getCompanyCode().equalsIgnoreCase(company) ||
-                                        (t.getSymbol() != null && t.getSymbol().equalsIgnoreCase(company));
+                        boolean match = (t.getCompanyName() != null && t.getCompanyName().equalsIgnoreCase(company))
+                                || (t.getCompanyCode() != null && t.getCompanyCode().equalsIgnoreCase(company))
+                                || (t.getSymbol() != null && t.getSymbol().equalsIgnoreCase(company));
                         if (!match) return false;
                     }
                     if (tradeType != null && !tradeType.isBlank() && !"ALL".equalsIgnoreCase(tradeType)) {
@@ -982,26 +1188,38 @@ public class PortfolioService {
                     if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
                         if (!t.getStatus().equalsIgnoreCase(status)) return false;
                     }
+                    if (startFilter != null || endFilter != null) {
+                        LocalDate d = tradeDates.get(t.getTradeId());
+                        if (d == null) return false;
+                        if (startFilter != null && d.isBefore(startFilter)) return false;
+                        if (endFilter != null && d.isAfter(endFilter)) return false;
+                    }
                     return true;
                 })
                 .collect(Collectors.toList());
-
-        PortfolioTradeDetailDto selectedDetail = getTradeDetail(selectedTradeId != null ? selectedTradeId : 1L, null, userId);
 
         int pageSize = size > 0 ? size : 10;
         int currentPage = Math.max(page, 1);
         int totalItems = filtered.size();
         int totalPages = Math.max((int) Math.ceil((double) totalItems / pageSize), 1);
-        int fromIndex = (currentPage - 1) * pageSize;
+        int fromIndex = Math.min((currentPage - 1) * pageSize, totalItems);
         int toIndex = Math.min(fromIndex + pageSize, totalItems);
 
         List<PortfolioTradeItemDto> pagedTrades = fromIndex < totalItems ? filtered.subList(fromIndex, toIndex) : Collections.emptyList();
+
+        Long effectiveSelectedId = selectedTradeId;
+        if (effectiveSelectedId == null && !pagedTrades.isEmpty()) {
+            effectiveSelectedId = pagedTrades.get(0).getTradeId();
+        }
+        PortfolioTradeDetailDto selectedDetail = effectiveSelectedId != null
+                ? buildTradeDetailSafe(effectiveSelectedId, userId)
+                : null;
 
         return PortfolioTradesResponseDto.builder()
                 .summaryKpis(summaryKpis)
                 .trades(pagedTrades)
                 .selectedTradeDetail(selectedDetail)
-                .totalTradesCount(62)
+                .totalTradesCount(totalItems)
                 .currentPage(currentPage)
                 .totalPages(totalPages)
                 .pageSize(pageSize)
@@ -1010,62 +1228,110 @@ public class PortfolioService {
 
     @Transactional(readOnly = true)
     public PortfolioTradeDetailDto getTradeDetail(Long tradeId, String tradeNo, Long userId) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load trade detail", HttpStatus.UNAUTHORIZED);
+        }
+        MarketTrade trade = null;
+        if (tradeId != null) {
+            trade = tradeRepository.findById(tradeId).orElse(null);
+        } else if (tradeNo != null && !tradeNo.isBlank()) {
+            trade = tradeRepository.findUserTrades(userId).stream()
+                    .filter(t -> tradeNo.equalsIgnoreCase(t.getTradeNo()))
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (trade == null) {
+            throw new ResourceNotFoundException("Trade not found");
+        }
+        boolean isParticipant = (trade.getBuyerUser() != null && userId.equals(trade.getBuyerUser().getUserId()))
+                || (trade.getSellerUser() != null && userId.equals(trade.getSellerUser().getUserId()));
+        if (!isParticipant) {
+            throw new ApiException("You are not authorized to view this trade", HttpStatus.FORBIDDEN);
+        }
+        return toTradeDetailDto(trade, userId);
+    }
+
+    private PortfolioTradeDetailDto buildTradeDetailSafe(Long tradeId, Long userId) {
+        return tradeRepository.findById(tradeId)
+                .filter(t -> (t.getBuyerUser() != null && userId.equals(t.getBuyerUser().getUserId()))
+                        || (t.getSellerUser() != null && userId.equals(t.getSellerUser().getUserId())))
+                .map(t -> toTradeDetailDto(t, userId))
+                .orElse(null);
+    }
+
+    private PortfolioTradeDetailDto toTradeDetailDto(MarketTrade t, Long userId) {
+        boolean isBuy = t.getBuyerUser() != null && userId.equals(t.getBuyerUser().getUserId());
+        UserAccount otherUser = isBuy ? t.getSellerUser() : t.getBuyerUser();
+        String counterparty = otherUser != null
+                ? dataHelper.resolveUserFullName(otherUser) + " (ATG" + otherUser.getUserId() + ")"
+                : "-";
+
+        Long userOrderId = isBuy ? t.getBuyOrderId() : t.getSellOrderId();
+        MarketOrder linkedOrder = userOrderId != null ? orderRepository.findById(userOrderId).orElse(null) : null;
+        Escrow escrow = escrowRepository.findByTrade_TradeId(t.getTradeId()).orElse(null);
+
+        String orderTime = linkedOrder != null && linkedOrder.getPlacedAt() != null
+                ? linkedOrder.getPlacedAt().format(DISPLAY_DT_FORMATTER)
+                : (t.getExecutedAt() != null ? t.getExecutedAt().format(DISPLAY_DT_FORMATTER) : "-");
+        String tradeTime = t.getExecutedAt() != null ? t.getExecutedAt().format(DISPLAY_DT_FORMATTER) : "-";
+        String settlementTime = escrow != null && escrow.getReleasedAt() != null
+                ? escrow.getReleasedAt().format(DISPLAY_DT_FORMATTER)
+                : tradeTime;
+        String settlementRef = escrow != null && escrow.getEscrowReference() != null
+                ? escrow.getEscrowReference()
+                : "SET" + (t.getTradeNo() != null ? t.getTradeNo().replace("TRD", "") : t.getTradeId());
+
+        String rawStatus = t.getStatus() != null ? t.getStatus().toUpperCase(Locale.ROOT) : "EXECUTED";
+        boolean cancelled = "REVERSED".equals(rawStatus) || "CANCELLED".equals(rawStatus);
+        String statusLabel = cancelled ? "Cancelled" : "Settled";
+        String escrowTime = escrow != null && escrow.getCreatedAt() != null
+                ? escrow.getCreatedAt().format(DISPLAY_DT_FORMATTER)
+                : tradeTime;
+
         List<PortfolioTimelineStepDto> timeline = List.of(
-                PortfolioTimelineStepDto.builder().stepNumber(1).stepName("Order Placed").timestamp("18 Sep 2025, 10:15 AM").status("COMPLETED").isCurrent(false).build(),
-                PortfolioTimelineStepDto.builder().stepNumber(2).stepName("Matched with Seller").timestamp("18 Sep 2025, 10:20 AM").status("COMPLETED").isCurrent(false).build(),
-                PortfolioTimelineStepDto.builder().stepNumber(3).stepName("Payment to Escrow").timestamp("18 Sep 2025, 10:43 AM").status("COMPLETED").isCurrent(false).build(),
-                PortfolioTimelineStepDto.builder().stepNumber(4).stepName("Shares Locked").timestamp("18 Sep 2025, 10:51 AM").status("COMPLETED").isCurrent(false).build(),
-                PortfolioTimelineStepDto.builder().stepNumber(5).stepName("Shares Transferred").timestamp("18 Sep 2025, 11:05 AM").status("COMPLETED").isCurrent(false).build(),
-                PortfolioTimelineStepDto.builder().stepNumber(6).stepName("Settlement Completed").timestamp("18 Sep 2025, 11:28 AM").status("COMPLETED").isCurrent(true).build()
+                PortfolioTimelineStepDto.builder().stepNumber(1).stepName("Order Placed").timestamp(orderTime).status("COMPLETED").isCurrent(false).build(),
+                PortfolioTimelineStepDto.builder().stepNumber(2).stepName(isBuy ? "Matched with Seller" : "Matched with Buyer").timestamp(tradeTime).status("COMPLETED").isCurrent(false).build(),
+                PortfolioTimelineStepDto.builder().stepNumber(3).stepName("Payment to Escrow").timestamp(escrowTime).status(cancelled ? "PENDING" : "COMPLETED").isCurrent(false).build(),
+                PortfolioTimelineStepDto.builder().stepNumber(4).stepName("Shares Locked").timestamp(escrowTime).status(cancelled ? "PENDING" : "COMPLETED").isCurrent(false).build(),
+                PortfolioTimelineStepDto.builder().stepNumber(5).stepName("Shares Transferred").timestamp(tradeTime).status(cancelled ? "PENDING" : "COMPLETED").isCurrent(false).build(),
+                PortfolioTimelineStepDto.builder().stepNumber(6).stepName(cancelled ? "Trade Cancelled" : "Settlement Completed").timestamp(settlementTime).status(cancelled ? "CANCELLED" : "COMPLETED").isCurrent(true).build()
         );
 
-        if (tradeNo != null && !tradeNo.isBlank()) {
-            Optional<PortfolioTradeItemDto> match = getTradesList().stream().filter(t -> t.getTradeNo().equalsIgnoreCase(tradeNo)).findFirst();
-            if (match.isPresent()) {
-                PortfolioTradeItemDto m = match.get();
-                return PortfolioTradeDetailDto.builder()
-                        .tradeId(m.getTradeId())
-                        .tradeNo(m.getTradeNo())
-                        .companyName(m.getCompanyName())
-                        .symbol(m.getSymbol())
-                        .tradeType(m.getTradeType())
-                        .quantity(m.getQuantity())
-                        .formattedQuantity(m.getFormattedQuantity())
-                        .pricePerShare(m.getPrice())
-                        .formattedPricePerShare(m.getFormattedPrice())
-                        .totalValue(m.getTradeValue())
-                        .formattedTotalValue(m.getFormattedTradeValue())
-                        .orderDateTime("18 Sep 2025, 10:15 AM")
-                        .tradeDateTime(m.getTradeDateTime())
-                        .settlementDate("18 Sep 2025, 11:28 AM")
-                        .status(m.getStatus())
-                        .counterparty(m.getCounterparty() + " (ATG10056)")
-                        .settlementRef("SET" + m.getTradeNo().replace("TRD", ""))
-                        .timeline(timeline)
-                        .build();
-            }
-        }
+        long qty = t.getQuantity() != null ? t.getQuantity() : 0L;
+        BigDecimal price = t.getTradePrice() != null ? t.getTradePrice().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal val = t.getTradeValue() != null ? t.getTradeValue().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         return PortfolioTradeDetailDto.builder()
-                .tradeId(1L)
-                .tradeNo("TRD250918004")
-                .companyName("Atirath Holdings India Limited")
-                .symbol("ATG-H")
-                .tradeType("Buy")
-                .quantity(1000L)
-                .formattedQuantity("1,000")
-                .pricePerShare(new BigDecimal("230.00"))
-                .formattedPricePerShare("₹ 230.00")
-                .totalValue(new BigDecimal("230000.00"))
-                .formattedTotalValue("₹ 2,30,000")
-                .orderDateTime("18 Sep 2025, 10:15 AM")
-                .tradeDateTime("18 Sep 2025, 11:05 AM")
-                .settlementDate("18 Sep 2025, 11:28 AM")
-                .status("Settled")
-                .counterparty("Rakesh Mehta (ATG10056)")
-                .settlementRef("SET250918001")
+                .tradeId(t.getTradeId())
+                .tradeNo(t.getTradeNo())
+                .companyName(t.getCompany() != null ? t.getCompany().getCompanyName() : "Atirath Group")
+                .symbol(t.getCompany() != null ? t.getCompany().getSymbol() : "ATG")
+                .tradeType(isBuy ? "Buy" : "Sell")
+                .quantity(qty)
+                .formattedQuantity(dataHelper.formatCount(qty))
+                .pricePerShare(price)
+                .formattedPricePerShare(dataHelper.formatInr(price))
+                .totalValue(val)
+                .formattedTotalValue(dataHelper.formatInr(val))
+                .orderDateTime(orderTime)
+                .tradeDateTime(tradeTime)
+                .settlementDate(settlementTime)
+                .status(statusLabel)
+                .counterparty(counterparty)
+                .settlementRef(settlementRef)
                 .timeline(timeline)
                 .build();
+    }
+
+    private LocalDate parseIsoDate(String val) {
+        if (val == null || val.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(val.trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // =========================================================================
@@ -1295,110 +1561,260 @@ public class PortfolioService {
         );
     }
 
-    private List<PortfolioTradeItemDto> getTradesList() {
-        return List.of(
-                PortfolioTradeItemDto.builder().tradeId(1L).tradeNo("TRD250918004").tradeDateTime("18 Sep 2025\n11:05 AM").companyId(1L).companyName("Atirath Holdings India Limited").companyCode("ATG").symbol("ATG-H").tradeType("Buy").quantity(1000L).formattedQuantity("1,000").price(new BigDecimal("230.00")).formattedPrice("230.00").tradeValue(new BigDecimal("230000.00")).formattedTradeValue("2,30,000").status("Settled").counterparty("Rakesh Mehta").build(),
-                PortfolioTradeItemDto.builder().tradeId(2L).tradeNo("TRD250917006").tradeDateTime("17 Sep 2025\n04:32 PM").companyId(6L).companyName("CS Interio Private Limited").companyCode("CSI").symbol("ATG-CSI").tradeType("Sell").quantity(500L).formattedQuantity("500").price(new BigDecimal("145.00")).formattedPrice("145.00").tradeValue(new BigDecimal("72500.00")).formattedTradeValue("72,500").status("Settled").counterparty("Anil Kumar").build(),
-                PortfolioTradeItemDto.builder().tradeId(3L).tradeNo("TRD250917005").tradeDateTime("17 Sep 2025\n11:20 AM").companyId(3L).companyName("Farm Vantara Private Limited").companyCode("FVPL").symbol("ATG-FV").tradeType("Buy").quantity(750L).formattedQuantity("750").price(new BigDecimal("135.00")).formattedPrice("135.00").tradeValue(new BigDecimal("101250.00")).formattedTradeValue("1,01,250").status("Settled").counterparty("Priya Sharma").build(),
-                PortfolioTradeItemDto.builder().tradeId(4L).tradeNo("TRD250916004").tradeDateTime("16 Sep 2025\n02:45 PM").companyId(2L).companyName("Atirath Technologies Private Limited").companyCode("ATT").symbol("ATG-T").tradeType("Sell").quantity(1200L).formattedQuantity("1,200").price(new BigDecimal("180.00")).formattedPrice("180.00").tradeValue(new BigDecimal("216000.00")).formattedTradeValue("2,16,000").status("Settled").counterparty("Kiran Reddy").build(),
-                PortfolioTradeItemDto.builder().tradeId(5L).tradeNo("TRD250915003").tradeDateTime("15 Sep 2025\n12:10 PM").companyId(4L).companyName("Tri Energy Battery Private Limited").companyCode("TEB").symbol("ATG-TEB").tradeType("Buy").quantity(600L).formattedQuantity("600").price(new BigDecimal("225.00")).formattedPrice("225.00").tradeValue(new BigDecimal("135000.00")).formattedTradeValue("1,35,000").status("Settled").counterparty("Suresh Babu").build(),
-                PortfolioTradeItemDto.builder().tradeId(6L).tradeNo("TRD250915002").tradeDateTime("15 Sep 2025\n11:35 AM").companyId(5L).companyName("Royal One Heating Equipments Pvt Ltd").companyCode("ROHE").symbol("ATG-ROHE").tradeType("Buy").quantity(400L).formattedQuantity("400").price(new BigDecimal("235.00")).formattedPrice("235.00").tradeValue(new BigDecimal("94000.00")).formattedTradeValue("94,000").status("Cancelled").counterparty("-").build(),
-                PortfolioTradeItemDto.builder().tradeId(7L).tradeNo("TRD250914001").tradeDateTime("14 Sep 2025\n03:20 PM").companyId(1L).companyName("Atirath Holdings India Limited").companyCode("ATG").symbol("ATG-H").tradeType("Sell").quantity(800L).formattedQuantity("800").price(new BigDecimal("240.00")).formattedPrice("240.00").tradeValue(new BigDecimal("192000.00")).formattedTradeValue("1,92,000").status("Settled").counterparty("Neha Gupta").build(),
-                PortfolioTradeItemDto.builder().tradeId(8L).tradeNo("TRD250913008").tradeDateTime("13 Sep 2025\n10:05 AM").companyId(6L).companyName("CS Interio Private Limited").companyCode("CSI").symbol("ATG-CSI").tradeType("Buy").quantity(1000L).formattedQuantity("1,000").price(new BigDecimal("160.00")).formattedPrice("160.00").tradeValue(new BigDecimal("160000.00")).formattedTradeValue("1,60,000").status("Settled").counterparty("Vikram Rao").build(),
-                PortfolioTradeItemDto.builder().tradeId(9L).tradeNo("TRD250912007").tradeDateTime("12 Sep 2025\n04:18 PM").companyId(3L).companyName("Farm Vantara Private Limited").companyCode("FVPL").symbol("ATG-FV").tradeType("Sell").quantity(300L).formattedQuantity("300").price(new BigDecimal("140.00")).formattedPrice("140.00").tradeValue(new BigDecimal("42000.00")).formattedTradeValue("42,000").status("Settled").counterparty("Divya S").build(),
-                PortfolioTradeItemDto.builder().tradeId(10L).tradeNo("TRD250911006").tradeDateTime("11 Sep 2025\n01:25 PM").companyId(2L).companyName("Atirath Technologies Private Limited").companyCode("ATT").symbol("ATG-T").tradeType("Buy").quantity(500L).formattedQuantity("500").price(new BigDecimal("175.00")).formattedPrice("175.00").tradeValue(new BigDecimal("87500.00")).formattedTradeValue("87,500").status("Settled").counterparty("Manoj Verma").build()
-        );
-    }
-
     // =========================================================================
-    // 6. PORTFOLIO ANALYTICS (Image 1)
+    // 6. PORTFOLIO ANALYTICS (Real Per-User DB Aggregation)
     // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioAnalyticsResponseDto getAnalytics(Long userId, String allocationTab, String trendPeriod, String dateRange) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load portfolio analytics", HttpStatus.UNAUTHORIZED);
+        }
+
         String activeAllocTab = (allocationTab != null && !allocationTab.isBlank()) ? allocationTab : "By Company";
-        String activePeriod = (trendPeriod != null && !trendPeriod.isBlank()) ? trendPeriod.toUpperCase() : "6M";
-        String activeDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Jan 2025 - 18 Sep 2025";
+        String activePeriod = dataHelper.normalizePeriod(trendPeriod != null && !trendPeriod.isBlank() ? trendPeriod : "6M");
+        OffsetDateTime now = OffsetDateTime.now();
+        String activeDateRange = (dateRange != null && !dateRange.isBlank() && !dateRange.contains("2025"))
+                ? dateRange
+                : now.minusMonths(6).format(DATE_ONLY_FORMATTER) + " - " + now.format(DATE_ONLY_FORMATTER);
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId).stream()
+                .filter(h -> h.getTotalShares() != null && h.getTotalShares() > 0 && h.getCompany() != null)
+                .toList();
+        PortfolioDataHelper.HoldingSummary summary = dataHelper.aggregateHoldings(rawHoldings);
+
+        BigDecimal totalValue = summary.totalValue();
+        BigDecimal investedAmount = summary.investedAmount();
+        BigDecimal unrealizedPnl = totalValue.subtract(investedAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal dayChange = totalValue.subtract(summary.prevTotalValue());
+        BigDecimal dayChangePct = dataHelper.computePercent(dayChange, summary.prevTotalValue());
+        BigDecimal unrealizedPct = dataHelper.computePercent(unrealizedPnl, investedAmount);
+
+        List<MarketTrade> userTrades = tradeRepository.findUserTrades(userId);
+        Map<Long, BigDecimal> avgCostByCompany = new HashMap<>();
+        for (PortfolioDataHelper.ComputedHolding ch : summary.holdings()) {
+            avgCostByCompany.put(ch.company().getCompanyId(), ch.avgPrice());
+        }
+
+        BigDecimal realizedPnl = BigDecimal.ZERO;
+        for (MarketTrade t : userTrades) {
+            if (t.getSellerUser() != null && userId.equals(t.getSellerUser().getUserId())
+                    && t.getCompany() != null && t.getTradePrice() != null && t.getQuantity() != null
+                    && !"REVERSED".equalsIgnoreCase(t.getStatus()) && !"CANCELLED".equalsIgnoreCase(t.getStatus())) {
+                BigDecimal cost = avgCostByCompany.getOrDefault(t.getCompany().getCompanyId(), t.getTradePrice());
+                realizedPnl = realizedPnl.add(t.getTradePrice().subtract(cost).multiply(BigDecimal.valueOf(t.getQuantity())));
+            }
+        }
+        realizedPnl = realizedPnl.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedPct = dataHelper.computePercent(realizedPnl, investedAmount);
+        BigDecimal totalCombinedPnl = unrealizedPnl.add(realizedPnl).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalReturnPct = dataHelper.computePercent(totalCombinedPnl, investedAmount);
 
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
-                PortfolioSummaryKpiDto.builder().id("total_portfolio_value").title("Total Portfolio Value").amount(new BigDecimal("2480000.00")).formattedAmount(formatInr(new BigDecimal("2480000.00"))).changePercentage(new BigDecimal("12.6")).formattedChangePercentage("↑ 12.6%").isPositive(true).comparisonLabel("vs. previous period").icon("wallet").build(),
-                PortfolioSummaryKpiDto.builder().id("total_invested_amount").title("Total Invested Amount").amount(new BigDecimal("1850000.00")).formattedAmount(formatInr(new BigDecimal("1850000.00"))).changePercentage(new BigDecimal("8.3")).formattedChangePercentage("↑ 8.3%").isPositive(true).comparisonLabel("vs. previous period").icon("coins").build(),
-                PortfolioSummaryKpiDto.builder().id("unrealized_pnl").title("Unrealized P&L").amount(new BigDecimal("630000.00")).formattedAmount(formatInr(new BigDecimal("630000.00"))).changePercentage(new BigDecimal("25.4")).formattedChangePercentage("↑ 25.4%").isPositive(true).comparisonLabel("vs. previous period").icon("trending-up").build(),
-                PortfolioSummaryKpiDto.builder().id("realized_pnl").title("Realized P&L").amount(new BigDecimal("120000.00")).formattedAmount(formatInr(new BigDecimal("120000.00"))).changePercentage(new BigDecimal("10.0")).formattedChangePercentage("↑ 10.0%").isPositive(true).comparisonLabel("in this period").icon("dollar-sign").build(),
-                PortfolioSummaryKpiDto.builder().id("total_return").title("Total Return").formattedCount("40.5%").comparisonLabel("(Realized + Unrealized)").icon("percent").build()
+                PortfolioSummaryKpiDto.builder()
+                        .id("total_portfolio_value").title("Total Portfolio Value")
+                        .amount(totalValue).formattedAmount(dataHelper.formatInr(totalValue))
+                        .changePercentage(dayChangePct).formattedChangePercentage(dataHelper.formatSignedPercent(dayChangePct))
+                        .isPositive(dayChangePct.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("vs. previous close").icon("wallet").build(),
+                PortfolioSummaryKpiDto.builder()
+                        .id("total_invested_amount").title("Total Invested Amount")
+                        .amount(investedAmount).formattedAmount(dataHelper.formatInr(investedAmount))
+                        .changePercentage(unrealizedPct).formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPct.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("cost basis").icon("coins").build(),
+                PortfolioSummaryKpiDto.builder()
+                        .id("unrealized_pnl").title("Unrealized P&L")
+                        .amount(unrealizedPnl).formattedAmount(dataHelper.formatSignedInr(unrealizedPnl))
+                        .changePercentage(unrealizedPct).formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct))
+                        .isPositive(unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("open holdings").icon("trending-up").build(),
+                PortfolioSummaryKpiDto.builder()
+                        .id("realized_pnl").title("Realized P&L")
+                        .amount(realizedPnl).formattedAmount(dataHelper.formatSignedInr(realizedPnl))
+                        .changePercentage(realizedPct).formattedChangePercentage(dataHelper.formatSignedPercent(realizedPct))
+                        .isPositive(realizedPnl.compareTo(BigDecimal.ZERO) >= 0)
+                        .comparisonLabel("executed sells").icon("dollar-sign").build(),
+                PortfolioSummaryKpiDto.builder()
+                        .id("total_return").title("Total Return")
+                        .formattedCount(dataHelper.formatSignedPercent(totalReturnPct))
+                        .comparisonLabel("(Realized + Unrealized)").icon("percent").build()
         );
 
-        List<PortfolioAllocationSliceDto> byCompany = getAllocationData();
-        List<PortfolioAllocationSliceDto> bySector = List.of(
-                PortfolioAllocationSliceDto.builder().companyName("Diversified").percentage(new BigDecimal("35.5")).formattedPercentage("35.5%").color("#1E40AF").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Information Technology").percentage(new BigDecimal("20.6")).formattedPercentage("20.6%").color("#3B82F6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Agriculture / Dairy").percentage(new BigDecimal("15.7")).formattedPercentage("15.7%").color("#F59E0B").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Clean Energy & Battery").percentage(new BigDecimal("10.9")).formattedPercentage("10.9%").color("#8B5CF6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Industrial & Heating").percentage(new BigDecimal("8.5")).formattedPercentage("8.5%").color("#EF4444").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Interior & Infra").percentage(new BigDecimal("5.8")).formattedPercentage("5.8%").color("#10B981").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Others").percentage(new BigDecimal("3.0")).formattedPercentage("3.0%").color("#64748B").build()
-        );
-        List<PortfolioAllocationSliceDto> byType = List.of(
-                PortfolioAllocationSliceDto.builder().companyName("Direct Equity").percentage(new BigDecimal("75.0")).formattedPercentage("75.0%").color("#1E40AF").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Promoted Holdings").percentage(new BigDecimal("15.0")).formattedPercentage("15.0%").color("#3B82F6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("ESOP / Strategic").percentage(new BigDecimal("10.0")).formattedPercentage("10.0%").color("#F59E0B").build()
-        );
+        List<PortfolioAllocationSliceDto> byCompany = new ArrayList<>();
+        Map<String, BigDecimal> sectorTotals = new LinkedHashMap<>();
+        BigDecimal availableEquityVal = BigDecimal.ZERO;
+        BigDecimal lockedEquityVal = BigDecimal.ZERO;
+        List<PortfolioAnalyticsPerformanceRowDto> companyPerf = new ArrayList<>();
 
-        List<PortfolioTrendPointDto> pvTrend = getTrendData(activePeriod);
-        List<PortfolioTrendPointDto> invTrend = List.of(
-                PortfolioTrendPointDto.builder().period("Mar 2025").date("2025-03-31").value(new BigDecimal("900000.00")).formattedValue("₹ 9.0L").build(),
-                PortfolioTrendPointDto.builder().period("Apr 2025").date("2025-04-30").value(new BigDecimal("1100000.00")).formattedValue("₹ 11.0L").build(),
-                PortfolioTrendPointDto.builder().period("May 2025").date("2025-05-31").value(new BigDecimal("1300000.00")).formattedValue("₹ 13.0L").build(),
-                PortfolioTrendPointDto.builder().period("Jun 2025").date("2025-06-30").value(new BigDecimal("1450000.00")).formattedValue("₹ 14.5L").build(),
-                PortfolioTrendPointDto.builder().period("Jul 2025").date("2025-07-31").value(new BigDecimal("1600000.00")).formattedValue("₹ 16.0L").build(),
-                PortfolioTrendPointDto.builder().period("Aug 2025").date("2025-08-31").value(new BigDecimal("1750000.00")).formattedValue("₹ 17.5L").build(),
-                PortfolioTrendPointDto.builder().period("18 Sep 2025").date("2025-09-18").value(new BigDecimal("1850000.00")).formattedValue("₹ 18,50,000").isCurrent(true).build()
-        );
+        for (int i = 0; i < summary.holdings().size(); i++) {
+            PortfolioDataHelper.ComputedHolding ch = summary.holdings().get(i);
+            String color = PortfolioDataHelper.CHART_COLORS.get(i % PortfolioDataHelper.CHART_COLORS.size());
+            BigDecimal pct = totalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? ch.currentValue().multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
 
+            byCompany.add(PortfolioAllocationSliceDto.builder()
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .percentage(pct).formattedPercentage(pct.toPlainString() + "%")
+                    .value(ch.currentValue()).formattedValue(dataHelper.formatInr(ch.currentValue()))
+                    .color(color).build());
+
+            String sector = ch.company().getSector() != null && !ch.company().getSector().isBlank()
+                    ? ch.company().getSector().trim()
+                    : "Diversified";
+            sectorTotals.merge(sector, ch.currentValue(), BigDecimal::add);
+
+            availableEquityVal = availableEquityVal.add(ch.currentPrice().multiply(BigDecimal.valueOf(ch.availableShares())));
+            lockedEquityVal = lockedEquityVal.add(ch.currentPrice().multiply(BigDecimal.valueOf(ch.lockedShares())));
+
+            companyPerf.add(PortfolioAnalyticsPerformanceRowDto.builder()
+                    .companyId(ch.company().getCompanyId())
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .logoUrl(ch.company().getLogoUrl())
+                    .investedAmount(ch.investedValue())
+                    .formattedInvestedAmount(dataHelper.formatInr(ch.investedValue()))
+                    .currentValue(ch.currentValue())
+                    .formattedCurrentValue(dataHelper.formatInr(ch.currentValue()))
+                    .unrealizedPnl(ch.pnl())
+                    .formattedUnrealizedPnl(dataHelper.formatSignedInrWithPlus(ch.pnl()))
+                    .returnPercentage(ch.pnlPercentage())
+                    .formattedReturnPercentage(dataHelper.formatSignedPercent(ch.pnlPercentage()))
+                    .isPositive(ch.pnl().compareTo(BigDecimal.ZERO) >= 0)
+                    .build());
+        }
+
+        List<PortfolioAllocationSliceDto> bySector = new ArrayList<>();
+        int sIdx = 0;
+        for (Map.Entry<String, BigDecimal> e : sectorTotals.entrySet()) {
+            BigDecimal pct = totalValue.compareTo(BigDecimal.ZERO) > 0
+                    ? e.getValue().multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+            bySector.add(PortfolioAllocationSliceDto.builder()
+                    .companyName(e.getKey())
+                    .percentage(pct).formattedPercentage(pct.toPlainString() + "%")
+                    .value(e.getValue()).formattedValue(dataHelper.formatInr(e.getValue()))
+                    .color(PortfolioDataHelper.CHART_COLORS.get(sIdx % PortfolioDataHelper.CHART_COLORS.size()))
+                    .build());
+            sIdx++;
+        }
+
+        EscrowAccount escrowAcc = escrowAccountRepository.findByUserAccount_UserId(userId).orElse(null);
+        BigDecimal escrowAvail = escrowAcc != null && escrowAcc.getAvailableBalance() != null ? escrowAcc.getAvailableBalance() : BigDecimal.ZERO;
+        BigDecimal escrowBlocked = escrowAcc != null && escrowAcc.getBlockedBalance() != null ? escrowAcc.getBlockedBalance() : BigDecimal.ZERO;
+
+        availableEquityVal = availableEquityVal.setScale(2, RoundingMode.HALF_UP);
+        lockedEquityVal = lockedEquityVal.setScale(2, RoundingMode.HALF_UP);
+
+        List<PortfolioAllocationSliceDto> byType = new ArrayList<>();
+        if (totalValue.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal availPct = availableEquityVal.multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP);
+            byType.add(PortfolioAllocationSliceDto.builder().companyName("Direct Equity (Available)").percentage(availPct).formattedPercentage(availPct.toPlainString() + "%").value(availableEquityVal).formattedValue(dataHelper.formatInr(availableEquityVal)).color("#1E40AF").build());
+            if (lockedEquityVal.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal lockPct = lockedEquityVal.multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP);
+                byType.add(PortfolioAllocationSliceDto.builder().companyName("Escrow Locked Equity").percentage(lockPct).formattedPercentage(lockPct.toPlainString() + "%").value(lockedEquityVal).formattedValue(dataHelper.formatInr(lockedEquityVal)).color("#F59E0B").build());
+            }
+        }
+
+        BigDecimal totalAllAssets = availableEquityVal.add(lockedEquityVal).add(escrowBlocked).add(escrowAvail);
+        List<PortfolioAllocationSliceDto> assetTypeAlloc = new ArrayList<>();
+        if (totalAllAssets.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal eqPct = availableEquityVal.multiply(new BigDecimal("100")).divide(totalAllAssets, 1, RoundingMode.HALF_UP);
+            BigDecimal lkPct = lockedEquityVal.multiply(new BigDecimal("100")).divide(totalAllAssets, 1, RoundingMode.HALF_UP);
+            BigDecimal blPct = escrowBlocked.multiply(new BigDecimal("100")).divide(totalAllAssets, 1, RoundingMode.HALF_UP);
+            BigDecimal avPct = escrowAvail.multiply(new BigDecimal("100")).divide(totalAllAssets, 1, RoundingMode.HALF_UP);
+            assetTypeAlloc.add(PortfolioAllocationSliceDto.builder().companyName("Available Equity").percentage(eqPct).formattedPercentage(eqPct.toPlainString() + "%").value(availableEquityVal).formattedValue(dataHelper.formatInr(availableEquityVal)).color("#1E40AF").build());
+            assetTypeAlloc.add(PortfolioAllocationSliceDto.builder().companyName("Locked Shares").percentage(lkPct).formattedPercentage(lkPct.toPlainString() + "%").value(lockedEquityVal).formattedValue(dataHelper.formatInr(lockedEquityVal)).color("#10B981").build());
+            assetTypeAlloc.add(PortfolioAllocationSliceDto.builder().companyName("Escrow Blocked").percentage(blPct).formattedPercentage(blPct.toPlainString() + "%").value(escrowBlocked).formattedValue(dataHelper.formatInr(escrowBlocked)).color("#8B5CF6").build());
+            assetTypeAlloc.add(PortfolioAllocationSliceDto.builder().companyName("Escrow Cash").percentage(avPct).formattedPercentage(avPct.toPlainString() + "%").value(escrowAvail).formattedValue(dataHelper.formatInr(escrowAvail)).color("#F59E0B").build());
+        }
+
+        List<PortfolioTrendPointDto> pvTrend = dataHelper.buildPerformanceSeries(
+                rawHoldings, totalValue, investedAmount, summary.prevTotalValue(), activePeriod, now
+        ).stream().map(snap -> PortfolioTrendPointDto.builder()
+                .period(snap.label())
+                .date(snap.dateIso())
+                .value(snap.value())
+                .formattedValue(snap.formattedValue())
+                .isCurrent(snap.isCurrent())
+                .build()).toList();
+
+        List<PortfolioTrendPointDto> invTrend = pvTrend.stream()
+                .map(pt -> PortfolioTrendPointDto.builder()
+                        .period(pt.getPeriod())
+                        .date(pt.getDate())
+                        .value(investedAmount)
+                        .formattedValue(dataHelper.formatInr(investedAmount))
+                        .isCurrent(pt.getIsCurrent())
+                        .build())
+                .toList();
+
+        BigDecimal annualizedReturn = dataHelper.computePeriodReturnPct(
+                rawHoldings, totalValue, investedAmount, now.toLocalDate().minusYears(1)
+        );
+        if (annualizedReturn.compareTo(BigDecimal.ZERO) == 0 && unrealizedPct.compareTo(BigDecimal.ZERO) != 0) {
+            annualizedReturn = unrealizedPct;
+        }
         PortfolioReturnAnalysisDto returnAnalysis = PortfolioReturnAnalysisDto.builder()
-                .totalReturn(new BigDecimal("40.5")).formattedTotalReturn("40.5%")
-                .annualizedReturn(new BigDecimal("18.6")).formattedAnnualizedReturn("18.6%")
-                .priceAppreciation(new BigDecimal("12.4")).formattedPriceAppreciation("12.4%")
-                .dividendReturn(new BigDecimal("6.8")).formattedDividendReturn("6.8%")
+                .totalReturn(totalReturnPct).formattedTotalReturn(totalReturnPct.toPlainString() + "%")
+                .annualizedReturn(annualizedReturn).formattedAnnualizedReturn(annualizedReturn.toPlainString() + "%")
+                .priceAppreciation(unrealizedPct).formattedPriceAppreciation(unrealizedPct.toPlainString() + "%")
+                .dividendReturn(BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP)).formattedDividendReturn("0.0%")
                 .build();
 
-        List<PortfolioAnalyticsPerformanceRowDto> companyPerf = List.of(
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(1L).companyName("Atirath Holdings").symbol("ATG-H").investedAmount(new BigDecimal("600000.00")).formattedInvestedAmount("6,00,000").currentValue(new BigDecimal("805000.00")).formattedCurrentValue("8,05,000").unrealizedPnl(new BigDecimal("205000.00")).formattedUnrealizedPnl("+ 2,05,000").returnPercentage(new BigDecimal("34.2")).formattedReturnPercentage("+34.2%").isPositive(true).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(2L).companyName("Atirath Technologies").symbol("ATG-T").investedAmount(new BigDecimal("350000.00")).formattedInvestedAmount("3,50,000").currentValue(new BigDecimal("360000.00")).formattedCurrentValue("3,60,000").unrealizedPnl(new BigDecimal("10000.00")).formattedUnrealizedPnl("+ 10,000").returnPercentage(new BigDecimal("2.9")).formattedReturnPercentage("+2.9%").isPositive(true).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(3L).companyName("Farm Vantara").symbol("ATG-FV").investedAmount(new BigDecimal("280000.00")).formattedInvestedAmount("2,80,000").currentValue(new BigDecimal("390000.00")).formattedCurrentValue("3,90,000").unrealizedPnl(new BigDecimal("110000.00")).formattedUnrealizedPnl("+ 1,10,000").returnPercentage(new BigDecimal("39.3")).formattedReturnPercentage("+39.3%").isPositive(true).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(4L).companyName("Tri Energy Battery").symbol("ATG-TEB").investedAmount(new BigDecimal("220000.00")).formattedInvestedAmount("2,20,000").currentValue(new BigDecimal("270000.00")).formattedCurrentValue("2,70,000").unrealizedPnl(new BigDecimal("50000.00")).formattedUnrealizedPnl("+ 50,000").returnPercentage(new BigDecimal("22.7")).formattedReturnPercentage("+22.7%").isPositive(true).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(5L).companyName("Royal One Heating").symbol("ATG-ROHE").investedAmount(new BigDecimal("170000.00")).formattedInvestedAmount("1,70,000").currentValue(new BigDecimal("211500.00")).formattedCurrentValue("2,11,500").unrealizedPnl(new BigDecimal("41500.00")).formattedUnrealizedPnl("+ 41,500").returnPercentage(new BigDecimal("24.4")).formattedReturnPercentage("+24.4%").isPositive(true).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyId(6L).companyName("CS Interio").symbol("ATG-CSI").investedAmount(new BigDecimal("110000.00")).formattedInvestedAmount("1,10,000").currentValue(new BigDecimal("87000.00")).formattedCurrentValue("87,000").unrealizedPnl(new BigDecimal("-23000.00")).formattedUnrealizedPnl("- 23,000").returnPercentage(new BigDecimal("-20.9")).formattedReturnPercentage("-20.9%").isPositive(false).build()
-        );
+        List<PortfolioPriceMoverDto> allMovers = new ArrayList<>();
+        for (MarketCompany comp : companyRepository.findByStatusOrderByCompanyNameAsc("ACTIVE")) {
+            PortfolioDataHelper.PriceQuote q = dataHelper.resolvePriceQuote(comp, BigDecimal.ZERO);
+            if (q.currentPrice().compareTo(BigDecimal.ZERO) <= 0) continue;
+            BigDecimal chg = q.currentPrice().subtract(q.previousClose()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal chgPct = dataHelper.computePercent(chg, q.previousClose());
+            boolean isGainer = chg.compareTo(BigDecimal.ZERO) >= 0;
+            allMovers.add(PortfolioPriceMoverDto.builder()
+                    .companyName(comp.getCompanyName())
+                    .symbol(comp.getSymbol())
+                    .currentPrice(q.currentPrice())
+                    .formattedCurrentPrice(q.currentPrice().toPlainString())
+                    .changeAmount(chg)
+                    .formattedChangeAmount((isGainer ? "+ " : "- ") + chg.abs().toPlainString())
+                    .changePercentage(chgPct)
+                    .formattedChangePercentage(dataHelper.formatSignedPercent(chgPct))
+                    .isGainer(isGainer)
+                    .build());
+        }
+        List<PortfolioPriceMoverDto> gainers = allMovers.stream()
+                .filter(m -> Boolean.TRUE.equals(m.getIsGainer()))
+                .sorted(Comparator.comparing(PortfolioPriceMoverDto::getChangePercentage).reversed())
+                .limit(3)
+                .toList();
+        List<PortfolioPriceMoverDto> losers = allMovers.stream()
+                .filter(m -> Boolean.FALSE.equals(m.getIsGainer()))
+                .sorted(Comparator.comparing(PortfolioPriceMoverDto::getChangePercentage))
+                .limit(3)
+                .toList();
 
-        List<PortfolioAllocationSliceDto> assetTypeAlloc = List.of(
-                PortfolioAllocationSliceDto.builder().companyName("Equity Shares").percentage(new BigDecimal("92.5")).formattedPercentage("92.5%").color("#1E40AF").build(),
-                PortfolioAllocationSliceDto.builder().companyName("ESOP / RSU").percentage(new BigDecimal("4.2")).formattedPercentage("4.2%").color("#F59E0B").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Locked Shares").percentage(new BigDecimal("1.7")).formattedPercentage("1.7%").color("#10B981").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Pending Transfer").percentage(new BigDecimal("1.6")).formattedPercentage("1.6%").color("#8B5CF6").build()
-        );
-
-        List<String> keyInsights = List.of(
-                "Your portfolio value has increased by 12.6% compared to the last 6 months.",
-                "Atirath Holdings is your best performing investment (+34.2%).",
-                "Diversify further to reduce concentration risk (Top 2 companies = 56.1%).",
-                "CS Interio is underperforming (-20.9%). Review your position.",
-                "Your total return (40.5%) is higher than the platform average (28.3%)."
-        );
-
-        List<PortfolioPriceMoverDto> gainers = List.of(
-                PortfolioPriceMoverDto.builder().companyName("Farm Vantara").symbol("ATG-FV").currentPrice(new BigDecimal("135.00")).formattedCurrentPrice("135.00").changeAmount(new BigDecimal("35.00")).formattedChangeAmount("+ 35.00").changePercentage(new BigDecimal("35.0")).formattedChangePercentage("+35.0%").isGainer(true).build(),
-                PortfolioPriceMoverDto.builder().companyName("Atirath Holdings").symbol("ATG-H").currentPrice(new BigDecimal("230.00")).formattedCurrentPrice("230.00").changeAmount(new BigDecimal("60.00")).formattedChangeAmount("+ 60.00").changePercentage(new BigDecimal("35.3")).formattedChangePercentage("+35.3%").isGainer(true).build(),
-                PortfolioPriceMoverDto.builder().companyName("Tri Energy Battery").symbol("ATG-TEB").currentPrice(new BigDecimal("225.00")).formattedCurrentPrice("225.00").changeAmount(new BigDecimal("25.00")).formattedChangeAmount("+ 25.00").changePercentage(new BigDecimal("12.5")).formattedChangePercentage("+12.5%").isGainer(true).build()
-        );
-
-        List<PortfolioPriceMoverDto> losers = List.of(
-                PortfolioPriceMoverDto.builder().companyName("CS Interio").symbol("ATG-CSI").currentPrice(new BigDecimal("145.00")).formattedCurrentPrice("145.00").changeAmount(new BigDecimal("-15.00")).formattedChangeAmount("- 15.00").changePercentage(new BigDecimal("-9.4")).formattedChangePercentage("-9.4%").isGainer(false).build(),
-                PortfolioPriceMoverDto.builder().companyName("Atirath Technologies").symbol("ATG-T").currentPrice(new BigDecimal("180.00")).formattedCurrentPrice("180.00").changeAmount(new BigDecimal("-10.00")).formattedChangeAmount("- 10.00").changePercentage(new BigDecimal("-5.3")).formattedChangePercentage("-5.3%").isGainer(false).build(),
-                PortfolioPriceMoverDto.builder().companyName("Royal One Heating").symbol("ATG-ROHE").currentPrice(new BigDecimal("235.00")).formattedCurrentPrice("235.00").changeAmount(new BigDecimal("-5.00")).formattedChangeAmount("- 5.00").changePercentage(new BigDecimal("-2.1")).formattedChangePercentage("-2.1%").isGainer(false).build()
-        );
+        List<String> keyInsights = new ArrayList<>();
+        if (summary.holdings().isEmpty()) {
+            keyInsights.add("No active equity holdings found yet. Place your first order from Internal Market to start tracking analytics.");
+        } else {
+            keyInsights.add("Your total portfolio return (realized + unrealized) is " + dataHelper.formatSignedPercent(totalReturnPct) + ".");
+            Optional<PortfolioDataHelper.ComputedHolding> best = summary.holdings().stream().max(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage));
+            best.ifPresent(b -> keyInsights.add(b.company().getCompanyName() + " is your best performing investment (" + dataHelper.formatSignedPercent(b.pnlPercentage()) + ")."));
+            if (summary.holdings().size() >= 2 && totalValue.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal topTwo = summary.holdings().get(0).currentValue().add(summary.holdings().get(1).currentValue());
+                BigDecimal concPct = topTwo.multiply(new BigDecimal("100")).divide(totalValue, 1, RoundingMode.HALF_UP);
+                keyInsights.add("Top 2 holdings account for " + concPct.toPlainString() + "% of your portfolio value.");
+            }
+            Optional<PortfolioDataHelper.ComputedHolding> worst = summary.holdings().stream().min(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage));
+            if (worst.isPresent() && worst.get().pnl().compareTo(BigDecimal.ZERO) < 0) {
+                keyInsights.add(worst.get().company().getCompanyName() + " is currently below cost basis (" + dataHelper.formatSignedPercent(worst.get().pnlPercentage()) + ").");
+            }
+            keyInsights.add("Portfolio is invested across " + summary.holdings().size() + (summary.holdings().size() == 1 ? " company" : " companies") + " and " + bySector.size() + (bySector.size() == 1 ? " sector." : " sectors."));
+        }
 
         return PortfolioAnalyticsResponseDto.builder()
-                .asOfDate("18 Sep 2025, 11:28 AM")
+                .asOfDate(now.format(DISPLAY_DT_FORMATTER))
                 .dateRange(activeDateRange)
                 .summaryKpis(summaryKpis)
                 .activeAllocationTab(activeAllocTab)
@@ -1418,60 +1834,224 @@ public class PortfolioService {
     }
 
     // =========================================================================
-    // 7. PORTFOLIO P&L REPORT (Image 2)
+    // 7. PORTFOLIO P&L REPORT (Real Per-User DB Aggregation)
     // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioPnlResponseDto getPnlReport(Long userId, String tab, String company, String sector, String dateRange) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load P&L report", HttpStatus.UNAUTHORIZED);
+        }
+
         String activeTab = (tab != null && !tab.isBlank()) ? tab : "Company-wise P&L";
-        String activeDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Jan 2025 - 18 Sep 2025";
+        OffsetDateTime now = OffsetDateTime.now();
+        String activeDateRange = (dateRange != null && !dateRange.isBlank() && !dateRange.contains("2025"))
+                ? dateRange
+                : now.minusMonths(6).format(DATE_ONLY_FORMATTER) + " - " + now.format(DATE_ONLY_FORMATTER);
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId).stream()
+                .filter(h -> h.getTotalShares() != null && h.getTotalShares() > 0 && h.getCompany() != null)
+                .toList();
+        PortfolioDataHelper.HoldingSummary summary = dataHelper.aggregateHoldings(rawHoldings);
+
+        List<MarketTrade> userTrades = tradeRepository.findUserTrades(userId);
+        Map<Long, BigDecimal> avgCostByCompany = new HashMap<>();
+        for (UserShareHolding h : shareHoldingRepository.findByUserAccount_UserId(userId)) {
+            if (h.getCompany() != null && h.getAverageBuyPrice() != null) {
+                avgCostByCompany.put(h.getCompany().getCompanyId(), h.getAverageBuyPrice());
+            }
+        }
+
+        Map<Long, BigDecimal> realizedByCompany = new HashMap<>();
+        Map<YearMonth, BigDecimal> realizedByMonth = new TreeMap<>();
+        for (MarketTrade t : userTrades) {
+            if (t.getSellerUser() != null && userId.equals(t.getSellerUser().getUserId())
+                    && t.getCompany() != null && t.getTradePrice() != null && t.getQuantity() != null
+                    && !"REVERSED".equalsIgnoreCase(t.getStatus()) && !"CANCELLED".equalsIgnoreCase(t.getStatus())) {
+                BigDecimal cost = avgCostByCompany.getOrDefault(t.getCompany().getCompanyId(), t.getTradePrice());
+                BigDecimal pnl = t.getTradePrice().subtract(cost).multiply(BigDecimal.valueOf(t.getQuantity()));
+                realizedByCompany.merge(t.getCompany().getCompanyId(), pnl, BigDecimal::add);
+                if (t.getExecutedAt() != null) {
+                    realizedByMonth.merge(YearMonth.from(t.getExecutedAt()), pnl, BigDecimal::add);
+                }
+            }
+        }
+
+        List<PortfolioDataHelper.ComputedHolding> filteredHoldings = summary.holdings().stream()
+                .filter(ch -> {
+                    if (company != null && !company.isBlank() && !"ALL".equalsIgnoreCase(company)) {
+                        MarketCompany c = ch.company();
+                        boolean match = c.getCompanyName().equalsIgnoreCase(company)
+                                || (c.getCompanyCode() != null && c.getCompanyCode().equalsIgnoreCase(company))
+                                || (c.getSymbol() != null && c.getSymbol().equalsIgnoreCase(company));
+                        if (!match) return false;
+                    }
+                    if (sector != null && !sector.isBlank() && !"ALL".equalsIgnoreCase(sector)) {
+                        String compSector = ch.company().getSector() != null ? ch.company().getSector() : "Diversified";
+                        if (!compSector.equalsIgnoreCase(sector)) return false;
+                    }
+                    return true;
+                })
+                .toList();
+
+        BigDecimal totalInvestment = BigDecimal.ZERO;
+        BigDecimal currentValue = BigDecimal.ZERO;
+        BigDecimal unrealizedPnl = BigDecimal.ZERO;
+        BigDecimal realizedPnl = BigDecimal.ZERO;
+
+        List<PortfolioCompanyPnlRowDto> companyPnlList = new ArrayList<>();
+        Map<String, BigDecimal[]> sectorAgg = new LinkedHashMap<>();
+
+        for (PortfolioDataHelper.ComputedHolding ch : filteredHoldings) {
+            Long cid = ch.company().getCompanyId();
+            BigDecimal compRealized = realizedByCompany.getOrDefault(cid, BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal compUnrealized = ch.pnl().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal compTotalPnl = compRealized.add(compUnrealized).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal retPct = dataHelper.computePercent(compTotalPnl, ch.investedValue());
+
+            totalInvestment = totalInvestment.add(ch.investedValue());
+            currentValue = currentValue.add(ch.currentValue());
+            unrealizedPnl = unrealizedPnl.add(compUnrealized);
+            realizedPnl = realizedPnl.add(compRealized);
+
+            companyPnlList.add(PortfolioCompanyPnlRowDto.builder()
+                    .companyId(cid)
+                    .companyName(ch.company().getCompanyName())
+                    .symbol(ch.company().getSymbol())
+                    .companyCode(ch.company().getCompanyCode())
+                    .logoUrl(ch.company().getLogoUrl())
+                    .investedAmount(ch.investedValue())
+                    .formattedInvestedAmount(dataHelper.formatInr(ch.investedValue()))
+                    .currentValue(ch.currentValue())
+                    .formattedCurrentValue(dataHelper.formatInr(ch.currentValue()))
+                    .realizedPnl(compRealized)
+                    .formattedRealizedPnl(dataHelper.formatSignedInr(compRealized))
+                    .unrealizedPnl(compUnrealized)
+                    .formattedUnrealizedPnl(dataHelper.formatSignedInr(compUnrealized))
+                    .totalPnl(compTotalPnl)
+                    .formattedTotalPnl(dataHelper.formatSignedInr(compTotalPnl))
+                    .returnPercentage(retPct)
+                    .formattedReturnPercentage(dataHelper.formatSignedPercent(retPct))
+                    .isProfit(compTotalPnl.compareTo(BigDecimal.ZERO) >= 0)
+                    .build());
+
+            String sec = ch.company().getSector() != null && !ch.company().getSector().isBlank() ? ch.company().getSector() : "Diversified";
+            BigDecimal[] arr = sectorAgg.computeIfAbsent(sec, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
+            arr[0] = arr[0].add(ch.investedValue());
+            arr[1] = arr[1].add(ch.currentValue());
+            arr[2] = arr[2].add(compRealized);
+            arr[3] = arr[3].add(compUnrealized);
+        }
+
+        if ("Sector-wise".equalsIgnoreCase(activeTab)) {
+            companyPnlList = new ArrayList<>();
+            for (Map.Entry<String, BigDecimal[]> entry : sectorAgg.entrySet()) {
+                BigDecimal[] arr = entry.getValue();
+                BigDecimal inv = arr[0].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal cur = arr[1].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal rel = arr[2].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal unrel = arr[3].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal tot = rel.add(unrel).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal ret = dataHelper.computePercent(tot, inv);
+                companyPnlList.add(PortfolioCompanyPnlRowDto.builder()
+                        .companyName(entry.getKey())
+                        .companyCode("SECTOR")
+                        .investedAmount(inv).formattedInvestedAmount(dataHelper.formatInr(inv))
+                        .currentValue(cur).formattedCurrentValue(dataHelper.formatInr(cur))
+                        .realizedPnl(rel).formattedRealizedPnl(dataHelper.formatSignedInr(rel))
+                        .unrealizedPnl(unrel).formattedUnrealizedPnl(dataHelper.formatSignedInr(unrel))
+                        .totalPnl(tot).formattedTotalPnl(dataHelper.formatSignedInr(tot))
+                        .returnPercentage(ret).formattedReturnPercentage(dataHelper.formatSignedPercent(ret))
+                        .isProfit(tot.compareTo(BigDecimal.ZERO) >= 0)
+                        .build());
+            }
+        } else if ("Realized P&L".equalsIgnoreCase(activeTab)) {
+            companyPnlList = companyPnlList.stream()
+                    .filter(r -> r.getRealizedPnl() != null && r.getRealizedPnl().compareTo(BigDecimal.ZERO) != 0)
+                    .toList();
+        } else if ("Unrealized P&L".equalsIgnoreCase(activeTab)) {
+            companyPnlList = companyPnlList.stream()
+                    .filter(r -> r.getUnrealizedPnl() != null && r.getUnrealizedPnl().compareTo(BigDecimal.ZERO) != 0)
+                    .toList();
+        }
+
+        totalInvestment = totalInvestment.setScale(2, RoundingMode.HALF_UP);
+        currentValue = currentValue.setScale(2, RoundingMode.HALF_UP);
+        realizedPnl = realizedPnl.setScale(2, RoundingMode.HALF_UP);
+        unrealizedPnl = unrealizedPnl.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalPnl = realizedPnl.add(unrealizedPnl).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalRetPct = dataHelper.computePercent(totalPnl, totalInvestment);
+        BigDecimal realizedRetPct = dataHelper.computePercent(realizedPnl, totalInvestment);
+        BigDecimal unrealizedRetPct = dataHelper.computePercent(unrealizedPnl, totalInvestment);
 
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
-                PortfolioSummaryKpiDto.builder().id("total_investment").title("Total Investment").amount(new BigDecimal("1850000.00")).formattedAmount(formatInr(new BigDecimal("1850000.00"))).icon("coins").build(),
-                PortfolioSummaryKpiDto.builder().id("current_value").title("Current Value").amount(new BigDecimal("2480000.00")).formattedAmount(formatInr(new BigDecimal("2480000.00"))).changePercentage(new BigDecimal("34.1")).formattedChangePercentage("↑ 34.1%").isPositive(true).icon("trending-up").build(),
-                PortfolioSummaryKpiDto.builder().id("total_pnl").title("Total P&L").amount(new BigDecimal("630000.00")).formattedAmount(formatInr(new BigDecimal("630000.00"))).changePercentage(new BigDecimal("34.1")).formattedChangePercentage("↑ 34.1%").isPositive(true).icon("bar-chart").build(),
-                PortfolioSummaryKpiDto.builder().id("realized_pnl").title("Realized P&L").amount(new BigDecimal("120000.00")).formattedAmount(formatInr(new BigDecimal("120000.00"))).changePercentage(new BigDecimal("10.0")).formattedChangePercentage("↑ 10.0%").isPositive(true).icon("dollar-sign").build(),
-                PortfolioSummaryKpiDto.builder().id("unrealized_pnl").title("Unrealized P&L").amount(new BigDecimal("510000.00")).formattedAmount(formatInr(new BigDecimal("510000.00"))).changePercentage(new BigDecimal("43.6")).formattedChangePercentage("↑ 43.6%").isPositive(true).icon("trending-up").build()
-        );
-
-        List<PortfolioPnlTrendPointDto> pnlTrend = List.of(
-                PortfolioPnlTrendPointDto.builder().month("Jan 2025").realizedPnl(new BigDecimal("15000")).formattedRealizedPnl("15,000").unrealizedPnl(new BigDecimal("45000")).formattedUnrealizedPnl("45,000").totalPnl(new BigDecimal("60000")).formattedTotalPnl("60,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Feb 2025").realizedPnl(new BigDecimal("25000")).formattedRealizedPnl("25,000").unrealizedPnl(new BigDecimal("85000")).formattedUnrealizedPnl("85,000").totalPnl(new BigDecimal("110000")).formattedTotalPnl("1,10,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Mar 2025").realizedPnl(new BigDecimal("40000")).formattedRealizedPnl("40,000").unrealizedPnl(new BigDecimal("140000")).formattedUnrealizedPnl("1,40,000").totalPnl(new BigDecimal("180000")).formattedTotalPnl("1,80,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Apr 2025").realizedPnl(new BigDecimal("55000")).formattedRealizedPnl("55,000").unrealizedPnl(new BigDecimal("205000")).formattedUnrealizedPnl("2,05,000").totalPnl(new BigDecimal("260000")).formattedTotalPnl("2,60,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("May 2025").realizedPnl(new BigDecimal("70000")).formattedRealizedPnl("70,000").unrealizedPnl(new BigDecimal("280000")).formattedUnrealizedPnl("2,80,000").totalPnl(new BigDecimal("350000")).formattedTotalPnl("3,50,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Jun 2025").realizedPnl(new BigDecimal("85000")).formattedRealizedPnl("85,000").unrealizedPnl(new BigDecimal("345000")).formattedUnrealizedPnl("3,45,000").totalPnl(new BigDecimal("430000")).formattedTotalPnl("4,30,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Jul 2025").realizedPnl(new BigDecimal("95000")).formattedRealizedPnl("95,000").unrealizedPnl(new BigDecimal("415000")).formattedUnrealizedPnl("4,15,000").totalPnl(new BigDecimal("510000")).formattedTotalPnl("5,10,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Aug 2025").realizedPnl(new BigDecimal("110000")).formattedRealizedPnl("1,10,000").unrealizedPnl(new BigDecimal("470000")).formattedUnrealizedPnl("4,70,000").totalPnl(new BigDecimal("580000")).formattedTotalPnl("5,80,000").build(),
-                PortfolioPnlTrendPointDto.builder().month("Sep 2025").realizedPnl(new BigDecimal("120000")).formattedRealizedPnl("1,20,000").unrealizedPnl(new BigDecimal("510000")).formattedUnrealizedPnl("5,10,000").totalPnl(new BigDecimal("630000")).formattedTotalPnl("6,30,000").build()
+                PortfolioSummaryKpiDto.builder().id("total_investment").title("Total Investment").amount(totalInvestment).formattedAmount(dataHelper.formatInr(totalInvestment)).icon("coins").build(),
+                PortfolioSummaryKpiDto.builder().id("current_value").title("Current Value").amount(currentValue).formattedAmount(dataHelper.formatInr(currentValue)).changePercentage(unrealizedRetPct).formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedRetPct)).isPositive(unrealizedRetPct.compareTo(BigDecimal.ZERO) >= 0).icon("trending-up").build(),
+                PortfolioSummaryKpiDto.builder().id("total_pnl").title("Total P&L").amount(totalPnl).formattedAmount(dataHelper.formatSignedInr(totalPnl)).changePercentage(totalRetPct).formattedChangePercentage(dataHelper.formatSignedPercent(totalRetPct)).isPositive(totalPnl.compareTo(BigDecimal.ZERO) >= 0).icon("bar-chart").build(),
+                PortfolioSummaryKpiDto.builder().id("realized_pnl").title("Realized P&L").amount(realizedPnl).formattedAmount(dataHelper.formatSignedInr(realizedPnl)).changePercentage(realizedRetPct).formattedChangePercentage(dataHelper.formatSignedPercent(realizedRetPct)).isPositive(realizedPnl.compareTo(BigDecimal.ZERO) >= 0).icon("dollar-sign").build(),
+                PortfolioSummaryKpiDto.builder().id("unrealized_pnl").title("Unrealized P&L").amount(unrealizedPnl).formattedAmount(dataHelper.formatSignedInr(unrealizedPnl)).changePercentage(unrealizedRetPct).formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedRetPct)).isPositive(unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0).icon("trending-up").build()
         );
 
         PortfolioPnlSummaryDto pnlSummary = PortfolioPnlSummaryDto.builder()
-                .totalInvestment(new BigDecimal("1850000.00")).formattedTotalInvestment("₹ 18,50,000")
-                .currentValue(new BigDecimal("2480000.00")).formattedCurrentValue("₹ 24,80,000")
-                .totalPnl(new BigDecimal("630000.00")).formattedTotalPnl("₹ 6,30,000")
-                .totalReturn(new BigDecimal("34.1")).formattedTotalReturn("+34.1%")
-                .realizedPnl(new BigDecimal("120000.00")).formattedRealizedPnl("₹ 1,20,000")
-                .unrealizedPnl(new BigDecimal("510000.00")).formattedUnrealizedPnl("₹ 5,10,000")
-                .realizedReturn(new BigDecimal("10.0")).formattedRealizedReturn("+10.0%")
-                .unrealizedReturn(new BigDecimal("43.6")).formattedUnrealizedReturn("+43.6%")
+                .totalInvestment(totalInvestment).formattedTotalInvestment(dataHelper.formatInr(totalInvestment))
+                .currentValue(currentValue).formattedCurrentValue(dataHelper.formatInr(currentValue))
+                .totalPnl(totalPnl).formattedTotalPnl(dataHelper.formatSignedInr(totalPnl))
+                .totalReturn(totalRetPct).formattedTotalReturn(dataHelper.formatSignedPercent(totalRetPct))
+                .realizedPnl(realizedPnl).formattedRealizedPnl(dataHelper.formatSignedInr(realizedPnl))
+                .unrealizedPnl(unrealizedPnl).formattedUnrealizedPnl(dataHelper.formatSignedInr(unrealizedPnl))
+                .realizedReturn(realizedRetPct).formattedRealizedReturn(dataHelper.formatSignedPercent(realizedRetPct))
+                .unrealizedReturn(unrealizedRetPct).formattedUnrealizedReturn(dataHelper.formatSignedPercent(unrealizedRetPct))
                 .build();
 
-        List<PortfolioCompanyPnlRowDto> companyPnlList = List.of(
-                PortfolioCompanyPnlRowDto.builder().companyId(1L).companyName("Atirath Holdings India Limited (ATG)").companyCode("ATG").investedAmount(new BigDecimal("600000.00")).formattedInvestedAmount("6,00,000").currentValue(new BigDecimal("805000.00")).formattedCurrentValue("8,05,000").realizedPnl(new BigDecimal("50000.00")).formattedRealizedPnl("50,000").unrealizedPnl(new BigDecimal("155000.00")).formattedUnrealizedPnl("1,55,000").totalPnl(new BigDecimal("205000.00")).formattedTotalPnl("2,05,000").returnPercentage(new BigDecimal("34.2")).formattedReturnPercentage("+34.2%").isProfit(true).build(),
-                PortfolioCompanyPnlRowDto.builder().companyId(2L).companyName("Atirath Technologies Private Limited (ATT)").companyCode("ATT").investedAmount(new BigDecimal("350000.00")).formattedInvestedAmount("3,50,000").currentValue(new BigDecimal("360000.00")).formattedCurrentValue("3,60,000").realizedPnl(new BigDecimal("30000.00")).formattedRealizedPnl("30,000").unrealizedPnl(new BigDecimal("80000.00")).formattedUnrealizedPnl("80,000").totalPnl(new BigDecimal("110000.00")).formattedTotalPnl("1,10,000").returnPercentage(new BigDecimal("31.4")).formattedReturnPercentage("+31.4%").isProfit(true).build(),
-                PortfolioCompanyPnlRowDto.builder().companyId(3L).companyName("Farm Vantara Private Limited (FVPL)").companyCode("FVPL").investedAmount(new BigDecimal("280000.00")).formattedInvestedAmount("2,80,000").currentValue(new BigDecimal("390000.00")).formattedCurrentValue("3,90,000").realizedPnl(new BigDecimal("25000.00")).formattedRealizedPnl("25,000").unrealizedPnl(new BigDecimal("85000.00")).formattedUnrealizedPnl("85,000").totalPnl(new BigDecimal("110000.00")).formattedTotalPnl("1,10,000").returnPercentage(new BigDecimal("39.3")).formattedReturnPercentage("+39.3%").isProfit(true).build(),
-                PortfolioCompanyPnlRowDto.builder().companyId(4L).companyName("Tri Energy Battery Private Limited (TEB)").companyCode("TEB").investedAmount(new BigDecimal("220000.00")).formattedInvestedAmount("2,20,000").currentValue(new BigDecimal("270000.00")).formattedCurrentValue("2,70,000").realizedPnl(new BigDecimal("10000.00")).formattedRealizedPnl("10,000").unrealizedPnl(new BigDecimal("40000.00")).formattedUnrealizedPnl("40,000").totalPnl(new BigDecimal("50000.00")).formattedTotalPnl("50,000").returnPercentage(new BigDecimal("22.7")).formattedReturnPercentage("+22.7%").isProfit(true).build(),
-                PortfolioCompanyPnlRowDto.builder().companyId(5L).companyName("Royal One Heating Equipments Pvt Ltd (ROHE)").companyCode("ROHE").investedAmount(new BigDecimal("170000.00")).formattedInvestedAmount("1,70,000").currentValue(new BigDecimal("211500.00")).formattedCurrentValue("2,11,500").realizedPnl(new BigDecimal("5000.00")).formattedRealizedPnl("5,000").unrealizedPnl(new BigDecimal("36500.00")).formattedUnrealizedPnl("36,500").totalPnl(new BigDecimal("41500.00")).formattedTotalPnl("41,500").returnPercentage(new BigDecimal("24.4")).formattedReturnPercentage("+24.4%").isProfit(true).build(),
-                PortfolioCompanyPnlRowDto.builder().companyId(6L).companyName("CS Interio Private Limited (CSI)").companyCode("CSI").investedAmount(new BigDecimal("110000.00")).formattedInvestedAmount("1,10,000").currentValue(new BigDecimal("87000.00")).formattedCurrentValue("87,000").realizedPnl(BigDecimal.ZERO).formattedRealizedPnl("0").unrealizedPnl(new BigDecimal("-23000.00")).formattedUnrealizedPnl("-23,000").totalPnl(new BigDecimal("-23000.00")).formattedTotalPnl("-23,000").returnPercentage(new BigDecimal("-20.9")).formattedReturnPercentage("-20.9%").isProfit(false).build()
+        List<PortfolioDataHelper.TrendSnapshot> perfSeries = dataHelper.buildPerformanceSeries(
+                rawHoldings, currentValue, totalInvestment, summary.prevTotalValue(), "6M", now
         );
+        List<PortfolioPnlTrendPointDto> pnlTrend = new ArrayList<>();
+        if (perfSeries.isEmpty() && realizedByMonth.isEmpty()) {
+            YearMonth ym = YearMonth.from(now);
+            pnlTrend.add(PortfolioPnlTrendPointDto.builder()
+                    .month(ym.format(MONTH_YEAR_FORMATTER))
+                    .realizedPnl(realizedPnl).formattedRealizedPnl(dataHelper.formatSignedInr(realizedPnl))
+                    .unrealizedPnl(unrealizedPnl).formattedUnrealizedPnl(dataHelper.formatSignedInr(unrealizedPnl))
+                    .totalPnl(totalPnl).formattedTotalPnl(dataHelper.formatSignedInr(totalPnl))
+                    .build());
+        } else {
+            BigDecimal runningRealized = BigDecimal.ZERO;
+            YearMonth currentYm = YearMonth.from(now);
+            for (PortfolioDataHelper.TrendSnapshot snap : perfSeries) {
+                BigDecimal unrel = snap.value().subtract(totalInvestment).setScale(2, RoundingMode.HALF_UP);
+                YearMonth snapYm = currentYm;
+                try {
+                    snapYm = YearMonth.from(LocalDate.parse(snap.dateIso()));
+                } catch (Exception ignored) {}
+                BigDecimal rel = realizedByMonth.getOrDefault(snapYm, BigDecimal.ZERO);
+                runningRealized = runningRealized.add(rel);
+                BigDecimal relVal = snap.isCurrent() ? realizedPnl : runningRealized.setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totVal = relVal.add(unrel).setScale(2, RoundingMode.HALF_UP);
+                pnlTrend.add(PortfolioPnlTrendPointDto.builder()
+                        .month(snap.label())
+                        .realizedPnl(relVal).formattedRealizedPnl(dataHelper.formatSignedInr(relVal))
+                        .unrealizedPnl(unrel).formattedUnrealizedPnl(dataHelper.formatSignedInr(unrel))
+                        .totalPnl(totVal).formattedTotalPnl(dataHelper.formatSignedInr(totVal))
+                        .build());
+            }
+        }
 
-        List<String> keyInsights = List.of(
-                "Your total return is 34.1%. Higher than last period (28.3%).",
-                "Atirath Holdings is your top performing investment (+34.2%).",
-                "CS Interio is underperforming (-20.9%). Consider reviewing your position.",
-                "60% of your gains are unrealized. Monitor market movements.",
-                "Your portfolio is diversified across 6 companies and 5 sectors."
-        );
+        List<String> keyInsights = new ArrayList<>();
+        if (filteredHoldings.isEmpty()) {
+            keyInsights.add("No P&L data available for the selected filters or current account.");
+        } else {
+            keyInsights.add("Your total return across selected holdings is " + dataHelper.formatSignedPercent(totalRetPct) + ".");
+            filteredHoldings.stream().max(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage))
+                    .ifPresent(b -> keyInsights.add(b.company().getCompanyName() + " is your top performing holding (" + dataHelper.formatSignedPercent(b.pnlPercentage()) + ")."));
+            filteredHoldings.stream().min(Comparator.comparing(PortfolioDataHelper.ComputedHolding::pnlPercentage))
+                    .filter(w -> w.pnl().compareTo(BigDecimal.ZERO) < 0)
+                    .ifPresent(w -> keyInsights.add(w.company().getCompanyName() + " is underperforming (" + dataHelper.formatSignedPercent(w.pnlPercentage()) + "). Review your position."));
+            if (totalPnl.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal unrelShare = unrealizedPnl.multiply(new BigDecimal("100")).divide(totalPnl, 0, RoundingMode.HALF_UP);
+                keyInsights.add(unrelShare.toPlainString() + "% of your total gains are unrealized.");
+            }
+            keyInsights.add("Your holdings span " + filteredHoldings.size() + (filteredHoldings.size() == 1 ? " company" : " companies") + " across " + sectorAgg.size() + (sectorAgg.size() == 1 ? " sector." : " sectors."));
+        }
 
         return PortfolioPnlResponseDto.builder()
                 .dateRange(activeDateRange)
@@ -1481,94 +2061,349 @@ public class PortfolioService {
                 .activeTab(activeTab)
                 .companyPnl(companyPnlList)
                 .keyInsights(keyInsights)
-                .totalCompaniesCount(6)
+                .totalCompaniesCount(companyPnlList.size())
                 .build();
     }
 
     // =========================================================================
-    // 8. PORTFOLIO OWNERSHIP STATEMENT (Image 3)
+    // 8. PORTFOLIO OWNERSHIP STATEMENT (Real Per-User DB Aggregation)
     // =========================================================================
     @Transactional(readOnly = true)
     public PortfolioOwnershipResponseDto getOwnershipStatement(Long userId, String tab, String asOfDate) {
+        if (userId == null) {
+            throw new ApiException("Authentication required to load ownership statement", HttpStatus.UNAUTHORIZED);
+        }
+
+        UserAccount user = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User account not found"));
+
         String activeTab = (tab != null && !tab.isBlank()) ? tab : "Company-wise";
-        String date = (asOfDate != null && !asOfDate.isBlank()) ? asOfDate : "18 Sep 2025";
+        OffsetDateTime now = OffsetDateTime.now();
+        String date = (asOfDate != null && !asOfDate.isBlank() && !asOfDate.contains("2025"))
+                ? asOfDate
+                : now.format(DATE_ONLY_FORMATTER);
+
+        List<UserShareHolding> rawHoldings = shareHoldingRepository.findByUserAccount_UserId(userId).stream()
+                .filter(h -> h.getTotalShares() != null && h.getTotalShares() > 0 && h.getCompany() != null)
+                .toList();
+        PortfolioDataHelper.HoldingSummary summary = dataHelper.aggregateHoldings(rawHoldings);
+
+        BigDecimal totalInvestment = summary.investedAmount();
+        BigDecimal currentValue = summary.totalValue();
+        BigDecimal unrealizedPnl = currentValue.subtract(totalInvestment).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal unrealizedPct = dataHelper.computePercent(unrealizedPnl, totalInvestment);
+        long totalSharesOwned = summary.totalShares();
+
+        long totalIssuedAcrossHeld = 0L;
+        for (PortfolioDataHelper.ComputedHolding ch : summary.holdings()) {
+            long issued = ch.company().getIssuedShares() != null ? ch.company().getIssuedShares() : 0L;
+            totalIssuedAcrossHeld += issued;
+        }
+        BigDecimal totalOwnershipPct = totalIssuedAcrossHeld > 0
+                ? BigDecimal.valueOf(totalSharesOwned).multiply(new BigDecimal("100"))
+                        .divide(BigDecimal.valueOf(totalIssuedAcrossHeld), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal weightedAvgPrice = totalSharesOwned > 0
+                ? totalInvestment.divide(BigDecimal.valueOf(totalSharesOwned), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         List<PortfolioSummaryKpiDto> summaryKpis = List.of(
-                PortfolioSummaryKpiDto.builder().id("total_companies").title("Total Companies").count(6L).formattedCount("6").comparisonLabel("Group Companies").icon("layers").build(),
-                PortfolioSummaryKpiDto.builder().id("total_shares_owned").title("Total Shares Owned").count(5450L).formattedCount("5,450").comparisonLabel("Shares").icon("pie-chart").build(),
-                PortfolioSummaryKpiDto.builder().id("total_investment").title("Total Investment").amount(new BigDecimal("1850000.00")).formattedAmount(formatInr(new BigDecimal("1850000.00"))).icon("coins").build(),
-                PortfolioSummaryKpiDto.builder().id("current_market_value").title("Current Market Value").amount(new BigDecimal("2480000.00")).formattedAmount(formatInr(new BigDecimal("2480000.00"))).changePercentage(new BigDecimal("34.1")).formattedChangePercentage("↑ 34.1%").isPositive(true).icon("trending-up").build(),
-                PortfolioSummaryKpiDto.builder().id("total_ownership").title("Total Ownership").formattedCount("4.85%").comparisonLabel("Across Group").icon("percent").build()
+                PortfolioSummaryKpiDto.builder().id("total_companies").title("Total Companies").count((long) summary.holdings().size()).formattedCount(dataHelper.formatCount(summary.holdings().size())).comparisonLabel("Group Companies").icon("layers").build(),
+                PortfolioSummaryKpiDto.builder().id("total_shares_owned").title("Total Shares Owned").count(totalSharesOwned).formattedCount(dataHelper.formatCount(totalSharesOwned)).comparisonLabel("Shares").icon("pie-chart").build(),
+                PortfolioSummaryKpiDto.builder().id("total_investment").title("Total Investment").amount(totalInvestment).formattedAmount(dataHelper.formatInr(totalInvestment)).icon("coins").build(),
+                PortfolioSummaryKpiDto.builder().id("current_market_value").title("Current Market Value").amount(currentValue).formattedAmount(dataHelper.formatInr(currentValue)).changePercentage(unrealizedPct).formattedChangePercentage(dataHelper.formatSignedPercent(unrealizedPct)).isPositive(unrealizedPct.compareTo(BigDecimal.ZERO) >= 0).icon("trending-up").build(),
+                PortfolioSummaryKpiDto.builder().id("total_ownership").title("Total Ownership").formattedCount(totalOwnershipPct.toPlainString() + "%").comparisonLabel("Across Group").icon("percent").build()
         );
 
-        List<PortfolioCompanyOwnershipRowDto> companies = List.of(
-                PortfolioCompanyOwnershipRowDto.builder().companyId(1L).companyName("Atirath Holdings India Limited (ATG)").companyCode("ATG").totalSharesOwned(2000L).formattedTotalSharesOwned("2,000").ownershipPercentage(new BigDecimal("8.00")).formattedOwnershipPercentage("8.00%").averagePrice(new BigDecimal("230.00")).formattedAveragePrice("230.00").totalInvestment(new BigDecimal("460000.00")).formattedTotalInvestment("4,60,000").currentPrice(new BigDecimal("320.00")).formattedCurrentPrice("320.00").currentValue(new BigDecimal("640000.00")).formattedCurrentValue("6,40,000").unrealizedPnl(new BigDecimal("180000.00")).formattedUnrealizedPnl("+1,80,000").unrealizedPnlPercentage(new BigDecimal("39.1")).formattedUnrealizedPnlPercentage("+39.1%").isProfit(true).build(),
-                PortfolioCompanyOwnershipRowDto.builder().companyId(2L).companyName("Atirath Technologies Private Limited (ATT)").companyCode("ATT").totalSharesOwned(1200L).formattedTotalSharesOwned("1,200").ownershipPercentage(new BigDecimal("6.00")).formattedOwnershipPercentage("6.00%").averagePrice(new BigDecimal("180.00")).formattedAveragePrice("180.00").totalInvestment(new BigDecimal("216000.00")).formattedTotalInvestment("2,16,000").currentPrice(new BigDecimal("240.00")).formattedCurrentPrice("240.00").currentValue(new BigDecimal("288000.00")).formattedCurrentValue("2,88,000").unrealizedPnl(new BigDecimal("72000.00")).formattedUnrealizedPnl("+72,000").unrealizedPnlPercentage(new BigDecimal("33.3")).formattedUnrealizedPnlPercentage("+33.3%").isProfit(true).build(),
-                PortfolioCompanyOwnershipRowDto.builder().companyId(3L).companyName("Farm Vantara Private Limited (FVPL)").companyCode("FVPL").totalSharesOwned(750L).formattedTotalSharesOwned("750").ownershipPercentage(new BigDecimal("3.00")).formattedOwnershipPercentage("3.00%").averagePrice(new BigDecimal("135.00")).formattedAveragePrice("135.00").totalInvestment(new BigDecimal("101250.00")).formattedTotalInvestment("1,01,250").currentPrice(new BigDecimal("165.00")).formattedCurrentPrice("165.00").currentValue(new BigDecimal("123750.00")).formattedCurrentValue("1,23,750").unrealizedPnl(new BigDecimal("22500.00")).formattedUnrealizedPnl("+22,500").unrealizedPnlPercentage(new BigDecimal("22.2")).formattedUnrealizedPnlPercentage("+22.2%").isProfit(true).build(),
-                PortfolioCompanyOwnershipRowDto.builder().companyId(4L).companyName("Tri Energy Battery Private Limited (TEB)").companyCode("TEB").totalSharesOwned(600L).formattedTotalSharesOwned("600").ownershipPercentage(new BigDecimal("2.40")).formattedOwnershipPercentage("2.40%").averagePrice(new BigDecimal("225.00")).formattedAveragePrice("225.00").totalInvestment(new BigDecimal("135000.00")).formattedTotalInvestment("1,35,000").currentPrice(new BigDecimal("250.00")).formattedCurrentPrice("250.00").currentValue(new BigDecimal("150000.00")).formattedCurrentValue("1,50,000").unrealizedPnl(new BigDecimal("15000.00")).formattedUnrealizedPnl("+15,000").unrealizedPnlPercentage(new BigDecimal("11.1")).formattedUnrealizedPnlPercentage("+11.1%").isProfit(true).build(),
-                PortfolioCompanyOwnershipRowDto.builder().companyId(5L).companyName("Royal One Heating Equipments Pvt Ltd (ROHE)").companyCode("ROHE").totalSharesOwned(500L).formattedTotalSharesOwned("500").ownershipPercentage(new BigDecimal("2.00")).formattedOwnershipPercentage("2.00%").averagePrice(new BigDecimal("235.00")).formattedAveragePrice("235.00").totalInvestment(new BigDecimal("117500.00")).formattedTotalInvestment("1,17,500").currentPrice(new BigDecimal("210.00")).formattedCurrentPrice("210.00").currentValue(new BigDecimal("105000.00")).formattedCurrentValue("1,05,000").unrealizedPnl(new BigDecimal("-12500.00")).formattedUnrealizedPnl("-12,500").unrealizedPnlPercentage(new BigDecimal("-10.6")).formattedUnrealizedPnlPercentage("-10.6%").isProfit(false).build(),
-                PortfolioCompanyOwnershipRowDto.builder().companyId(6L).companyName("CS Interio Private Limited (CSI)").companyCode("CSI").totalSharesOwned(400L).formattedTotalSharesOwned("400").ownershipPercentage(new BigDecimal("1.60")).formattedOwnershipPercentage("1.60%").averagePrice(new BigDecimal("160.00")).formattedAveragePrice("160.00").totalInvestment(new BigDecimal("64000.00")).formattedTotalInvestment("64,000").currentPrice(new BigDecimal("145.00")).formattedCurrentPrice("145.00").currentValue(new BigDecimal("58000.00")).formattedCurrentValue("58,000").unrealizedPnl(new BigDecimal("-6000.00")).formattedUnrealizedPnl("-6,000").unrealizedPnlPercentage(new BigDecimal("-9.4")).formattedUnrealizedPnlPercentage("-9.4%").isProfit(false).build()
-        );
+        List<PortfolioCompanyOwnershipRowDto> rows = new ArrayList<>();
+        List<PortfolioAllocationSliceDto> ownershipDistribution = new ArrayList<>();
+        List<PortfolioAnalyticsPerformanceRowDto> invVsCur = new ArrayList<>();
+
+        Map<String, List<PortfolioDataHelper.ComputedHolding>> groupedBySector = new LinkedHashMap<>();
+        long totalAvailable = 0L;
+        long totalLocked = 0L;
+        BigDecimal availInv = BigDecimal.ZERO;
+        BigDecimal availCur = BigDecimal.ZERO;
+        BigDecimal lockInv = BigDecimal.ZERO;
+        BigDecimal lockCur = BigDecimal.ZERO;
+
+        for (int i = 0; i < summary.holdings().size(); i++) {
+            PortfolioDataHelper.ComputedHolding ch = summary.holdings().get(i);
+            MarketCompany comp = ch.company();
+            String color = PortfolioDataHelper.CHART_COLORS.get(i % PortfolioDataHelper.CHART_COLORS.size());
+
+            long issued = comp.getIssuedShares() != null ? comp.getIssuedShares() : 0L;
+            BigDecimal compOwnPct = issued > 0
+                    ? BigDecimal.valueOf(ch.shares()).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(issued), 2, RoundingMode.HALF_UP)
+                    : (totalSharesOwned > 0
+                            ? BigDecimal.valueOf(ch.shares()).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalSharesOwned), 2, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+
+            BigDecimal shareDistPct = totalSharesOwned > 0
+                    ? BigDecimal.valueOf(ch.shares()).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalSharesOwned), 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+
+            ownershipDistribution.add(PortfolioAllocationSliceDto.builder()
+                    .companyId(comp.getCompanyId())
+                    .companyName(comp.getCompanyName())
+                    .symbol(comp.getSymbol())
+                    .percentage(shareDistPct)
+                    .formattedPercentage(shareDistPct.toPlainString() + "%")
+                    .value(ch.currentValue())
+                    .formattedValue(dataHelper.formatInr(ch.currentValue()))
+                    .color(color)
+                    .build());
+
+            invVsCur.add(PortfolioAnalyticsPerformanceRowDto.builder()
+                    .companyId(comp.getCompanyId())
+                    .companyName(comp.getCompanyCode() != null ? comp.getCompanyCode() : comp.getSymbol())
+                    .symbol(comp.getSymbol())
+                    .investedAmount(ch.investedValue())
+                    .currentValue(ch.currentValue())
+                    .build());
+
+            String sec = comp.getSector() != null && !comp.getSector().isBlank() ? comp.getSector() : "Diversified";
+            groupedBySector.computeIfAbsent(sec, k -> new ArrayList<>()).add(ch);
+
+            totalAvailable += ch.availableShares();
+            totalLocked += ch.lockedShares();
+            availInv = availInv.add(ch.avgPrice().multiply(BigDecimal.valueOf(ch.availableShares())));
+            availCur = availCur.add(ch.currentPrice().multiply(BigDecimal.valueOf(ch.availableShares())));
+            lockInv = lockInv.add(ch.avgPrice().multiply(BigDecimal.valueOf(ch.lockedShares())));
+            lockCur = lockCur.add(ch.currentPrice().multiply(BigDecimal.valueOf(ch.lockedShares())));
+
+            if ("Company-wise".equalsIgnoreCase(activeTab) || (!"Sector-wise".equalsIgnoreCase(activeTab) && !"Share Class-wise".equalsIgnoreCase(activeTab))) {
+                rows.add(PortfolioCompanyOwnershipRowDto.builder()
+                        .companyId(comp.getCompanyId())
+                        .companyName(comp.getCompanyName())
+                        .companyCode(comp.getCompanyCode())
+                        .symbol(comp.getSymbol())
+                        .logoUrl(comp.getLogoUrl())
+                        .totalSharesOwned(ch.shares())
+                        .formattedTotalSharesOwned(dataHelper.formatCount(ch.shares()))
+                        .ownershipPercentage(compOwnPct)
+                        .formattedOwnershipPercentage(compOwnPct.toPlainString() + "%")
+                        .averagePrice(ch.avgPrice())
+                        .formattedAveragePrice(dataHelper.formatInr(ch.avgPrice()))
+                        .totalInvestment(ch.investedValue())
+                        .formattedTotalInvestment(dataHelper.formatInr(ch.investedValue()))
+                        .currentPrice(ch.currentPrice())
+                        .formattedCurrentPrice(dataHelper.formatInr(ch.currentPrice()))
+                        .currentValue(ch.currentValue())
+                        .formattedCurrentValue(dataHelper.formatInr(ch.currentValue()))
+                        .unrealizedPnl(ch.pnl())
+                        .formattedUnrealizedPnl(dataHelper.formatSignedInr(ch.pnl()))
+                        .unrealizedPnlPercentage(ch.pnlPercentage())
+                        .formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(ch.pnlPercentage()))
+                        .isProfit(ch.pnl().compareTo(BigDecimal.ZERO) >= 0)
+                        .build());
+            }
+        }
+
+        if ("Sector-wise".equalsIgnoreCase(activeTab)) {
+            for (Map.Entry<String, List<PortfolioDataHelper.ComputedHolding>> entry : groupedBySector.entrySet()) {
+                long secShares = entry.getValue().stream().mapToLong(PortfolioDataHelper.ComputedHolding::shares).sum();
+                BigDecimal secInv = entry.getValue().stream().map(PortfolioDataHelper.ComputedHolding::investedValue).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal secCur = entry.getValue().stream().map(PortfolioDataHelper.ComputedHolding::currentValue).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal secPnl = secCur.subtract(secInv).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal secRet = dataHelper.computePercent(secPnl, secInv);
+                BigDecimal secAvg = secShares > 0 ? secInv.divide(BigDecimal.valueOf(secShares), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                BigDecimal secCurPrice = secShares > 0 ? secCur.divide(BigDecimal.valueOf(secShares), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                BigDecimal secPct = totalSharesOwned > 0 ? BigDecimal.valueOf(secShares).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalSharesOwned), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+                rows.add(PortfolioCompanyOwnershipRowDto.builder()
+                        .companyName(entry.getKey())
+                        .companyCode("SECTOR")
+                        .totalSharesOwned(secShares).formattedTotalSharesOwned(dataHelper.formatCount(secShares))
+                        .ownershipPercentage(secPct).formattedOwnershipPercentage(secPct.toPlainString() + "%")
+                        .averagePrice(secAvg).formattedAveragePrice(dataHelper.formatInr(secAvg))
+                        .totalInvestment(secInv).formattedTotalInvestment(dataHelper.formatInr(secInv))
+                        .currentPrice(secCurPrice).formattedCurrentPrice(dataHelper.formatInr(secCurPrice))
+                        .currentValue(secCur).formattedCurrentValue(dataHelper.formatInr(secCur))
+                        .unrealizedPnl(secPnl).formattedUnrealizedPnl(dataHelper.formatSignedInr(secPnl))
+                        .unrealizedPnlPercentage(secRet).formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(secRet))
+                        .isProfit(secPnl.compareTo(BigDecimal.ZERO) >= 0)
+                        .build());
+            }
+        } else if ("Share Class-wise".equalsIgnoreCase(activeTab)) {
+            if (totalAvailable > 0) {
+                BigDecimal p = availCur.subtract(availInv).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal rp = dataHelper.computePercent(p, availInv);
+                BigDecimal pct = totalSharesOwned > 0 ? BigDecimal.valueOf(totalAvailable).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalSharesOwned), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                rows.add(PortfolioCompanyOwnershipRowDto.builder()
+                        .companyName("Free / Available Equity Shares").companyCode("FREE")
+                        .totalSharesOwned(totalAvailable).formattedTotalSharesOwned(dataHelper.formatCount(totalAvailable))
+                        .ownershipPercentage(pct).formattedOwnershipPercentage(pct.toPlainString() + "%")
+                        .averagePrice(availInv.divide(BigDecimal.valueOf(totalAvailable), 2, RoundingMode.HALF_UP))
+                        .formattedAveragePrice(dataHelper.formatInr(availInv.divide(BigDecimal.valueOf(totalAvailable), 2, RoundingMode.HALF_UP)))
+                        .totalInvestment(availInv.setScale(2, RoundingMode.HALF_UP)).formattedTotalInvestment(dataHelper.formatInr(availInv))
+                        .currentPrice(availCur.divide(BigDecimal.valueOf(totalAvailable), 2, RoundingMode.HALF_UP))
+                        .formattedCurrentPrice(dataHelper.formatInr(availCur.divide(BigDecimal.valueOf(totalAvailable), 2, RoundingMode.HALF_UP)))
+                        .currentValue(availCur.setScale(2, RoundingMode.HALF_UP)).formattedCurrentValue(dataHelper.formatInr(availCur))
+                        .unrealizedPnl(p).formattedUnrealizedPnl(dataHelper.formatSignedInr(p))
+                        .unrealizedPnlPercentage(rp).formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(rp))
+                        .isProfit(p.compareTo(BigDecimal.ZERO) >= 0)
+                        .build());
+            }
+            if (totalLocked > 0) {
+                BigDecimal p = lockCur.subtract(lockInv).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal rp = dataHelper.computePercent(p, lockInv);
+                BigDecimal pct = totalSharesOwned > 0 ? BigDecimal.valueOf(totalLocked).multiply(new BigDecimal("100")).divide(BigDecimal.valueOf(totalSharesOwned), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                rows.add(PortfolioCompanyOwnershipRowDto.builder()
+                        .companyName("Escrow Locked Equity Shares").companyCode("LOCKED")
+                        .totalSharesOwned(totalLocked).formattedTotalSharesOwned(dataHelper.formatCount(totalLocked))
+                        .ownershipPercentage(pct).formattedOwnershipPercentage(pct.toPlainString() + "%")
+                        .averagePrice(lockInv.divide(BigDecimal.valueOf(totalLocked), 2, RoundingMode.HALF_UP))
+                        .formattedAveragePrice(dataHelper.formatInr(lockInv.divide(BigDecimal.valueOf(totalLocked), 2, RoundingMode.HALF_UP)))
+                        .totalInvestment(lockInv.setScale(2, RoundingMode.HALF_UP)).formattedTotalInvestment(dataHelper.formatInr(lockInv))
+                        .currentPrice(lockCur.divide(BigDecimal.valueOf(totalLocked), 2, RoundingMode.HALF_UP))
+                        .formattedCurrentPrice(dataHelper.formatInr(lockCur.divide(BigDecimal.valueOf(totalLocked), 2, RoundingMode.HALF_UP)))
+                        .currentValue(lockCur.setScale(2, RoundingMode.HALF_UP)).formattedCurrentValue(dataHelper.formatInr(lockCur))
+                        .unrealizedPnl(p).formattedUnrealizedPnl(dataHelper.formatSignedInr(p))
+                        .unrealizedPnlPercentage(rp).formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(rp))
+                        .isProfit(p.compareTo(BigDecimal.ZERO) >= 0)
+                        .build());
+            }
+        }
 
         PortfolioOwnershipSummaryDetailDto statementSummary = PortfolioOwnershipSummaryDetailDto.builder()
-                .memberName("Sairam Vempati")
-                .memberId("ATG10027")
+                .memberName(dataHelper.resolveUserFullName(user))
+                .memberId("ATG" + userId)
                 .statementDate(date)
-                .totalCompanies(6)
-                .totalSharesOwned(5450L)
-                .formattedTotalSharesOwned("5,450")
-                .totalInvestment(new BigDecimal("1850000.00"))
-                .formattedTotalInvestment("₹ 18,50,000")
-                .currentMarketValue(new BigDecimal("2480000.00"))
-                .formattedCurrentMarketValue("₹ 24,80,000")
-                .totalOwnership(new BigDecimal("4.85"))
-                .formattedTotalOwnership("4.85%")
-                .averagePrice(new BigDecimal("194.50"))
-                .formattedAveragePrice("194.50")
-                .unrealizedPnl(new BigDecimal("630000.00"))
-                .formattedUnrealizedPnl("+6,30,000")
-                .unrealizedPnlPercentage(new BigDecimal("34.1"))
-                .formattedUnrealizedPnlPercentage("+34.1%")
+                .totalCompanies(summary.holdings().size())
+                .totalSharesOwned(totalSharesOwned)
+                .formattedTotalSharesOwned(dataHelper.formatCount(totalSharesOwned))
+                .totalInvestment(totalInvestment)
+                .formattedTotalInvestment(dataHelper.formatInr(totalInvestment))
+                .currentMarketValue(currentValue)
+                .formattedCurrentMarketValue(dataHelper.formatInr(currentValue))
+                .totalOwnership(totalOwnershipPct)
+                .formattedTotalOwnership(totalOwnershipPct.toPlainString() + "%")
+                .averagePrice(weightedAvgPrice)
+                .formattedAveragePrice(dataHelper.formatInr(weightedAvgPrice))
+                .unrealizedPnl(unrealizedPnl)
+                .formattedUnrealizedPnl(dataHelper.formatSignedInr(unrealizedPnl))
+                .unrealizedPnlPercentage(unrealizedPct)
+                .formattedUnrealizedPnlPercentage(dataHelper.formatSignedPercent(unrealizedPct))
                 .build();
 
-        List<PortfolioAllocationSliceDto> ownershipDistribution = List.of(
-                PortfolioAllocationSliceDto.builder().companyName("Atirath Holdings").percentage(new BigDecimal("36.7")).formattedPercentage("36.7%").color("#1E40AF").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Atirath Technologies").percentage(new BigDecimal("22.0")).formattedPercentage("22.0%").color("#3B82F6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Farm Vantara").percentage(new BigDecimal("13.8")).formattedPercentage("13.8%").color("#F59E0B").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Tri Energy Battery").percentage(new BigDecimal("11.0")).formattedPercentage("11.0%").color("#8B5CF6").build(),
-                PortfolioAllocationSliceDto.builder().companyName("Royal One Heating").percentage(new BigDecimal("9.2")).formattedPercentage("9.2%").color("#EF4444").build(),
-                PortfolioAllocationSliceDto.builder().companyName("CS Interio").percentage(new BigDecimal("7.3")).formattedPercentage("7.3%").color("#10B981").build()
-        );
-
-        List<PortfolioTrendPointDto> ownershipTrend = List.of(
-                PortfolioTrendPointDto.builder().period("Mar 2025").date("2025-03-31").value(new BigDecimal("1.20")).formattedValue("1.20%").build(),
-                PortfolioTrendPointDto.builder().period("Apr 2025").date("2025-04-30").value(new BigDecimal("2.10")).formattedValue("2.10%").build(),
-                PortfolioTrendPointDto.builder().period("May 2025").date("2025-05-31").value(new BigDecimal("2.80")).formattedValue("2.80%").build(),
-                PortfolioTrendPointDto.builder().period("Jun 2025").date("2025-06-30").value(new BigDecimal("3.40")).formattedValue("3.40%").build(),
-                PortfolioTrendPointDto.builder().period("Jul 2025").date("2025-07-31").value(new BigDecimal("4.00")).formattedValue("4.00%").build(),
-                PortfolioTrendPointDto.builder().period("Aug 2025").date("2025-08-31").value(new BigDecimal("4.50")).formattedValue("4.50%").build(),
-                PortfolioTrendPointDto.builder().period("Sep 2025").date("2025-09-18").value(new BigDecimal("4.85")).formattedValue("4.85%").isCurrent(true).build()
-        );
-
-        List<PortfolioAnalyticsPerformanceRowDto> invVsCur = List.of(
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("ATG").investedAmount(new BigDecimal("460000")).currentValue(new BigDecimal("640000")).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("ATT").investedAmount(new BigDecimal("216000")).currentValue(new BigDecimal("288000")).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("FVPL").investedAmount(new BigDecimal("101250")).currentValue(new BigDecimal("123750")).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("TEB").investedAmount(new BigDecimal("135000")).currentValue(new BigDecimal("150000")).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("ROHE").investedAmount(new BigDecimal("117500")).currentValue(new BigDecimal("105000")).build(),
-                PortfolioAnalyticsPerformanceRowDto.builder().companyName("CSI").investedAmount(new BigDecimal("64000")).currentValue(new BigDecimal("58000")).build()
-        );
+        List<PortfolioTrendPointDto> ownershipTrend = dataHelper.buildPerformanceSeries(
+                rawHoldings, currentValue, totalInvestment, summary.prevTotalValue(), "6M", now
+        ).stream().map(snap -> {
+            BigDecimal ratioPct = currentValue.compareTo(BigDecimal.ZERO) > 0
+                    ? totalOwnershipPct.multiply(snap.value()).divide(currentValue, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            return PortfolioTrendPointDto.builder()
+                    .period(snap.label())
+                    .date(snap.dateIso())
+                    .value(ratioPct)
+                    .formattedValue(ratioPct.toPlainString() + "%")
+                    .isCurrent(snap.isCurrent())
+                    .build();
+        }).toList();
 
         return PortfolioOwnershipResponseDto.builder()
                 .asOfDate(date)
                 .summaryKpis(summaryKpis)
                 .activeTab(activeTab)
-                .companies(companies)
+                .companies(rows)
                 .statementSummary(statementSummary)
                 .ownershipDistribution(ownershipDistribution)
                 .ownershipTrend(ownershipTrend)
                 .investmentVsCurrentValue(invVsCur)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public String buildAnalyticsCsv(Long userId, String period, String dateRange) {
+        PortfolioAnalyticsResponseDto dto = getAnalytics(userId, "By Company", period, dateRange);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Portfolio Analytics Report\n");
+        sb.append("As Of,").append(escapeCsv(dto.getAsOfDate())).append('\n');
+        sb.append("Date Range,").append(escapeCsv(dto.getDateRange())).append("\n\n");
+        sb.append("Metric,Value,Change\n");
+        for (PortfolioSummaryKpiDto kpi : dto.getSummaryKpis()) {
+            String val = kpi.getFormattedAmount() != null ? kpi.getFormattedAmount() : (kpi.getFormattedCount() != null ? kpi.getFormattedCount() : "-");
+            sb.append(escapeCsv(kpi.getTitle())).append(',')
+                    .append(escapeCsv(val)).append(',')
+                    .append(escapeCsv(kpi.getFormattedChangePercentage() != null ? kpi.getFormattedChangePercentage() : "-"))
+                    .append('\n');
+        }
+        sb.append("\nCompany,Invested Amount,Current Value,Unrealized PnL,Return %\n");
+        for (PortfolioAnalyticsPerformanceRowDto row : dto.getCompanyPerformance()) {
+            sb.append(escapeCsv(row.getCompanyName())).append(',')
+                    .append(row.getInvestedAmount() != null ? row.getInvestedAmount().toPlainString() : "0").append(',')
+                    .append(row.getCurrentValue() != null ? row.getCurrentValue().toPlainString() : "0").append(',')
+                    .append(row.getUnrealizedPnl() != null ? row.getUnrealizedPnl().toPlainString() : "0").append(',')
+                    .append(escapeCsv(row.getFormattedReturnPercentage())).append('\n');
+        }
+        return sb.toString();
+    }
+
+    @Transactional(readOnly = true)
+    public String buildPnlReportCsv(Long userId, String tab, String company, String sector, String dateRange) {
+        PortfolioPnlResponseDto dto = getPnlReport(userId, tab, company, sector, dateRange);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Company / Group,Invested Amount,Current Value,Realized PnL,Unrealized PnL,Total PnL,Return\n");
+        for (PortfolioCompanyPnlRowDto row : dto.getCompanyPnl()) {
+            sb.append(escapeCsv(row.getCompanyName())).append(',')
+                    .append(row.getInvestedAmount() != null ? row.getInvestedAmount().toPlainString() : "0").append(',')
+                    .append(row.getCurrentValue() != null ? row.getCurrentValue().toPlainString() : "0").append(',')
+                    .append(row.getRealizedPnl() != null ? row.getRealizedPnl().toPlainString() : "0").append(',')
+                    .append(row.getUnrealizedPnl() != null ? row.getUnrealizedPnl().toPlainString() : "0").append(',')
+                    .append(row.getTotalPnl() != null ? row.getTotalPnl().toPlainString() : "0").append(',')
+                    .append(escapeCsv(row.getFormattedReturnPercentage())).append('\n');
+        }
+        return sb.toString();
+    }
+
+    @Transactional(readOnly = true)
+    public String buildTradeReceiptCsv(Long userId, Long tradeId) {
+        PortfolioTradeDetailDto detail = getTradeDetail(tradeId, null, userId);
+        return "Field,Value\n" +
+                "Trade No," + escapeCsv(detail.getTradeNo()) + "\n" +
+                "Company," + escapeCsv(detail.getCompanyName()) + "\n" +
+                "Symbol," + escapeCsv(detail.getSymbol()) + "\n" +
+                "Trade Type," + escapeCsv(detail.getTradeType()) + "\n" +
+                "Quantity," + detail.getQuantity() + "\n" +
+                "Price Per Share," + detail.getPricePerShare().toPlainString() + "\n" +
+                "Total Value," + detail.getTotalValue().toPlainString() + "\n" +
+                "Order Date," + escapeCsv(detail.getOrderDateTime()) + "\n" +
+                "Trade Date," + escapeCsv(detail.getTradeDateTime()) + "\n" +
+                "Settlement Date," + escapeCsv(detail.getSettlementDate()) + "\n" +
+                "Settlement Ref," + escapeCsv(detail.getSettlementRef()) + "\n" +
+                "Counterparty," + escapeCsv(detail.getCounterparty()) + "\n" +
+                "Status," + escapeCsv(detail.getStatus()) + "\n";
+    }
+
+    @Transactional(readOnly = true)
+    public String buildTradeHistoryCsv(Long userId, String search, String company, String tradeType, String status, String startDate, String endDate) {
+        PortfolioTradesResponseDto dto = getTradeHistory(userId, search, company, tradeType, status, startDate, endDate, null, 1, 500);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Trade No,Date & Time,Company,Symbol,Type,Quantity,Price,Trade Value,Status,Counterparty\n");
+        for (PortfolioTradeItemDto row : dto.getTrades()) {
+            sb.append(escapeCsv(row.getTradeNo())).append(',')
+                    .append(escapeCsv(row.getTradeDateTime() != null ? row.getTradeDateTime().replace('\n', ' ') : "-")).append(',')
+                    .append(escapeCsv(row.getCompanyName())).append(',')
+                    .append(escapeCsv(row.getSymbol())).append(',')
+                    .append(escapeCsv(row.getTradeType())).append(',')
+                    .append(row.getQuantity() != null ? row.getQuantity() : 0).append(',')
+                    .append(row.getPrice() != null ? row.getPrice().toPlainString() : "0").append(',')
+                    .append(row.getTradeValue() != null ? row.getTradeValue().toPlainString() : "0").append(',')
+                    .append(escapeCsv(row.getStatus())).append(',')
+                    .append(escapeCsv(row.getCounterparty())).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private String escapeCsv(String val) {
+        if (val == null) return "";
+        String cleaned = val.replace("\"", "\"\"");
+        if (cleaned.contains(",") || cleaned.contains("\n") || cleaned.contains("\"")) {
+            return "\"" + cleaned + "\"";
+        }
+        return cleaned;
     }
 
     // =========================================================================

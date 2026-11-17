@@ -59,7 +59,12 @@ public class MarketBroadcastService {
             String sym = comp.getSymbol().toUpperCase();
             if (!currentTicks.containsKey(sym)) {
                 BigDecimal basePrice = getBasePriceForSymbol(sym);
-                BigDecimal prevClose = "ATG-H".equals(sym) ? new BigDecimal("210.00") : basePrice.multiply(new BigDecimal("0.992")).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal prevClose = switch (sym) {
+                    case "ATG-H" -> new BigDecimal("210.00");
+                    case "ATG-M" -> basePrice.multiply(new BigDecimal("1.012")).setScale(2, RoundingMode.HALF_UP);
+                    case "ATG-L" -> basePrice.multiply(new BigDecimal("1.007")).setScale(2, RoundingMode.HALF_UP);
+                    default -> basePrice.multiply(new BigDecimal("0.992")).setScale(2, RoundingMode.HALF_UP);
+                };
                 BigDecimal diff = basePrice.subtract(prevClose);
                 BigDecimal pct = diff.divide(prevClose, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
                 BigDecimal high = "ATG-H".equals(sym) ? new BigDecimal("250.00") : basePrice.multiply(new BigDecimal("1.015")).setScale(2, RoundingMode.HALF_UP);
@@ -253,10 +258,10 @@ public class MarketBroadcastService {
             Optional<MarketCompany> compOpt = companyRepository.findBySymbolIgnoreCase(sym);
             if (compOpt.isPresent()) {
                 List<UserAccount> users = userAccountRepository.findAll();
-                UserAccount buyer = users.isEmpty() ? null : users.get(0);
-                UserAccount seller = users.size() > 1 ? users.get(1) : buyer;
+                UserAccount buyer = users.isEmpty() ? null : users.get(ThreadLocalRandom.current().nextInt(users.size()));
+                UserAccount seller = users.size() > 1 ? users.stream().filter(u -> buyer == null || !u.getUserId().equals(buyer.getUserId())).findAny().orElse(users.get(0)) : buyer;
 
-                MarketOrder buyOrder = orderRepository.save(MarketOrder.builder()
+                MarketOrder buyOrderBuilder = MarketOrder.builder()
                         .orderNo(String.format("ORD-B-%s-%06d", sym, seq % 1000000))
                         .userAccount(buyer)
                         .company(compOpt.get())
@@ -266,9 +271,9 @@ public class MarketBroadcastService {
                         .pricePerShare(price)
                         .orderValue(tradeVal)
                         .status("EXECUTED")
-                        .build());
+                        .build();
 
-                MarketOrder sellOrder = orderRepository.save(MarketOrder.builder()
+                MarketOrder sellOrderBuilder = MarketOrder.builder()
                         .orderNo(String.format("ORD-S-%s-%06d", sym, (seq % 1000000) + 1))
                         .userAccount(seller)
                         .company(compOpt.get())
@@ -278,7 +283,18 @@ public class MarketBroadcastService {
                         .pricePerShare(price)
                         .orderValue(tradeVal)
                         .status("EXECUTED")
-                        .build());
+                        .build();
+
+                // Save passive order first and aggressor order second so buyOrderId >= sellOrderId encodes BUY aggressor
+                MarketOrder buyOrder;
+                MarketOrder sellOrder;
+                if (isBuy) {
+                    sellOrder = orderRepository.save(sellOrderBuilder);
+                    buyOrder = orderRepository.save(buyOrderBuilder);
+                } else {
+                    buyOrder = orderRepository.save(buyOrderBuilder);
+                    sellOrder = orderRepository.save(sellOrderBuilder);
+                }
 
                 MarketTrade trade = MarketTrade.builder()
                         .tradeNo(tradeNo)

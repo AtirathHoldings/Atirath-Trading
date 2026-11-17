@@ -156,12 +156,9 @@ public class NotificationController {
     @GetMapping("/preferences")
     @Operation(summary = "Get Notification Preferences", description = "Returns channel statuses (Email, SMS, Push, In-App), 11 preference matrix rows, quiet hours, and frequency options.")
     public ResponseEntity<ApiResponse<NotificationPreferencesResponseDto>> getPreferences(
-            @RequestParam(required = false) Long userId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long effectiveUserId = userId != null ? userId : extractUserId(authHeader);
-        if (effectiveUserId == null) effectiveUserId = 1L;
-
+        Long effectiveUserId = requireAuthenticatedUserId(authHeader);
         NotificationPreferencesResponseDto response = notificationService.getPreferences(effectiveUserId);
         return ResponseEntity.ok(ApiResponse.success(response, "Notification preferences retrieved successfully"));
     }
@@ -170,12 +167,9 @@ public class NotificationController {
     @Operation(summary = "Save Notification Preferences", description = "Updates fine-grained channel toggles, frequencies, and quiet hours.")
     public ResponseEntity<ApiResponse<NotificationPreferencesResponseDto>> updatePreferences(
             @RequestBody UpdateNotificationPreferencesRequest request,
-            @RequestParam(required = false) Long userId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long effectiveUserId = userId != null ? userId : extractUserId(authHeader);
-        if (effectiveUserId == null) effectiveUserId = 1L;
-
+        Long effectiveUserId = requireAuthenticatedUserId(authHeader);
         NotificationPreferencesResponseDto updated = notificationService.updatePreferences(effectiveUserId, request);
         return ResponseEntity.ok(ApiResponse.success(updated, "Preferences saved successfully"));
     }
@@ -183,12 +177,9 @@ public class NotificationController {
     @PostMapping("/preferences/reset")
     @Operation(summary = "Reset Notification Preferences to Default")
     public ResponseEntity<ApiResponse<NotificationPreferencesResponseDto>> resetPreferences(
-            @RequestParam(required = false) Long userId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long effectiveUserId = userId != null ? userId : extractUserId(authHeader);
-        if (effectiveUserId == null) effectiveUserId = 1L;
-
+        Long effectiveUserId = requireAuthenticatedUserId(authHeader);
         NotificationPreferencesResponseDto reset = notificationService.resetPreferences(effectiveUserId);
         return ResponseEntity.ok(ApiResponse.success(reset, "Preferences reset to default successfully"));
     }
