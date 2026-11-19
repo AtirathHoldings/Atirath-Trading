@@ -8,6 +8,7 @@ import com.atirath.trading.modules.auth.service.TokenBlacklistService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,17 +55,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && jwtTokenProvider.validateToken(jwt)
                     && !jwtTokenProvider.isRefreshToken(jwt)) {
                 Long userId = jwtTokenProvider.getUserIdFromToken(jwt);
+                Claims claims = jwtTokenProvider.getClaims(jwt);
+                String role = claims.get("role", String.class);
+                Boolean isAdmin = claims.get("isAdmin", Boolean.class);
 
-                if (isTradingMutationRequest(request) && isUnder18User(userId)) {
-                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    ApiResponse<Object> apiResponse = ApiResponse.error(
-                            "Age restriction: You must be at least 18 years old to buy or sell shares.");
-                    response.getOutputStream().println(objectMapper.writeValueAsString(apiResponse));
-                    return;
+                UserDetails userDetails;
+                if ("ADMIN".equalsIgnoreCase(role) || Boolean.TRUE.equals(isAdmin)) {
+                    userDetails = customUserDetailsService.loadAdminById(userId);
+                } else {
+                    if (isTradingMutationRequest(request) && isUnder18User(userId)) {
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        ApiResponse<Object> apiResponse = ApiResponse.error(
+                                "Age restriction: You must be at least 18 years old to buy or sell shares.");
+                        response.getOutputStream().println(objectMapper.writeValueAsString(apiResponse));
+                        return;
+                    }
+                    userDetails = customUserDetailsService.loadUserById(userId);
                 }
-
-                UserDetails userDetails = customUserDetailsService.loadUserById(userId);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

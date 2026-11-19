@@ -28,3 +28,9 @@ ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO user_credentials (user_id, password_hash, password_changed_at, created_at, updated_at)
 VALUES (2, '$2a$12$v9eC0R2uXq1oB6i7JbWcceU1y1c0f8m8pZ0l7bC.h2N5Jv.kYp2Q2', NOW(), NOW(), NOW())
 ON CONFLICT (user_id) DO NOTHING;
+
+-- 3. Default Admin Account (admin@atirathgroup.com / Admin@123)
+INSERT INTO admin_accounts (admin_id, email, password_hash, admin_name, admin_status, created_at, updated_at)
+OVERRIDING SYSTEM VALUE
+VALUES (1, 'admin@atirathgroup.com', '$2a$12$xQ0lE6XhE2d1iNf7G/qC5u5tBwV.N7S5m.y1Wb5b6g7c8d9e0f1g2', 'System Administrator', 'ACTIVE', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;

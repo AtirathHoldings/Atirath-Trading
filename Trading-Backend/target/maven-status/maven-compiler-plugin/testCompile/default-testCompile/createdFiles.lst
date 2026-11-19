@@ -1,6 +1,7 @@
 com\atirath\trading\AuthFlowIntegrationTest$4.class
 com\atirath\trading\MemberPendingActionsIntegrationTest.class
 com\atirath\trading\MobileMarketIntegrationTest.class
+com\atirath\trading\OwaspApiSecurityIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$5.class
 com\atirath\trading\MemberTransactionsIntegrationTest.class
 com\atirath\trading\PortfolioScreenIntegrationTest.class
@@ -11,6 +12,7 @@ com\atirath\trading\MemberNotificationsIntegrationTest.class
 com\atirath\trading\MobileTradeIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$1.class
 com\atirath\trading\ProfileSettingsIntegrationTest.class
+com\atirath\trading\AdminAuthIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest.class
 com\atirath\trading\TradeTerminalIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$3.class

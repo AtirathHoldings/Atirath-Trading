@@ -32,4 +32,10 @@ public class MobileOrderPreviewDto {
     private Boolean isSufficient;
     private BigDecimal postOrderBalance;
     private String message;
+
+    // Additional fields for Screen 4: Order Review
+    private String settlementType;           // "Internal T+2 Cycle"
+    private String estimatedSettlementDate;  // e.g. "21 Nov 2026"
+    private String bankAccountMasked;        // "HDFC Bank (Escrow) ****4821"
+    private String escrowVerification;       // "Required upon matching"
 }

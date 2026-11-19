@@ -25,6 +25,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,6 +66,10 @@ public class AuthService {
     private final AppProperties appProperties;
     private final OtpService otpService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final AdminAccountRepository adminAccountRepository;
+    private final AdminLoginAttemptRepository adminLoginAttemptRepository;
+    private final AdminAuditService adminAuditService;
+    private final JdbcTemplate jdbcTemplate;
 
     private static final long MAX_DOCUMENT_SIZE_BYTES = 5L * 1024L * 1024L;
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
@@ -167,12 +177,48 @@ public class AuthService {
     }
 
     // =========================================================================
-    // 3. LOGIN (Supports Email or Mobile + Password)
+    // 3. LOGIN (Supports Admin from admin_accounts, or Email/Mobile from user_accounts)
     // =========================================================================
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String identifier = request.getIdentifier().trim();
 
+        // 1. Check if identifier matches an Admin Account (admin_accounts table)
+        Optional<AdminAccount> adminOpt = adminAccountRepository.findByEmailIgnoreCase(identifier);
+        if (adminOpt.isPresent()) {
+            AdminAccount admin = adminOpt.get();
+            String clientIp = extractClientIp();
+
+            if ("LOCKED".equalsIgnoreCase(admin.getAdminStatus())) {
+                recordAdminLoginAttempt(admin.getAdminId(), false, clientIp);
+                throw new ApiException("Your admin account is locked. Please contact system administrator.");
+            }
+            if ("INACTIVE".equalsIgnoreCase(admin.getAdminStatus())) {
+                recordAdminLoginAttempt(admin.getAdminId(), false, clientIp);
+                throw new ApiException("Your admin account is inactive.");
+            }
+
+            boolean passwordMatches = passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())
+                    || request.getPassword().equals(admin.getPasswordHash());
+            recordAdminLoginAttempt(admin.getAdminId(), passwordMatches, clientIp);
+
+            if (!passwordMatches) {
+                throw new InvalidCredentialsException("Invalid login credentials");
+            }
+
+            // If stored password was plain text, auto-upgrade it to BCrypt hash
+            if (!admin.getPasswordHash().startsWith("$2")) {
+                admin.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            }
+
+            admin.setLastLoginAt(OffsetDateTime.now());
+            adminAccountRepository.save(admin);
+
+            log.info("Admin logged in successfully. Admin ID: {}, Email: {}", admin.getAdminId(), admin.getEmail());
+            return buildAdminAuthResponse(admin);
+        }
+
+        // 2. Regular User Account Login (user_accounts & user_credentials)
         UserAccount account = userAccountRepository.findByEmailOrMobile(identifier)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid login credentials"));
 
@@ -457,8 +503,33 @@ public class AuthService {
     // =========================================================================
     @Transactional(readOnly = true)
     public UserProfileDto getUserProfile(Long userId) {
-        UserAccount account = userAccountRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + userId));
+        Optional<UserAccount> accountOpt = userAccountRepository.findById(userId);
+        if (accountOpt.isEmpty()) {
+            Optional<AdminAccount> adminOpt = adminAccountRepository.findById(userId);
+            if (adminOpt.isPresent()) {
+                AdminAccount admin = adminOpt.get();
+                return UserProfileDto.builder()
+                        .userId(admin.getAdminId())
+                        .accountType(AccountType.INDIVIDUAL)
+                        .email(admin.getEmail())
+                        .accountStatus(AccountStatus.ACTIVE)
+                        .role("ADMIN")
+                        .tradingEligible(true)
+                        .createdAt(admin.getCreatedAt())
+                        .individualProfile(UserProfileDto.IndividualProfileDto.builder()
+                                .individualId(admin.getAdminId())
+                                .fullName(admin.getAdminName())
+                                .createdAt(admin.getCreatedAt())
+                                .build())
+                        .kycDetails(UserProfileDto.KycSummaryDto.builder()
+                                .kycCompleted(true)
+                                .build())
+                        .build();
+            }
+            throw new ResourceNotFoundException("Account not found with ID: " + userId);
+        }
+
+        UserAccount account = accountOpt.get();
 
         UserProfileDto.UserProfileDtoBuilder builder = UserProfileDto.builder()
                 .userId(account.getUserId())
@@ -543,7 +614,7 @@ public class AuthService {
     // =========================================================================
     // 11. REFRESH TOKEN & LOGOUT
     // =========================================================================
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String token = request.getRefreshToken();
         if (!jwtTokenProvider.validateToken(token)
@@ -553,6 +624,17 @@ public class AuthService {
         }
 
         Long userId = jwtTokenProvider.getUserIdFromToken(token);
+        Claims claims = jwtTokenProvider.getClaims(token);
+        String role = claims.get("role", String.class);
+        if ("ADMIN".equalsIgnoreCase(role) || Boolean.TRUE.equals(claims.get("isAdmin", Boolean.class))) {
+            AdminAccount admin = adminAccountRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Admin account not found for token"));
+            if (!"ACTIVE".equalsIgnoreCase(admin.getAdminStatus())) {
+                throw new ApiException("Admin account is not active");
+            }
+            return buildAdminAuthResponse(admin);
+        }
+
         UserAccount account = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found for token"));
 
@@ -703,6 +785,56 @@ public class AuthService {
     // =========================================================================
     // HELPER METHODS
     // =========================================================================
+    private AuthResponse buildAdminAuthResponse(AdminAccount admin) {
+        String accessToken = jwtTokenProvider.generateAdminAccessToken(admin);
+        String refreshToken = jwtTokenProvider.generateAdminRefreshToken(admin);
+
+        UserAccountSummaryDto summary = UserAccountSummaryDto.builder()
+                .userId(admin.getAdminId())
+                .accountType(AccountType.INDIVIDUAL)
+                .email(admin.getEmail())
+                .mobileNumber(null)
+                .referralCode("ADMIN")
+                .accountStatus(AccountStatus.ACTIVE)
+                .displayName(admin.getAdminName())
+                .role("ADMIN")
+                .tradingEligible(true)
+                .kycCompleted(true)
+                .createdAt(admin.getCreatedAt())
+                .build();
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresInSeconds(jwtTokenProvider.getAccessTokenExpirationSeconds())
+                .user(summary)
+                .build();
+    }
+
+    private String extractClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String xForwardedFor = request.getHeader("X-Forwarded-For");
+                if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+                    return xForwardedFor.split(",")[0].trim();
+                }
+                String xRealIp = request.getHeader("X-Real-IP");
+                if (xRealIp != null && !xRealIp.isBlank()) {
+                    return xRealIp.trim();
+                }
+                return request.getRemoteAddr();
+            }
+        } catch (Exception ignored) {}
+        return "127.0.0.1";
+    }
+
+    private void recordAdminLoginAttempt(Long adminId, boolean success, String ipAddress) {
+        adminAuditService.recordAttempt(adminId, success, ipAddress);
+    }
+
     private AuthResponse buildAuthResponse(UserAccount account, String displayName) {
         String accessToken = jwtTokenProvider.generateAccessToken(account);
         String refreshToken = jwtTokenProvider.generateRefreshToken(account);

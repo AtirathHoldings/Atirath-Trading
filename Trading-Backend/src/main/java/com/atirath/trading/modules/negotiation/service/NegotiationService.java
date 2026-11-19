@@ -1,17 +1,35 @@
 package com.atirath.trading.modules.negotiation.service;
 
+import com.atirath.trading.common.AccountType;
 import com.atirath.trading.common.ResourceNotFoundException;
+import com.atirath.trading.modules.auth.model.CorporateProfile;
+import com.atirath.trading.modules.auth.model.IndividualProfile;
+import com.atirath.trading.modules.auth.model.UserAccount;
+import com.atirath.trading.modules.auth.repository.CorporateProfileRepository;
+import com.atirath.trading.modules.auth.repository.IndividualProfileRepository;
+import com.atirath.trading.modules.auth.repository.UserAccountRepository;
+import com.atirath.trading.modules.market.dto.MarketTickDto;
+import com.atirath.trading.modules.market.model.MarketCompany;
+import com.atirath.trading.modules.market.repository.MarketCompanyRepository;
+import com.atirath.trading.modules.market.repository.MarketOrderRepository;
+import com.atirath.trading.modules.market.service.MarketBroadcastService;
 import com.atirath.trading.modules.negotiation.dto.*;
 import com.atirath.trading.modules.negotiation.model.*;
 import com.atirath.trading.modules.negotiation.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +42,11 @@ public class NegotiationService {
     private final NegotiationOfferRepository negotiationOfferRepository;
     private final NegotiationMessageRepository negotiationMessageRepository;
     private final TradeAgreementRepository tradeAgreementRepository;
+    private final MarketCompanyRepository marketCompanyRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final IndividualProfileRepository individualProfileRepository;
+    private final CorporateProfileRepository corporateProfileRepository;
+    private final MarketBroadcastService broadcastService;
 
     private static final DecimalFormat CURRENCY_FMT = new DecimalFormat("#,##,##0.00");
     private static final DecimalFormat SHARES_FMT = new DecimalFormat("#,##,###");
@@ -41,6 +64,45 @@ public class NegotiationService {
 
     public void resetDemoData() {
         initDemoData();
+    }
+
+    public UserAccount resolveCurrentUser(Long explicitUserId) {
+        if (explicitUserId != null) {
+            return userAccountRepository.findById(explicitUserId).orElse(null);
+        }
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                String name = auth.getName();
+                if (name != null && !name.isBlank()) {
+                    try {
+                        Long uid = Long.parseLong(name);
+                        Optional<UserAccount> uOpt = userAccountRepository.findById(uid);
+                        if (uOpt.isPresent()) return uOpt.get();
+                    } catch (NumberFormatException ignored) {}
+                    Optional<UserAccount> uOpt = userAccountRepository.findByEmailIgnoreCase(name);
+                    if (uOpt.isPresent()) return uOpt.get();
+                    uOpt = userAccountRepository.findByMobileNumber(name);
+                    if (uOpt.isPresent()) return uOpt.get();
+                }
+                // An authenticated user identity was presented, but no matching account exists in DB
+                return null;
+            }
+        } catch (Exception ignored) {}
+
+        return userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com")
+                .or(() -> userAccountRepository.findAll().stream().findFirst())
+                .orElse(null);
+    }
+
+    public String resolveMemberId(UserAccount user) {
+        if (user == null) return "ATG10056";
+        if (user.getUserId() != null && user.getUserId() == 1L) return "ATG10027";
+        if (user.getEmail() != null && user.getEmail().contains("sairam")) return "ATG10027";
+        if (user.getUserId() != null && user.getUserId() == 56L) return "ATG10056";
+        if (user.getEmail() != null && user.getEmail().contains("rakesh")) return "ATG10056";
+        if (user.getReferralCode() != null && user.getReferralCode().startsWith("ATG")) return user.getReferralCode();
+        return "ATG" + (user.getUserId() != null ? (10000 + user.getUserId()) : "10099");
     }
 
     private void initDemoData() {
@@ -541,7 +603,30 @@ public class NegotiationService {
      * Dashboard Screen: summary KPI metrics, monthly insight chart, status donut chart, and paginated table
      */
     public NegotiationDashboardDto getDashboard(String tab, String search, int page, int size) {
-        List<NegotiationListItemDto> filtered = new ArrayList<>(liveNegotiationsList);
+        return getDashboard(tab, search, page, size, null);
+    }
+
+    public NegotiationDashboardDto getDashboard(String tab, String search, int page, int size, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        List<NegotiationListItemDto> allDtos;
+        List<Negotiation> dbList = Collections.emptyList();
+        try {
+            if (currentUser != null) {
+                dbList = negotiationRepository.findAllForUser(currentUser.getUserId());
+            } else {
+                dbList = Collections.emptyList();
+            }
+        } catch (Exception e) {
+            log.warn("Could not query negotiations from DB: {}", e.getMessage());
+        }
+
+        if (!dbList.isEmpty()) {
+            allDtos = dbList.stream().map(n -> mapDbToListItemDto(n, currentUser)).toList();
+        } else {
+            allDtos = Collections.emptyList();
+        }
+
+        List<NegotiationListItemDto> filtered = allDtos;
 
         // Tab filter
         if (tab != null && !tab.equalsIgnoreCase("ALL") && !tab.isBlank()) {
@@ -577,23 +662,23 @@ public class NegotiationService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        // KPI Counts computed dynamically from liveNegotiationsList
-        int activeCount = (int) liveNegotiationsList.stream()
+        // KPI Counts computed dynamically from DB records
+        int activeCount = (int) allDtos.stream()
                 .filter(n -> "Active".equalsIgnoreCase(n.getStatus()) || "Under Negotiation".equalsIgnoreCase(n.getStatus()))
                 .count();
-        int awaitingCount = (int) liveNegotiationsList.stream()
+        int awaitingCount = (int) allDtos.stream()
                 .filter(n -> "Awaiting Response".equalsIgnoreCase(n.getStatus()))
                 .count();
-        int acceptedCount = (int) liveNegotiationsList.stream()
+        int acceptedCount = (int) allDtos.stream()
                 .filter(n -> "Accepted".equalsIgnoreCase(n.getStatus()) || "Agreement Confirmed".equalsIgnoreCase(n.getStatus()))
                 .count();
-        int rejectedCount = (int) liveNegotiationsList.stream()
+        int rejectedCount = (int) allDtos.stream()
                 .filter(n -> "Rejected".equalsIgnoreCase(n.getStatus()))
                 .count();
-        int expiredCount = (int) liveNegotiationsList.stream()
+        int expiredCount = (int) allDtos.stream()
                 .filter(n -> "Expired".equalsIgnoreCase(n.getStatus()))
                 .count();
-        int totalCount = liveNegotiationsList.size();
+        int totalCount = allDtos.size();
 
         NegotiationSummaryDto summary = NegotiationSummaryDto.builder()
                 .allNegotiations(totalCount)
@@ -705,6 +790,22 @@ public class NegotiationService {
      * Negotiation Details Screen (Image 2)
      */
     public NegotiationDetailDto getNegotiationDetail(String negotiationNo) {
+        return getNegotiationDetail(negotiationNo, null);
+    }
+
+    public NegotiationDetailDto getNegotiationDetail(String negotiationNo, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        try {
+            Optional<Negotiation> optDb = negotiationRepository.findByNegotiationNo(negotiationNo);
+            if (optDb.isPresent()) {
+                NegotiationDetailDto dbDetail = buildDetailFromDb(optDb.get(), currentUser);
+                liveNegotiationDetails.put(negotiationNo, dbDetail);
+                return dbDetail;
+            }
+        } catch (Exception e) {
+            log.warn("Error loading negotiation {} from DB: {}", negotiationNo, e.getMessage());
+        }
+
         NegotiationDetailDto detail = liveNegotiationDetails.get(negotiationNo);
         if (detail == null) {
             // Check if item exists in list to build dynamic detail
@@ -727,7 +828,40 @@ public class NegotiationService {
      * Counter Offer Screen / Submission (Image 3)
      */
     public NegotiationDetailDto submitCounterOffer(String negotiationNo, CounterOfferRequestDto request) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return submitCounterOffer(negotiationNo, request, null);
+    }
+
+    public NegotiationDetailDto submitCounterOffer(String negotiationNo, CounterOfferRequestDto request, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        try {
+            Optional<Negotiation> optDb = negotiationRepository.findByNegotiationNo(negotiationNo);
+            if (optDb.isPresent()) {
+                Negotiation n = optDb.get();
+                n.setProposedPrice(request.getPricePerShare());
+                n.setQuantity(request.getQuantity());
+                n.setStatus("AWAITING_RESPONSE");
+                n.setUpdatedAt(OffsetDateTime.now());
+                negotiationRepository.save(n);
+
+                UserAccount offeringUser = currentUser != null ? currentUser : n.getInitiatorUser();
+
+                negotiationOfferRepository.save(NegotiationOffer.builder()
+                        .negotiation(n)
+                        .offeredByUser(offeringUser)
+                        .quantity(request.getQuantity())
+                        .offeredPrice(request.getPricePerShare())
+                        .offerMessage(request.getOtherTerms() != null && !request.getOtherTerms().isBlank()
+                                ? request.getOtherTerms()
+                                : "Counter offer submitted")
+                        .offerStatus("PENDING")
+                        .createdAt(OffsetDateTime.now())
+                        .build());
+            }
+        } catch (Exception e) {
+            log.warn("Error updating negotiation counter-offer in DB: {}", e.getMessage());
+        }
+
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
 
         // Update terms
         BigDecimal oldPrice = detail.getCompanyShareDetails().getLastTradedPrice();
@@ -845,7 +979,37 @@ public class NegotiationService {
      * Accept Offer (transitions to Trade Agreement)
      */
     public NegotiationDetailDto acceptOffer(String negotiationNo) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return acceptOffer(negotiationNo, null);
+    }
+
+    public NegotiationDetailDto acceptOffer(String negotiationNo, Long userId) {
+        try {
+            Optional<Negotiation> optDb = negotiationRepository.findByNegotiationNo(negotiationNo);
+            if (optDb.isPresent()) {
+                Negotiation n = optDb.get();
+                n.setStatus("ACCEPTED");
+                n.setUpdatedAt(OffsetDateTime.now());
+                negotiationRepository.save(n);
+
+                if (tradeAgreementRepository.findByNegotiation_NegotiationNo(negotiationNo).isEmpty()) {
+                    tradeAgreementRepository.save(TradeAgreement.builder()
+                            .agreementNo(negotiationNo)
+                            .negotiation(n)
+                            .buyerUser(n.getInitiatorUser())
+                            .sellerUser(n.getCounterpartyUser())
+                            .company(n.getCompany())
+                            .agreedQuantity(n.getQuantity())
+                            .agreedPrice(n.getProposedPrice())
+                            .agreementStatus("AGREEMENT_READY")
+                            .createdAt(OffsetDateTime.now())
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error accepting negotiation in DB: {}", e.getMessage());
+        }
+
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
         detail.setStatus("Accepted");
         if (detail.getAvailableActions() != null) {
             detail.getAvailableActions().setCanAccept(false);
@@ -975,7 +1139,23 @@ public class NegotiationService {
      * Reject Offer
      */
     public NegotiationDetailDto rejectOffer(String negotiationNo, String reason) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return rejectOffer(negotiationNo, reason, null);
+    }
+
+    public NegotiationDetailDto rejectOffer(String negotiationNo, String reason, Long userId) {
+        try {
+            Optional<Negotiation> optDb = negotiationRepository.findByNegotiationNo(negotiationNo);
+            if (optDb.isPresent()) {
+                Negotiation n = optDb.get();
+                n.setStatus("REJECTED");
+                n.setUpdatedAt(OffsetDateTime.now());
+                negotiationRepository.save(n);
+            }
+        } catch (Exception e) {
+            log.warn("Error rejecting negotiation in DB: {}", e.getMessage());
+        }
+
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
         detail.setStatus("Rejected");
         if (detail.getAvailableActions() != null) {
             detail.getAvailableActions().setCanAccept(false);
@@ -1012,7 +1192,11 @@ public class NegotiationService {
      * Request a call with the counterparty
      */
     public NegotiationDetailDto requestCall(String negotiationNo) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return requestCall(negotiationNo, null);
+    }
+
+    public NegotiationDetailDto requestCall(String negotiationNo, Long userId) {
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
 
         List<NegotiationDetailDto.TimelineEventDto> mutableTimeline = detail.getTimeline() != null
                 ? new ArrayList<>(detail.getTimeline())
@@ -1047,7 +1231,11 @@ public class NegotiationService {
      * Negotiation History Screen (Image 4)
      */
     public NegotiationHistoryDto getHistory(String negotiationNo) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return getHistory(negotiationNo, null);
+    }
+
+    public NegotiationHistoryDto getHistory(String negotiationNo, Long userId) {
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
         List<NegotiationHistoryDto.HistoryItemDto> timeline = liveHistoryItems.getOrDefault(negotiationNo, Collections.emptyList());
 
         boolean isDefaultSeed = "NEG250918001".equalsIgnoreCase(negotiationNo) && timeline.size() == 6;
@@ -1122,15 +1310,15 @@ public class NegotiationService {
                 .sellerLastOffer("₹ " + CURRENCY_FMT.format(latestCounterPrice) + " | " + SHARES_FMT.format(qty) + " shares")
                 .timeline(timeline)
                 .latestTermsComparison(NegotiationHistoryDto.LatestTermsComparisonDto.builder()
-                        .yourOfferPrice(latestYourPrice)
-                        .sellerOfferPrice(latestCounterPrice)
-                        .yourQuantity(qty)
-                        .sellerQuantity(qty)
-                        .yourOrderValue(yourVal)
-                        .sellerOrderValue(counterVal)
-                        .priceDifference(pDiffStr)
-                        .percentageDifference(pctStr)
-                        .build())
+                    .yourOfferPrice(latestYourPrice)
+                    .sellerOfferPrice(latestCounterPrice)
+                    .yourQuantity(qty)
+                    .sellerQuantity(qty)
+                    .yourOrderValue(yourVal)
+                    .sellerOrderValue(counterVal)
+                    .priceDifference(pDiffStr)
+                    .percentageDifference(pctStr)
+                    .build())
                 .actions(detail.getAvailableActions())
                 .build();
     }
@@ -1139,7 +1327,28 @@ public class NegotiationService {
      * Post a chat message in negotiation
      */
     public NegotiationHistoryDto postMessage(String negotiationNo, NegotiationMessageRequestDto request) {
-        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
+        return postMessage(negotiationNo, request, null);
+    }
+
+    public NegotiationHistoryDto postMessage(String negotiationNo, NegotiationMessageRequestDto request, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        try {
+            Optional<Negotiation> optDb = negotiationRepository.findByNegotiationNo(negotiationNo);
+            if (optDb.isPresent()) {
+                Negotiation n = optDb.get();
+                UserAccount sender = currentUser != null ? currentUser : n.getInitiatorUser();
+                negotiationMessageRepository.save(NegotiationMessage.builder()
+                        .negotiation(n)
+                        .senderUser(sender)
+                        .messageText(request.getMessageText())
+                        .sentAt(OffsetDateTime.now())
+                        .build());
+            }
+        } catch (Exception e) {
+            log.warn("Error saving negotiation message in DB: {}", e.getMessage());
+        }
+
+        NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
         List<NegotiationHistoryDto.HistoryItemDto> history = liveHistoryItems.computeIfAbsent(negotiationNo, k -> new ArrayList<>());
 
         history.add(NegotiationHistoryDto.HistoryItemDto.builder()
@@ -1153,17 +1362,21 @@ public class NegotiationService {
                 .isCurrentUser(true)
                 .build());
 
-        return getHistory(negotiationNo);
+        return getHistory(negotiationNo, userId);
     }
 
     /**
      * Trade Agreement Screen (Image 5)
      */
     public TradeAgreementDto getTradeAgreement(String negotiationNo) {
+        return getTradeAgreement(negotiationNo, null);
+    }
+
+    public TradeAgreementDto getTradeAgreement(String negotiationNo, Long userId) {
         TradeAgreementDto agreement = liveTradeAgreements.get(negotiationNo);
         if (agreement == null) {
-            NegotiationDetailDto detail = getNegotiationDetail(negotiationNo);
-            acceptOffer(negotiationNo);
+            NegotiationDetailDto detail = getNegotiationDetail(negotiationNo, userId);
+            acceptOffer(negotiationNo, userId);
             agreement = liveTradeAgreements.get(negotiationNo);
         }
         return agreement;
@@ -1173,7 +1386,30 @@ public class NegotiationService {
      * Confirm Agreement & Proceed to Escrow (Image 5 Bottom Action)
      */
     public TradeAgreementDto confirmAgreement(String negotiationNo, TradeAgreementConfirmRequestDto request) {
-        TradeAgreementDto agreement = getTradeAgreement(negotiationNo);
+        return confirmAgreement(negotiationNo, request, null);
+    }
+
+    public TradeAgreementDto confirmAgreement(String negotiationNo, TradeAgreementConfirmRequestDto request, Long userId) {
+        try {
+            Optional<TradeAgreement> optAg = tradeAgreementRepository.findByNegotiation_NegotiationNo(negotiationNo);
+            if (optAg.isPresent()) {
+                TradeAgreement ag = optAg.get();
+                ag.setAgreementStatus("CONFIRMED");
+                ag.setBuyerAcceptedAt(OffsetDateTime.now());
+                tradeAgreementRepository.save(ag);
+
+                Negotiation n = ag.getNegotiation();
+                if (n != null) {
+                    n.setStatus("AGREEMENT_CONFIRMED");
+                    n.setUpdatedAt(OffsetDateTime.now());
+                    negotiationRepository.save(n);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error confirming agreement in DB: {}", e.getMessage());
+        }
+
+        TradeAgreementDto agreement = getTradeAgreement(negotiationNo, userId);
         agreement.setStatus("Agreement Confirmed - Escrow Initiated");
 
         // Update checklist
@@ -1371,6 +1607,283 @@ public class NegotiationService {
         return fallback;
     }
 
+    private String resolveUserName(UserAccount user) {
+        if (user == null) return "Counterparty";
+        if (user.getAccountType() == AccountType.CORPORATE) {
+            return corporateProfileRepository.findByUserAccount_UserId(user.getUserId())
+                    .map(CorporateProfile::getCompanyName)
+                    .orElse("Corporate Member");
+        }
+        return individualProfileRepository.findByUserAccount_UserId(user.getUserId())
+                .map(IndividualProfile::getFullName)
+                .orElse("Verified Member");
+    }
+
+    private String mapDbStatusToDisplay(String dbStatus) {
+        if (dbStatus == null) return "Active";
+        return switch (dbStatus.toUpperCase()) {
+            case "OPEN", "ACTIVE" -> "Active";
+            case "UNDER_NEGOTIATION" -> "Under Negotiation";
+            case "AWAITING_RESPONSE", "PENDING" -> "Awaiting Response";
+            case "ACCEPTED" -> "Accepted";
+            case "AGREEMENT_CONFIRMED" -> "Agreement Confirmed";
+            case "AGREEMENT_READY" -> "Agreement Ready";
+            case "REJECTED" -> "Rejected";
+            case "EXPIRED" -> "Expired";
+            default -> dbStatus;
+        };
+    }
+
+    private NegotiationListItemDto mapDbToListItemDto(Negotiation n) {
+        return mapDbToListItemDto(n, null);
+    }
+
+    private NegotiationListItemDto mapDbToListItemDto(Negotiation n, UserAccount currentUser) {
+        MarketCompany comp = n.getCompany();
+        String symbol = comp != null ? comp.getSymbol() : "ATG-H";
+        String compName = comp != null ? comp.getCompanyName() : resolveCompanyName(symbol);
+
+        boolean isInitiator = currentUser == null || (n.getInitiatorUser() != null && currentUser.getUserId().equals(n.getInitiatorUser().getUserId()));
+        UserAccount counterparty = isInitiator ? n.getCounterpartyUser() : n.getInitiatorUser();
+
+        String cpName = resolveUserName(counterparty);
+        String cpMemberId = resolveMemberId(counterparty);
+
+        String displayStatus = mapDbStatusToDisplay(n.getStatus());
+        String updatedStr = n.getUpdatedAt() != null
+                ? n.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a"))
+                : (n.getCreatedAt() != null ? n.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a")) : "Recent");
+
+        MarketTickDto tick = broadcastService != null ? broadcastService.getTick(symbol) : null;
+        BigDecimal currentPrice = (tick != null && tick.getCurrentPrice() != null)
+                ? tick.getCurrentPrice()
+                : n.getProposedPrice();
+
+        String baseType = "Buy";
+        if (n.getOrder() != null && n.getOrder().getOrderSide() != null) {
+            baseType = "BUY".equalsIgnoreCase(n.getOrder().getOrderSide()) ? "Buy" : "Sell";
+        } else if ("FVT".equalsIgnoreCase(symbol) || "CSI".equalsIgnoreCase(symbol) || "ROHE".equalsIgnoreCase(symbol) || "ATG-E".equalsIgnoreCase(symbol) || "ATG-L".equalsIgnoreCase(symbol) || "ATG-R".equalsIgnoreCase(symbol)) {
+            baseType = "Sell";
+        }
+
+        String type = isInitiator ? baseType : ("Buy".equalsIgnoreCase(baseType) ? "Sell" : "Buy");
+
+        return NegotiationListItemDto.builder()
+                .negotiationNo(n.getNegotiationNo())
+                .companyName(compName)
+                .companySymbol(symbol)
+                .type(type)
+                .counterpartyName(cpName)
+                .counterpartyMemberId(cpMemberId)
+                .shares(n.getQuantity())
+                .currentPrice(currentPrice)
+                .proposedPrice(n.getProposedPrice())
+                .status(displayStatus)
+                .lastUpdated(updatedStr)
+                .build();
+    }
+
+    private NegotiationDetailDto buildDetailFromDb(Negotiation n) {
+        return buildDetailFromDb(n, null);
+    }
+
+    private NegotiationDetailDto buildDetailFromDb(Negotiation n, UserAccount currentUser) {
+        String negNo = n.getNegotiationNo();
+        MarketCompany comp = n.getCompany();
+        String symbol = comp != null ? comp.getSymbol() : "ATG-H";
+        String compName = comp != null ? comp.getCompanyName() : resolveCompanyName(symbol);
+
+        UserAccount initUser = n.getInitiatorUser();
+        UserAccount cpUser = n.getCounterpartyUser();
+
+        String initName = resolveUserName(initUser);
+        String cpName = resolveUserName(cpUser);
+
+        String initMemberId = resolveMemberId(initUser);
+        String cpMemberId = resolveMemberId(cpUser);
+
+        String initEmail = initUser != null && initUser.getEmail() != null ? initUser.getEmail() : "sairam@atirath.com";
+        String cpEmail = cpUser != null && cpUser.getEmail() != null ? cpUser.getEmail() : "counterparty@atirath.com";
+
+        String initPhone = initUser != null && initUser.getMobileNumber() != null ? "+91 " + initUser.getMobileNumber() : "+91 98765 43210";
+        String cpPhone = cpUser != null && cpUser.getMobileNumber() != null ? "+91 " + cpUser.getMobileNumber() : "+91 91234 56789";
+
+        boolean isCurrentUserBuyer = currentUser == null || (initUser != null && currentUser.getUserId().equals(initUser.getUserId()));
+        boolean isCurrentUserSeller = currentUser != null && cpUser != null && currentUser.getUserId().equals(cpUser.getUserId());
+
+        NegotiationDetailDto.PartyDto buyer = NegotiationDetailDto.PartyDto.builder()
+                .isCurrentUser(isCurrentUserBuyer)
+                .companyName("Atirath Holdings India Limited")
+                .companySymbol(symbol)
+                .verified(true)
+                .memberId(initMemberId)
+                .memberName(initName)
+                .email(initEmail)
+                .phone(initPhone)
+                .currentHoldings(12500L)
+                .quantity(n.getQuantity())
+                .partyRole("BUYER")
+                .build();
+
+        NegotiationDetailDto.PartyDto seller = NegotiationDetailDto.PartyDto.builder()
+                .isCurrentUser(isCurrentUserSeller)
+                .companyName(cpName.contains("Mehta") ? "Farm Vantara Technologies" : compName)
+                .companySymbol(symbol)
+                .verified(true)
+                .memberId(cpMemberId)
+                .memberName(cpName)
+                .email(cpEmail)
+                .phone(cpPhone)
+                .currentHoldings(5000L)
+                .quantity(n.getQuantity())
+                .partyRole("SELLER")
+                .build();
+
+        MarketTickDto tick = broadcastService != null ? broadcastService.getTick(symbol) : null;
+        BigDecimal curPrice = (tick != null && tick.getCurrentPrice() != null)
+                ? tick.getCurrentPrice()
+                : n.getProposedPrice();
+
+        NegotiationDetailDto.CompanyShareDetailsDto shareDetails = NegotiationDetailDto.CompanyShareDetailsDto.builder()
+                .companyName(compName)
+                .symbol(symbol)
+                .companyType("Private Limited")
+                .sector(comp != null ? comp.getSector() : "Diversified")
+                .isin(symbol + "-001")
+                .faceValue(new BigDecimal("10.00"))
+                .lastTradedPrice(curPrice)
+                .fiftyTwoWeekHigh(curPrice.multiply(new BigDecimal("1.15")).setScale(2, RoundingMode.HALF_UP))
+                .fiftyTwoWeekLow(curPrice.multiply(new BigDecimal("0.85")).setScale(2, RoundingMode.HALF_UP))
+                .build();
+
+        List<NegotiationOffer> offers = Collections.emptyList();
+        try {
+            offers = negotiationOfferRepository.findByNegotiation_NegotiationNoOrderByCreatedAtAsc(negNo);
+        } catch (Exception ignored) {}
+
+        BigDecimal buyerOfferPrice = n.getProposedPrice();
+        BigDecimal sellerOfferPrice = curPrice;
+        if (!offers.isEmpty()) {
+            boolean hasBuyer = false;
+            boolean hasSeller = false;
+            for (NegotiationOffer o : offers) {
+                if (initUser != null && o.getOfferedByUser() != null && o.getOfferedByUser().getUserId().equals(initUser.getUserId())) {
+                    if (!hasBuyer) {
+                        buyerOfferPrice = o.getOfferedPrice();
+                        hasBuyer = true;
+                    }
+                } else {
+                    if (!hasSeller) {
+                        sellerOfferPrice = o.getOfferedPrice();
+                        hasSeller = true;
+                    }
+                }
+            }
+        }
+
+        BigDecimal diffPrice = buyerOfferPrice.subtract(sellerOfferPrice);
+        String diffStr = (diffPrice.compareTo(BigDecimal.ZERO) < 0 ? "- " : "+ ") + "₹ " + diffPrice.abs().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal orderVal = buyerOfferPrice.multiply(BigDecimal.valueOf(n.getQuantity()));
+        BigDecimal sellerVal = sellerOfferPrice.multiply(BigDecimal.valueOf(n.getQuantity()));
+        BigDecimal valDiff = orderVal.subtract(sellerVal);
+        String valDiffStr = (valDiff.compareTo(BigDecimal.ZERO) < 0 ? "- " : "+ ") + "₹ " + CURRENCY_FMT.format(valDiff.abs());
+
+        List<NegotiationDetailDto.NegotiationTermRowDto> terms = new ArrayList<>(List.of(
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Price per Share")
+                        .buyerOffer("₹ " + CURRENCY_FMT.format(buyerOfferPrice))
+                        .sellerOffer("₹ " + CURRENCY_FMT.format(sellerOfferPrice))
+                        .currentProposal("₹ " + CURRENCY_FMT.format(n.getProposedPrice()))
+                        .difference(diffStr)
+                        .highlighted(true)
+                        .build(),
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Quantity (Shares)")
+                        .buyerOffer(SHARES_FMT.format(n.getQuantity()))
+                        .sellerOffer(SHARES_FMT.format(n.getQuantity()))
+                        .currentProposal(SHARES_FMT.format(n.getQuantity()))
+                        .difference("-")
+                        .highlighted(false)
+                        .build(),
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Order Value")
+                        .buyerOffer("₹ " + CURRENCY_FMT.format(orderVal))
+                        .sellerOffer("₹ " + CURRENCY_FMT.format(sellerVal))
+                        .currentProposal("₹ " + CURRENCY_FMT.format(n.getProposedPrice().multiply(BigDecimal.valueOf(n.getQuantity()))))
+                        .difference(valDiffStr)
+                        .highlighted(false)
+                        .build(),
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Settlement Timeline")
+                        .buyerOffer("T+3 Days")
+                        .sellerOffer("T+3 Days")
+                        .currentProposal("T+3 Days")
+                        .difference("-")
+                        .highlighted(false)
+                        .build(),
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Payment Mode")
+                        .buyerOffer("Bank Transfer (Escrow)")
+                        .sellerOffer("Bank Transfer (Escrow)")
+                        .currentProposal("Bank Transfer (Escrow)")
+                        .difference("-")
+                        .highlighted(false)
+                        .build(),
+                NegotiationDetailDto.NegotiationTermRowDto.builder()
+                        .parameter("Other Terms")
+                        .buyerOffer("Standard")
+                        .sellerOffer("Standard")
+                        .currentProposal("Standard")
+                        .difference("-")
+                        .highlighted(false)
+                        .build()
+        ));
+
+        List<NegotiationDetailDto.TimelineEventDto> timeline = new ArrayList<>();
+        int step = 1;
+        if (!offers.isEmpty()) {
+            for (NegotiationOffer o : offers) {
+                boolean isBuyer = initUser != null && o.getOfferedByUser() != null && o.getOfferedByUser().getUserId().equals(initUser.getUserId());
+                String senderName = isBuyer ? initName : cpName;
+                String senderCode = isBuyer ? "SV" : "RM";
+                String tStr = o.getCreatedAt() != null ? o.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "Recent";
+                timeline.add(NegotiationDetailDto.TimelineEventDto.builder()
+                        .stepNumber(step++)
+                        .title(isBuyer ? (step == offers.size() + 1 ? "Your Latest Offer" : "Counter Offer from You") : "Counter Offer from Seller")
+                        .description(o.getOfferMessage() != null ? o.getOfferMessage() : ("Proposed ₹ " + CURRENCY_FMT.format(o.getOfferedPrice())))
+                        .timestamp(tStr)
+                        .senderCode(senderCode)
+                        .senderName(senderName)
+                        .status(step == offers.size() + 1 ? "ACTIVE" : "COMPLETED")
+                        .price("₹ " + CURRENCY_FMT.format(o.getOfferedPrice()))
+                        .shares(SHARES_FMT.format(o.getQuantity()) + " shares")
+                        .build());
+            }
+        }
+
+        String displayStatus = mapDbStatusToDisplay(n.getStatus());
+        boolean canAct = !"ACCEPTED".equalsIgnoreCase(n.getStatus()) && !"REJECTED".equalsIgnoreCase(n.getStatus()) && !"EXPIRED".equalsIgnoreCase(n.getStatus());
+
+        return NegotiationDetailDto.builder()
+                .negotiationNo(negNo)
+                .status(displayStatus)
+                .initiatedOn(n.getCreatedAt() != null ? n.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "17 Sep 2025, 11:20 AM")
+                .expiresAt(n.getExpiresAt() != null ? n.getExpiresAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "20 Sep 2025, 11:59 PM")
+                .expiresIn("2 days")
+                .buyer(buyer)
+                .seller(seller)
+                .companyShareDetails(shareDetails)
+                .negotiationTerms(terms)
+                .timeline(timeline)
+                .availableActions(NegotiationDetailDto.AvailableActionsDto.builder()
+                        .canAccept(canAct)
+                        .canCounter(canAct)
+                        .canReject(canAct)
+                        .canRequestCall(canAct)
+                        .build())
+                .build();
+    }
+
     private String resolveCompanyName(String symbol) {
         if (symbol == null) {
             return "Atirath Group Company";
@@ -1396,13 +1909,18 @@ public class NegotiationService {
      * Start New Negotiation (Image 1 Quick Action / Header button)
      */
     public NegotiationListItemDto initiateNegotiation(InitiateNegotiationRequestDto request) {
+        return initiateNegotiation(request, null);
+    }
+
+    public NegotiationListItemDto initiateNegotiation(InitiateNegotiationRequestDto request, Long userId) {
+        UserAccount indiv = resolveCurrentUser(userId);
         String newNo = "NEG" + System.currentTimeMillis() % 1000000000L;
         String symbol = request.getCompanySymbol().trim().toUpperCase();
         String companyName = resolveCompanyName(symbol);
         String side = "SELL".equalsIgnoreCase(request.getType()) ? "Sell" : "Buy";
         String cpId = request.getCounterpartyMemberId() != null && !request.getCounterpartyMemberId().isBlank()
                 ? request.getCounterpartyMemberId().trim()
-                : "ATG10099";
+                : "ATG10056";
 
         NegotiationListItemDto item = NegotiationListItemDto.builder()
                 .negotiationNo(newNo)
@@ -1417,6 +1935,40 @@ public class NegotiationService {
                 .status("Active")
                 .lastUpdated("Just now")
                 .build();
+
+        try {
+            MarketCompany comp = marketCompanyRepository.findBySymbolIgnoreCase(symbol).orElse(null);
+            UserAccount cp = userAccountRepository.findByReferralCode(cpId)
+                    .or(() -> userAccountRepository.findByEmailIgnoreCase("rakesh@farmvantara.com"))
+                    .orElse(null);
+
+            if (comp != null && indiv != null && cp != null) {
+                Negotiation neg = negotiationRepository.save(Negotiation.builder()
+                        .negotiationNo(newNo)
+                        .company(comp)
+                        .initiatorUser(indiv)
+                        .counterpartyUser(cp)
+                        .quantity(request.getShares())
+                        .proposedPrice(request.getProposedPrice())
+                        .status("ACTIVE")
+                        .expiresAt(OffsetDateTime.now().plusDays(7))
+                        .createdAt(OffsetDateTime.now())
+                        .updatedAt(OffsetDateTime.now())
+                        .build());
+
+                negotiationOfferRepository.save(NegotiationOffer.builder()
+                        .negotiation(neg)
+                        .offeredByUser(indiv)
+                        .quantity(request.getShares())
+                        .offeredPrice(request.getProposedPrice())
+                        .offerMessage("Initial offer: ₹ " + request.getProposedPrice())
+                        .offerStatus("PENDING")
+                        .createdAt(OffsetDateTime.now())
+                        .build());
+            }
+        } catch (Exception e) {
+            log.warn("Error persisting initiated negotiation: {}", e.getMessage());
+        }
 
         liveNegotiationsList.add(0, item);
 
@@ -1967,6 +2519,10 @@ public class NegotiationService {
      * Negotiation Notifications Screen (Image 6)
      */
     public NegotiationNotificationsPageDto getNotificationsPage(String category, String search, Long selectedId) {
+        return getNotificationsPage(category, search, selectedId, null);
+    }
+
+    public NegotiationNotificationsPageDto getNotificationsPage(String category, String search, Long selectedId, Long userId) {
         List<NegotiationNotificationItemDto> list = new ArrayList<>(liveNotifications);
 
         // Filter by category / tab

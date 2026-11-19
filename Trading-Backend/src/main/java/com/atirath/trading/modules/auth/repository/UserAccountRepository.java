@@ -15,6 +15,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     Optional<UserAccount> findByMobileNumber(String mobileNumber);
 
+    Optional<UserAccount> findByReferralCode(String referralCode);
+
     @Query("SELECT u FROM UserAccount u WHERE LOWER(u.email) = LOWER(:identifier) OR u.mobileNumber = :identifier")
     Optional<UserAccount> findByEmailOrMobile(@Param("identifier") String identifier);
 

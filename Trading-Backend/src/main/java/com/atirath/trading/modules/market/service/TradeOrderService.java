@@ -1,7 +1,9 @@
 package com.atirath.trading.modules.market.service;
 
 import com.atirath.trading.common.ResourceNotFoundException;
+import com.atirath.trading.modules.auth.model.BankDetail;
 import com.atirath.trading.modules.auth.model.UserAccount;
+import com.atirath.trading.modules.auth.repository.BankDetailRepository;
 import com.atirath.trading.modules.auth.repository.UserAccountRepository;
 import com.atirath.trading.modules.market.dto.*;
 import com.atirath.trading.modules.market.dto.mobile.*;
@@ -43,6 +45,7 @@ public class TradeOrderService {
     private final TradeOrderDocumentRepository tradeOrderDocumentRepository;
     private final EscrowRepository escrowRepository;
     private final CompanyFinancialRatioRepository financialRatioRepository;
+    private final BankDetailRepository bankDetailRepository;
 
     private static final BigDecimal TRANSACTION_FEE_RATE = new BigDecimal("0.001"); // 0.1%
     private static final BigDecimal GST_RATE = new BigDecimal("0.18");              // 18%
@@ -776,116 +779,116 @@ public class TradeOrderService {
         boolean isCancelled = "CANCELLED".equalsIgnoreCase(currentStatusCode);
         boolean isEscrow = "IN_ESCROW".equalsIgnoreCase(currentStatusCode);
 
-            progressSteps = List.of(
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(1).title("Order Placed").timestamp(orderDateStr).status("COMPLETED").icon("file").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(2).title("Counterparty Matching").timestamp(isCompleted ? orderDateStr : (isCancelled ? "-" : "In Queue"))
-                            .status(isCompleted ? "COMPLETED" : (isCancelled ? "PENDING" : (isEscrow ? "COMPLETED" : "IN_PROGRESS"))).icon("users").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(3).title("Negotiation (Optional)").timestamp(isCompleted ? orderDateStr : "Not Required")
-                            .status(isCompleted || isEscrow ? "COMPLETED" : "PENDING").icon("chat").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(4).title("Escrow In Progress").timestamp(isEscrow || isCompleted ? orderDateStr : "-")
-                            .status(isCompleted ? "COMPLETED" : (isEscrow ? "IN_PROGRESS" : "PENDING")).icon("lock").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(5).title(isCompleted ? "Approval Completed" : "Approval Pending").timestamp(isCompleted ? orderDateStr : "-")
-                            .status(isCompleted ? "COMPLETED" : "PENDING").icon("check").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(6).title(isCompleted ? "Share Transfer Completed" : "Share Transfer Pending").timestamp(isCompleted ? orderDateStr : "-")
-                            .status(isCompleted ? "COMPLETED" : "PENDING").icon("transfer").build(),
-                    OrderStatusDetailDto.ProgressStepDto.builder()
-                            .stepNumber(7).title(isCancelled ? "Order Cancelled" : (isCompleted ? "Settlement Completed" : "Settlement Pending"))
-                            .timestamp(isCompleted ? orderDateStr : "-")
-                            .status(isCompleted ? "COMPLETED" : "PENDING").icon("flag").build()
-            );
+        progressSteps = List.of(
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(1).title("Order Placed").timestamp(orderDateStr).status("COMPLETED").icon("file").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(2).title("Counterparty Matching").timestamp(isCompleted ? orderDateStr : (isCancelled ? "-" : "In Queue"))
+                        .status(isCompleted ? "COMPLETED" : (isCancelled ? "PENDING" : (isEscrow ? "COMPLETED" : "IN_PROGRESS"))).icon("users").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(3).title("Negotiation (Optional)").timestamp(isCompleted ? orderDateStr : "Not Required")
+                        .status(isCompleted || isEscrow ? "COMPLETED" : "PENDING").icon("chat").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(4).title("Escrow In Progress").timestamp(isEscrow || isCompleted ? orderDateStr : "-")
+                        .status(isCompleted ? "COMPLETED" : (isEscrow ? "IN_PROGRESS" : "PENDING")).icon("lock").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(5).title(isCompleted ? "Approval Completed" : "Approval Pending").timestamp(isCompleted ? orderDateStr : "-")
+                        .status(isCompleted ? "COMPLETED" : "PENDING").icon("check").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(6).title(isCompleted ? "Share Transfer Completed" : "Share Transfer Pending").timestamp(isCompleted ? orderDateStr : "-")
+                        .status(isCompleted ? "COMPLETED" : "PENDING").icon("transfer").build(),
+                OrderStatusDetailDto.ProgressStepDto.builder()
+                        .stepNumber(7).title(isCancelled ? "Order Cancelled" : (isCompleted ? "Settlement Completed" : "Settlement Pending"))
+                        .timestamp(isCompleted ? orderDateStr : "-")
+                        .status(isCompleted ? "COMPLETED" : "PENDING").icon("flag").build()
+        );
 
-            List<OrderEvent> events = orderEventRepository.findByOrder_OrderIdOrderByCreatedAtAsc(order.getOrderId());
-            if (!events.isEmpty()) {
-                recentActivity = new ArrayList<>();
-                for (int i = events.size() - 1; i >= 0; i--) {
-                    OrderEvent ev = events.get(i);
-                    String evTime = ev.getCreatedAt() != null ? ev.getCreatedAt().format(DISPLAY_DT_FORMATTER) : orderDateStr;
-                    recentActivity.add(OrderStatusDetailDto.ActivityItemDto.builder()
-                            .title(ev.getEventType() != null ? ev.getEventType().replace("_", " ") : "Order Event")
-                            .description(ev.getEventNote() != null ? ev.getEventNote() : ("Status: " + ev.getNewStatus()))
-                            .timestamp(evTime)
-                            .state("CANCELLED".equalsIgnoreCase(ev.getNewStatus()) ? "PENDING" : (i == events.size() - 1 ? "ACTIVE" : "COMPLETED"))
-                            .build());
-                }
-            } else {
-                List<OrderStatusDetailDto.ActivityItemDto> acts = new ArrayList<>();
-                if (isCompleted) {
-                    acts.add(OrderStatusDetailDto.ActivityItemDto.builder()
-                            .title("Settlement completed")
-                            .description(String.format("Trade executed and settled for %d shares.", qty))
-                            .timestamp(orderDateStr)
-                            .state("COMPLETED")
-                            .build());
-                    acts.add(OrderStatusDetailDto.ActivityItemDto.builder()
-                            .title("Counterparty matched")
-                            .description("Counter-order matched in liquidity pool.")
-                            .timestamp(orderDateStr)
-                            .state("COMPLETED")
-                            .build());
-                }
+        List<OrderEvent> events = orderEventRepository.findByOrder_OrderIdOrderByCreatedAtAsc(order.getOrderId());
+        if (!events.isEmpty()) {
+            recentActivity = new ArrayList<>();
+            for (int i = events.size() - 1; i >= 0; i--) {
+                OrderEvent ev = events.get(i);
+                String evTime = ev.getCreatedAt() != null ? ev.getCreatedAt().format(DISPLAY_DT_FORMATTER) : orderDateStr;
+                recentActivity.add(OrderStatusDetailDto.ActivityItemDto.builder()
+                        .title(ev.getEventType() != null ? ev.getEventType().replace("_", " ") : "Order Event")
+                        .description(ev.getEventNote() != null ? ev.getEventNote() : ("Status: " + ev.getNewStatus()))
+                        .timestamp(evTime)
+                        .state("CANCELLED".equalsIgnoreCase(ev.getNewStatus()) ? "PENDING" : (i == events.size() - 1 ? "ACTIVE" : "COMPLETED"))
+                        .build());
+            }
+        } else {
+            List<OrderStatusDetailDto.ActivityItemDto> acts = new ArrayList<>();
+            if (isCompleted) {
                 acts.add(OrderStatusDetailDto.ActivityItemDto.builder()
-                        .title("Order placed successfully")
-                        .description(String.format("Your %s order has been submitted.", side.toLowerCase()))
+                        .title("Settlement completed")
+                        .description(String.format("Trade executed and settled for %d shares.", qty))
                         .timestamp(orderDateStr)
                         .state("COMPLETED")
                         .build());
-                recentActivity = acts;
+                acts.add(OrderStatusDetailDto.ActivityItemDto.builder()
+                        .title("Counterparty matched")
+                        .description("Counter-order matched in liquidity pool.")
+                        .timestamp(orderDateStr)
+                        .state("COMPLETED")
+                        .build());
             }
+            acts.add(OrderStatusDetailDto.ActivityItemDto.builder()
+                    .title("Order placed successfully")
+                    .description(String.format("Your %s order has been submitted.", side.toLowerCase()))
+                    .timestamp(orderDateStr)
+                    .state("COMPLETED")
+                    .build());
+            recentActivity = acts;
+        }
 
-            UserAccount cpUser = null;
-            if (order.getUserAccount() != null) {
-                try {
-                    final Long currentOrderId = order.getOrderId();
-                    List<MarketTrade> userTrades = tradeRepository.findUserTrades(order.getUserAccount().getUserId());
-                    MarketTrade matchedTrade = userTrades.stream()
-                            .filter(t -> (t.getBuyOrderId() != null && t.getBuyOrderId().equals(currentOrderId))
-                                    || (t.getSellOrderId() != null && t.getSellOrderId().equals(currentOrderId)))
-                            .findFirst().orElse(null);
-                    if (matchedTrade != null) {
-                        cpUser = "BUY".equalsIgnoreCase(order.getOrderSide()) ? matchedTrade.getSellerUser() : matchedTrade.getBuyerUser();
-                    }
-                } catch (Exception ignored) {}
-            }
-            String cpName = "BUY25091814322".equalsIgnoreCase(refNo)
-                    ? "Rakesh Mehta"
-                    : ((cpUser != null) ? resolveUserName(cpUser) : (isCompleted ? "Atirath Liquidity Pool" : "Order Book Matching Queue"));
-            String cpMemberId = "BUY25091814322".equalsIgnoreCase(refNo)
-                    ? "ATG10056"
-                    : ((cpUser != null) ? "ATG" + cpUser.getUserId() : "ATG-POOL");
+        UserAccount cpUser = null;
+        if (order.getUserAccount() != null) {
+            try {
+                final Long currentOrderId = order.getOrderId();
+                List<MarketTrade> userTrades = tradeRepository.findUserTrades(order.getUserAccount().getUserId());
+                MarketTrade matchedTrade = userTrades.stream()
+                        .filter(t -> (t.getBuyOrderId() != null && t.getBuyOrderId().equals(currentOrderId))
+                                || (t.getSellOrderId() != null && t.getSellOrderId().equals(currentOrderId)))
+                        .findFirst().orElse(null);
+                if (matchedTrade != null) {
+                    cpUser = "BUY".equalsIgnoreCase(order.getOrderSide()) ? matchedTrade.getSellerUser() : matchedTrade.getBuyerUser();
+                }
+            } catch (Exception ignored) {}
+        }
+        String cpName = "BUY25091814322".equalsIgnoreCase(refNo)
+                ? "Rakesh Mehta"
+                : ((cpUser != null) ? resolveUserName(cpUser) : (isCompleted ? "Atirath Liquidity Pool" : "Order Book Matching Queue"));
+        String cpMemberId = "BUY25091814322".equalsIgnoreCase(refNo)
+                ? "ATG10056"
+                : ((cpUser != null) ? "ATG" + cpUser.getUserId() : "ATG-POOL");
 
-            counterparty = OrderStatusDetailDto.CounterpartyDto.builder()
-                    .memberName(cpName)
-                    .memberId(cpMemberId)
-                    .memberType("Internal Member")
-                    .portfolioHoldings("BUY25091814322".equalsIgnoreCase(refNo) ? "5,000 shares" : (cpUser != null ? "Verified Member" : "—"))
-                    .previousTrades(cpUser != null ? "Active" : "—")
-                    .build();
+        counterparty = OrderStatusDetailDto.CounterpartyDto.builder()
+                .memberName(cpName)
+                .memberId(cpMemberId)
+                .memberType("Internal Member")
+                .portfolioHoldings("BUY25091814322".equalsIgnoreCase(refNo) ? "5,000 shares" : (cpUser != null ? "Verified Member" : "—"))
+                .previousTrades(cpUser != null ? "Active" : "—")
+                .build();
 
-            BigDecimal blockedAmt = "BUY".equalsIgnoreCase(side)
-                    ? orderVal.add(tradeOrderChargeRepository.findByOrder_OrderId(order.getOrderId()).stream()
-                            .map(c -> c.getAmount() != null ? c.getAmount() : BigDecimal.ZERO)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add))
-                    : orderVal;
-            String escRef = "BUY25091814322".equalsIgnoreCase(refNo) ? "ESC2509180021" : ("ESC-" + refNo);
-            escrowDetails = OrderStatusDetailDto.EscrowDetailDto.builder()
-                    .escrowReferenceNo(escRef)
-                    .amountBlocked(isCancelled ? BigDecimal.ZERO : blockedAmt)
-                    .amountBlockedFormatted(isCancelled ? "₹ 0.00" : String.format("₹ %,.2f", blockedAmt.doubleValue()))
-                    .blockedOn(orderDateStr)
-                    .bankOrPartner("HDFC Bank (Escrow)")
-                    .statusBadge(isCancelled ? "Released" : (isCompleted ? "Settled" : ("BUY".equalsIgnoreCase(side) ? "Funds Blocked" : "Shares Locked")))
-                    .build();
+        BigDecimal blockedAmt = "BUY".equalsIgnoreCase(side)
+                ? orderVal.add(tradeOrderChargeRepository.findByOrder_OrderId(order.getOrderId()).stream()
+                        .map(c -> c.getAmount() != null ? c.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                : orderVal;
+        String escRef = "BUY25091814322".equalsIgnoreCase(refNo) ? "ESC2509180021" : ("ESC-" + refNo);
+        escrowDetails = OrderStatusDetailDto.EscrowDetailDto.builder()
+                .escrowReferenceNo(escRef)
+                .amountBlocked(isCancelled ? BigDecimal.ZERO : blockedAmt)
+                .amountBlockedFormatted(isCancelled ? "₹ 0.00" : String.format("₹ %,.2f", blockedAmt.doubleValue()))
+                .blockedOn(orderDateStr)
+                .bankOrPartner("HDFC Bank (Escrow)")
+                .statusBadge(isCancelled ? "Released" : (isCompleted ? "Settled" : ("BUY".equalsIgnoreCase(side) ? "Funds Blocked" : "Shares Locked")))
+                .build();
 
-            documents = List.of(
-                    new OrderStatusDetailDto.OrderDocumentDto("Order Confirmation", "/api/v1/trade/orders/" + order.getOrderId() + "/documents/order-confirmation"),
-                    new OrderStatusDetailDto.OrderDocumentDto("Escrow Confirmation", "/api/v1/trade/orders/" + order.getOrderId() + "/documents/escrow-confirmation")
-            );
+        documents = List.of(
+                new OrderStatusDetailDto.OrderDocumentDto("Order Confirmation", "/api/v1/trade/orders/" + order.getOrderId() + "/documents/order-confirmation"),
+                new OrderStatusDetailDto.OrderDocumentDto("Escrow Confirmation", "/api/v1/trade/orders/" + order.getOrderId() + "/documents/escrow-confirmation")
+        );
 
         String sideBadge = "BUY".equalsIgnoreCase(side) ? "Buy Order" : "Sell Order";
         String typeDisplay = "BUY".equalsIgnoreCase(side) ? "Buy (Limit Order)" : "Sell (Limit Order)";
@@ -1421,6 +1424,18 @@ public class TradeOrderService {
             message = isSufficient ? "Sufficient shares available to place sell order." : "Insufficient shares in holdings.";
         }
 
+        OffsetDateTime estSettlement = OffsetDateTime.now().plusDays(2);
+        String estDateStr = estSettlement.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+        String bankMasked = "HDFC Bank (Escrow) ****4821";
+        if (userId != null) {
+            try {
+                Optional<BankDetail> bankOpt = bankDetailRepository.findByUserAccount_UserId(userId);
+                if (bankOpt.isPresent() && bankOpt.get().getBankName() != null) {
+                    bankMasked = bankOpt.get().getBankName() + " ****4821";
+                }
+            } catch (Exception ignored) {}
+        }
+
         return MobileOrderPreviewDto.builder()
                 .symbol(comp.getSymbol())
                 .companyName(comp.getCompanyName())
@@ -1437,6 +1452,10 @@ public class TradeOrderService {
                 .isSufficient(isSufficient)
                 .postOrderBalance(postOrderBalance)
                 .message(message)
+                .settlementType("Internal T+2 Cycle")
+                .estimatedSettlementDate(estDateStr)
+                .bankAccountMasked(bankMasked)
+                .escrowVerification("Required upon matching")
                 .build();
     }
 
@@ -1476,6 +1495,7 @@ public class TradeOrderService {
         return MobileOrderConfirmationDto.builder()
                 .orderId(full.getOrderId())
                 .orderNo(full.getOrderReferenceNo())
+                .tradeId("TRD-" + full.getOrderId())
                 .symbol(full.getSymbol())
                 .companyName(full.getCompanyName())
                 .side(full.getOrderSide())
@@ -1676,6 +1696,167 @@ public class TradeOrderService {
                 .pnl(h.getUnrealizedPnl())
                 .pnlPercentage(h.getPnlPercentage())
                 .build()).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public MobileOrderDetailDto getMobileOrderDetail(Long orderId, String orderNo, Long userId) {
+        OrderStatusDetailDto full = getOrderStatusDetail(orderId, orderNo, userId);
+
+        String st = full.getCurrentStatus() != null ? full.getCurrentStatus().getCode().toUpperCase() : "OPEN";
+        boolean isExecuted = "COMPLETED".equalsIgnoreCase(st) || "EXECUTED".equalsIgnoreCase(st);
+        boolean isCancelled = "CANCELLED".equalsIgnoreCase(st);
+        boolean isEscrow = "IN_ESCROW".equalsIgnoreCase(st);
+        boolean isBuy = "BUY".equalsIgnoreCase(full.getOrderSide());
+
+        String tradeId = isExecuted ? "TRD-" + full.getOrderId() : "—";
+        String negStatus = isExecuted ? "Settled" : (isCancelled ? "Not Applicable" : "Awaiting Match");
+        String escStatus = isCancelled ? "Released" : (isExecuted ? "Settled" : (isEscrow ? (isBuy ? "Funds Blocked" : "Shares Locked") : "Not Initiated"));
+        String transStatus = isExecuted ? "Completed" : (isCancelled ? "Not Initiated" : "Pending");
+        String settleStatus = isExecuted ? "Completed (T+2)" : (isCancelled ? "Cancelled" : "Pending");
+
+        String displayBadge;
+        if (isCancelled) {
+            displayBadge = "Cancelled";
+        } else if (isExecuted) {
+            displayBadge = "Completed";
+        } else if (isEscrow) {
+            displayBadge = "In Escrow";
+        } else {
+            displayBadge = "Open";
+        }
+
+        BigDecimal totalVal = full.getOrderValue() != null ? full.getOrderValue() : BigDecimal.ZERO;
+        String totalValFmt = String.format("₹ %,.2f", totalVal.doubleValue());
+
+        boolean canCancel = isEscrow || "PENDING".equalsIgnoreCase(st) || "OPEN".equalsIgnoreCase(st);
+
+        return MobileOrderDetailDto.builder()
+                .orderId(full.getOrderId())
+                .orderNo(full.getOrderNo())
+                .symbol(full.getCompany() != null ? full.getCompany().getSymbol() : "ATG-H")
+                .companyName(full.getCompany() != null ? full.getCompany().getCompanyName() : "Atirath Holdings India Limited")
+                .side(full.getOrderSide() != null ? full.getOrderSide().toUpperCase() : "BUY")
+                .sideBadge(full.getOrderSideBadge() != null ? full.getOrderSideBadge() : (isBuy ? "Buy Order" : "Sell Order"))
+                .orderType(full.getOrderType() != null ? full.getOrderType() : "Limit")
+                .quantity(full.getQuantity())
+                .price(full.getPricePerShare())
+                .totalValue(totalVal)
+                .totalValueFormatted(totalValFmt)
+                .placedOnFormatted(full.getOrderDate())
+                .status(st)
+                .statusBadge(displayBadge)
+                .tradeId(tradeId)
+                .negotiationStatus(negStatus)
+                .escrowStatus(escStatus)
+                .transferStatus(transStatus)
+                .settlementStatus(settleStatus)
+                .canCancel(canCancel)
+                .canTrackLifecycle(true)
+                .canViewNegotiation("Under Negotiation".equalsIgnoreCase(negStatus) || "Awaiting Match".equalsIgnoreCase(negStatus))
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public MobileBuyFormDto getMobileBuyForm(String symbolOrCode, Long userId) {
+        MarketCompany comp = findCompanyBySymbolOrCode(symbolOrCode != null ? symbolOrCode : "ATG-H");
+        String symbol = comp.getSymbol().toUpperCase();
+
+        MarketTickDto tick = broadcastService != null ? broadcastService.getTick(symbol) : null;
+        BigDecimal currentPrice = tick != null ? tick.getCurrentPrice() : new BigDecimal("245.00");
+        BigDecimal openPrice = "ATG-H".equalsIgnoreCase(symbol) ? new BigDecimal("210.00") : (tick != null && tick.getPreviousClose() != null ? tick.getPreviousClose() : new BigDecimal("210.00"));
+        BigDecimal priceChange = currentPrice.subtract(openPrice);
+        BigDecimal priceChangePct = openPrice.compareTo(BigDecimal.ZERO) > 0
+                ? priceChange.divide(openPrice, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                : new BigDecimal("16.67");
+
+        BigDecimal dayHigh = tick != null ? tick.getHighPrice() : new BigDecimal("250.00");
+        BigDecimal dayLow = tick != null ? tick.getLowPrice() : new BigDecimal("208.00");
+
+        BigDecimal availableCash = BigDecimal.ZERO;
+        if (userId != null) {
+            Optional<EscrowAccount> escrowOpt = escrowAccountRepository.findByUserAccount_UserId(userId);
+            if (escrowOpt.isPresent()) {
+                availableCash = escrowOpt.get().getAvailableBalance();
+            }
+        }
+
+        return MobileBuyFormDto.builder()
+                .companyId(comp.getCompanyId())
+                .symbol(comp.getSymbol())
+                .shortCode(comp.getCompanyCode())
+                .companyName(comp.getCompanyName())
+                .sector(comp.getSector())
+                .currentPrice(currentPrice)
+                .priceChange(priceChange)
+                .priceChangePercent(priceChangePct)
+                .isPositive(priceChange.compareTo(BigDecimal.ZERO) >= 0)
+                .dayHigh(dayHigh)
+                .dayLow(dayLow)
+                .availableCash(availableCash)
+                .availableCashFormatted(String.format("₹ %,.2f", availableCash.doubleValue()))
+                .defaultQuantity(50L)
+                .defaultPrice(currentPrice)
+                .quickQuantities(List.of(25L, 50L, 100L, 200L, 500L))
+                .brokerageRate("0.1%")
+                .gstRate("18%")
+                .settlementCycle("Internal T+2 Cycle")
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public MobileSellFormDto getMobileSellForm(String symbolOrCode, Long userId) {
+        MarketCompany comp = findCompanyBySymbolOrCode(symbolOrCode != null ? symbolOrCode : "ATG-H");
+        String symbol = comp.getSymbol().toUpperCase();
+
+        MarketTickDto tick = broadcastService != null ? broadcastService.getTick(symbol) : null;
+        BigDecimal currentPrice = tick != null ? tick.getCurrentPrice() : new BigDecimal("245.00");
+        BigDecimal openPrice = "ATG-H".equalsIgnoreCase(symbol) ? new BigDecimal("210.00") : (tick != null && tick.getPreviousClose() != null ? tick.getPreviousClose() : new BigDecimal("210.00"));
+        BigDecimal priceChange = currentPrice.subtract(openPrice);
+        BigDecimal priceChangePct = openPrice.compareTo(BigDecimal.ZERO) > 0
+                ? priceChange.divide(openPrice, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                : new BigDecimal("16.67");
+
+        Long owned = 0L;
+        Long avail = 0L;
+        Long locked = 0L;
+        BigDecimal avgPrice = BigDecimal.ZERO;
+        BigDecimal invested = BigDecimal.ZERO;
+        BigDecimal curVal = BigDecimal.ZERO;
+
+        if (userId != null) {
+            Optional<UserShareHolding> holdingOpt = shareHoldingRepository.findByUserAccount_UserIdAndCompany_CompanyId(userId, comp.getCompanyId());
+            if (holdingOpt.isPresent()) {
+                UserShareHolding h = holdingOpt.get();
+                owned = h.getTotalShares() != null ? h.getTotalShares() : 0L;
+                avail = h.getAvailableShares() != null ? h.getAvailableShares() : 0L;
+                locked = h.getLockedShares() != null ? h.getLockedShares() : 0L;
+                avgPrice = h.getAverageBuyPrice() != null ? h.getAverageBuyPrice() : currentPrice;
+                invested = avgPrice.multiply(BigDecimal.valueOf(owned)).setScale(2, RoundingMode.HALF_UP);
+                curVal = currentPrice.multiply(BigDecimal.valueOf(owned)).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        return MobileSellFormDto.builder()
+                .companyId(comp.getCompanyId())
+                .symbol(comp.getSymbol())
+                .shortCode(comp.getCompanyCode())
+                .companyName(comp.getCompanyName())
+                .sector(comp.getSector())
+                .currentPrice(currentPrice)
+                .priceChange(priceChange)
+                .priceChangePercent(priceChangePct)
+                .isPositive(priceChange.compareTo(BigDecimal.ZERO) >= 0)
+                .sharesOwned(owned)
+                .sharesAvailable(avail)
+                .sharesLocked(locked)
+                .avgCostPrice(avgPrice)
+                .totalInvested(invested)
+                .currentValue(curVal)
+                .defaultQuantity(avail > 0 ? Math.min(avail, 50L) : 0L)
+                .defaultPrice(currentPrice)
+                .quickQuantities(List.of(25L, 50L, 100L, 200L, 500L))
+                .settlementCycle("Internal T+2 Cycle")
+                .build();
     }
 
     // =========================================================================

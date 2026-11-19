@@ -1,5 +1,6 @@
 package com.atirath.trading.config;
 
+import com.atirath.trading.modules.auth.model.AdminAccount;
 import com.atirath.trading.modules.auth.model.UserAccount;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -46,6 +47,29 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String generateAdminAccessToken(AdminAccount admin) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", admin.getAdminId());
+        claims.put("adminId", admin.getAdminId());
+        claims.put("email", admin.getEmail());
+        claims.put("displayName", admin.getAdminName());
+        claims.put("role", "ADMIN");
+        claims.put("isAdmin", true);
+        claims.put("accountType", "ADMIN");
+        claims.put("accountStatus", admin.getAdminStatus());
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + appProperties.getJwt().getAccessTokenExpirationMs());
+
+        return Jwts.builder()
+                .subject(admin.getAdminId().toString())
+                .claims(claims)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     public String generateRefreshToken(UserAccount account) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + appProperties.getJwt().getRefreshTokenExpirationMs());
@@ -53,6 +77,23 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(account.getUserId().toString())
                 .claim("tokenType", "REFRESH")
+                .id(UUID.randomUUID().toString())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String generateAdminRefreshToken(AdminAccount admin) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + appProperties.getJwt().getRefreshTokenExpirationMs());
+
+        return Jwts.builder()
+                .subject(admin.getAdminId().toString())
+                .claim("tokenType", "REFRESH")
+                .claim("role", "ADMIN")
+                .claim("isAdmin", true)
+                .claim("adminId", admin.getAdminId())
                 .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiration(expiryDate)

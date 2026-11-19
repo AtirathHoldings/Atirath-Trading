@@ -23,7 +23,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-        ApiResponse<Object> apiResponse = ApiResponse.error("Unauthorized: Please authenticate to access this endpoint");
+        ApiResponse<Object> apiResponse = ApiResponse.error("Unauthorized: Direct browser access or unauthenticated requests are restricted as per OWASP guidelines. Please log in via the official Atirath Mobile App or Web Portal.");
         response.getOutputStream().println(objectMapper.writeValueAsString(apiResponse));
     }
 }

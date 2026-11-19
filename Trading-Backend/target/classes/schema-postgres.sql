@@ -586,3 +586,32 @@ CREATE TABLE IF NOT EXISTS member_notification_preferences (
     UNIQUE (user_id, mode_of_notification)
 );
 
+-- =========================================================
+-- MODULE F: ADMIN ACCOUNTS & AUDIT
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS admin_accounts (
+    admin_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(254) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    admin_name VARCHAR(150) NOT NULL,
+    admin_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+        CHECK (admin_status IN ('ACTIVE', 'INACTIVE', 'LOCKED')),
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_accounts_email ON admin_accounts(email);
+
+CREATE TABLE IF NOT EXISTS admin_login_attempts (
+    attempt_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    admin_id BIGINT REFERENCES admin_accounts(admin_id),
+    attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    success BOOLEAN NOT NULL DEFAULT FALSE,
+    ip_address INET
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_attempts_admin_id ON admin_login_attempts(admin_id);
+
+

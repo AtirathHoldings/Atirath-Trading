@@ -18,6 +18,7 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\util\Bi
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\common\util\HashUtil.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\AppProperties.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\AsyncConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\ClientIntegrityFilter.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\CustomAccessDeniedHandler.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\DataInitializer.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\JwtAuthenticationEntryPoint.java
@@ -195,6 +196,8 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\d
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserAccountSummaryDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\dto\UserProfileDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\AccountDocument.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\AdminAccount.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\AdminLoginAttempt.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\BankDetail.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\CorporateProfile.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\IdentityKycDetail.java
@@ -204,6 +207,8 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\m
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserBiometricCredential.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\model\UserCredential.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\AccountDocumentRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\AdminAccountRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\AdminLoginAttemptRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\BankDetailRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\CorporateProfileRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\IdentityKycDetailRepository.java
@@ -212,6 +217,7 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\r
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserAccountRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserBiometricCredentialRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\repository\UserCredentialRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\AdminAuditService.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\AuthService.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\BiometricService.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\auth\service\CustomUserDetailsService.java
@@ -274,13 +280,16 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTickDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketTradeDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\MarketWebSocketMessage.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileBuyFormDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileHoldingSummaryDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileMarketOverviewDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileMyOrdersResponseDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderConfirmationDto.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderDetailDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderLifecycleDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileOrderPreviewDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobilePlaceOrderRequest.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileSellFormDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileTradeScreenDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileTransactionItemDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\market\dto\mobile\MobileTransactionsPageDto.java

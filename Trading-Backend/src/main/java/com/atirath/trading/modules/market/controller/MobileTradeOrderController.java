@@ -45,9 +45,35 @@ public class MobileTradeOrderController {
         return ResponseEntity.ok(ApiResponse.success(dto, "Mobile trade screen data retrieved successfully"));
     }
 
-    @PostMapping("/preview")
-    @Operation(summary = "Preview Mobile Order & Dynamic Calculation",
-            description = "Calculates exact 0.1% transaction fee, 18% GST, checks wallet sufficiency, and returns post-order balance for trade_screen.dart")
+    @GetMapping(value = {"/buy", "/buy/{symbol}"})
+    @Operation(summary = "Screen 2: Get Mobile Buy Shares Form Data",
+            description = "Returns lightweight CMP, available wallet cash, default quantities, and settlement info for Buy Shares sheet")
+    public ResponseEntity<ApiResponse<MobileBuyFormDto>> getMobileBuyForm(
+            @PathVariable(value = "symbol", required = false) String symbol,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        String sym = (symbol != null && !symbol.isBlank()) ? symbol : "ATG-H";
+        MobileBuyFormDto dto = tradeOrderService.getMobileBuyForm(sym, userId);
+        return ResponseEntity.ok(ApiResponse.success(dto, "Mobile buy form data retrieved successfully"));
+    }
+
+    @GetMapping(value = {"/sell", "/sell/{symbol}"})
+    @Operation(summary = "Screen 3: Get Mobile Sell Shares Form Data",
+            description = "Returns lightweight user share holdings, available shares, CMP, and settlement info for Sell Shares sheet")
+    public ResponseEntity<ApiResponse<MobileSellFormDto>> getMobileSellForm(
+            @PathVariable(value = "symbol", required = false) String symbol,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        String sym = (symbol != null && !symbol.isBlank()) ? symbol : "ATG-H";
+        MobileSellFormDto dto = tradeOrderService.getMobileSellForm(sym, userId);
+        return ResponseEntity.ok(ApiResponse.success(dto, "Mobile sell form data retrieved successfully"));
+    }
+
+    @PostMapping(value = {"/preview", "/review"})
+    @Operation(summary = "Screen 4: Preview Mobile Order & Dynamic Calculation (Order Review)",
+            description = "Calculates exact 0.1% transaction fee, 18% GST, checks wallet sufficiency, returns settlement date, debit bank, and post-order balance for Order Review")
     public ResponseEntity<ApiResponse<MobileOrderPreviewDto>> previewMobileOrder(
             @Valid @RequestBody MobilePlaceOrderRequest request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -88,8 +114,8 @@ public class MobileTradeOrderController {
         return ResponseEntity.ok(ApiResponse.success(response, "Mobile orders retrieved successfully"));
     }
 
-    @GetMapping("/orders/{orderId}/lifecycle")
-    @Operation(summary = "Get Mobile Order Lifecycle & Stepper by ID",
+    @GetMapping(value = {"/orders/{orderId}/lifecycle", "/orders/{orderId}/status"})
+    @Operation(summary = "Screen 6: Get Mobile Order Lifecycle & Stepper by ID (Order Status)",
             description = "Returns 7-step horizontal progress stepper, escrow details, and concise activity timeline for order_lifecycle_screen.dart")
     public ResponseEntity<ApiResponse<MobileOrderLifecycleDto>> getMobileOrderLifecycleById(
             @PathVariable("orderId") Long orderId,
@@ -100,8 +126,8 @@ public class MobileTradeOrderController {
         return ResponseEntity.ok(ApiResponse.success(lifecycle, "Order lifecycle retrieved successfully"));
     }
 
-    @GetMapping("/orders/status-by-no/{orderNo}/lifecycle")
-    @Operation(summary = "Get Mobile Order Lifecycle & Stepper by Order No",
+    @GetMapping(value = {"/orders/status-by-no/{orderNo}/lifecycle", "/orders/status-by-no/{orderNo}/status"})
+    @Operation(summary = "Screen 6: Get Mobile Order Lifecycle & Stepper by Order No (Order Status)",
             description = "Returns order lifecycle details using Order Reference No (e.g. BUY25091814322) for order_lifecycle_screen.dart")
     public ResponseEntity<ApiResponse<MobileOrderLifecycleDto>> getMobileOrderLifecycleByNo(
             @PathVariable("orderNo") String orderNo,
@@ -110,6 +136,30 @@ public class MobileTradeOrderController {
         Long userId = extractUserId(authHeader);
         MobileOrderLifecycleDto lifecycle = tradeOrderService.getMobileOrderLifecycle(null, orderNo, userId);
         return ResponseEntity.ok(ApiResponse.success(lifecycle, "Order lifecycle retrieved successfully"));
+    }
+
+    @GetMapping("/orders/{orderId}/details")
+    @Operation(summary = "Screen 8: Get Mobile Order Details by ID",
+            description = "Returns compact Order Information, Trade & Status breakdown, and action flags for order_details_screen.dart")
+    public ResponseEntity<ApiResponse<MobileOrderDetailDto>> getMobileOrderDetailById(
+            @PathVariable("orderId") Long orderId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        MobileOrderDetailDto detail = tradeOrderService.getMobileOrderDetail(orderId, null, userId);
+        return ResponseEntity.ok(ApiResponse.success(detail, "Mobile order details retrieved successfully"));
+    }
+
+    @GetMapping("/orders/status-by-no/{orderNo}/details")
+    @Operation(summary = "Screen 8: Get Mobile Order Details by Order No",
+            description = "Returns compact Order Information, Trade & Status breakdown, and action flags using Order Reference No for order_details_screen.dart")
+    public ResponseEntity<ApiResponse<MobileOrderDetailDto>> getMobileOrderDetailByNo(
+            @PathVariable("orderNo") String orderNo,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long userId = extractUserId(authHeader);
+        MobileOrderDetailDto detail = tradeOrderService.getMobileOrderDetail(null, orderNo, userId);
+        return ResponseEntity.ok(ApiResponse.success(detail, "Mobile order details retrieved successfully"));
     }
 
     @PostMapping("/orders/{orderId}/cancel")

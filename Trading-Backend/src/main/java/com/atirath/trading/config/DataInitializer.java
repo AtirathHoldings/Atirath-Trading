@@ -2,10 +2,12 @@ package com.atirath.trading.config;
 
 import com.atirath.trading.common.AccountStatus;
 import com.atirath.trading.common.AccountType;
+import com.atirath.trading.modules.auth.model.AdminAccount;
 import com.atirath.trading.modules.auth.model.CorporateProfile;
 import com.atirath.trading.modules.auth.model.IndividualProfile;
 import com.atirath.trading.modules.auth.model.UserAccount;
 import com.atirath.trading.modules.auth.model.UserCredential;
+import com.atirath.trading.modules.auth.repository.AdminAccountRepository;
 import com.atirath.trading.modules.auth.repository.CorporateProfileRepository;
 import com.atirath.trading.modules.auth.repository.IndividualProfileRepository;
 import com.atirath.trading.modules.auth.repository.UserAccountRepository;
@@ -13,6 +15,14 @@ import com.atirath.trading.modules.auth.repository.UserCredentialRepository;
 import com.atirath.trading.modules.market.model.*;
 import com.atirath.trading.modules.market.repository.*;
 import com.atirath.trading.modules.market.service.MarketBroadcastService;
+import com.atirath.trading.modules.negotiation.model.Negotiation;
+import com.atirath.trading.modules.negotiation.model.NegotiationOffer;
+import com.atirath.trading.modules.negotiation.model.NegotiationMessage;
+import com.atirath.trading.modules.negotiation.model.TradeAgreement;
+import com.atirath.trading.modules.negotiation.repository.NegotiationRepository;
+import com.atirath.trading.modules.negotiation.repository.NegotiationOfferRepository;
+import com.atirath.trading.modules.negotiation.repository.NegotiationMessageRepository;
+import com.atirath.trading.modules.negotiation.repository.TradeAgreementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -35,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
     private final IndividualProfileRepository individualProfileRepository;
     private final CorporateProfileRepository corporateProfileRepository;
     private final UserCredentialRepository userCredentialRepository;
+    private final AdminAccountRepository adminAccountRepository;
     private final PasswordEncoder passwordEncoder;
 
     // Market Repositories
@@ -53,11 +64,28 @@ public class DataInitializer implements CommandLineRunner {
     private final MarketBroadcastService broadcastService;
     private final EscrowAccountRepository escrowAccountRepository;
     private final UserShareHoldingRepository userShareHoldingRepository;
+    private final NegotiationRepository negotiationRepository;
+    private final NegotiationOfferRepository negotiationOfferRepository;
+    private final NegotiationMessageRepository negotiationMessageRepository;
+    private final TradeAgreementRepository tradeAgreementRepository;
 
     @Override
-    @Transactional
     public void run(String... args) {
         log.info("Checking and seeding initial demo accounts & market data if not present...");
+
+        // 0. Seed Default Admin Account if empty
+        if (adminAccountRepository.count() == 0) {
+            AdminAccount defaultAdmin = AdminAccount.builder()
+                    .email("admin@atirathgroup.com")
+                    .passwordHash(passwordEncoder.encode("Admin@123"))
+                    .adminName("System Administrator")
+                    .adminStatus("ACTIVE")
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
+                    .build();
+            adminAccountRepository.save(defaultAdmin);
+            log.info("Default admin account seeded into admin_accounts: admin@atirathgroup.com / Admin@123");
+        }
 
         // 1. Seed Individual Account
         UserAccount indivAccount = null;
@@ -161,7 +189,7 @@ public class DataInitializer implements CommandLineRunner {
                                 .pricePerShare(new BigDecimal("242.00"))
                                 .orderValue(new BigDecimal("242000.00"))
                                 .status("IN_ESCROW")
-                                .validity("Day Order (Valid till end of trading day)")
+                                .validity("DAY_ORDER")
                                 .placedAt(OffsetDateTime.now().minusHours(2))
                                 .build());
                         log.info("-> Seeded MarketOrder BUY25091814322 in PostgreSQL database");
@@ -170,6 +198,177 @@ public class DataInitializer implements CommandLineRunner {
             } catch (Exception e) {
                 log.warn("Holdings/Order seeding skipped or table not ready: {}", e.getMessage());
             }
+
+            // Seed real Negotiations in PostgreSQL DB
+            seedNegotiations(indivAccount, corpAccount);
+        }
+    }
+
+    private void seedNegotiations(UserAccount indivAccount, UserAccount corpAccount) {
+        if (indivAccount == null) return;
+        try {
+            if (negotiationRepository.count() >= 12) {
+                log.info("Negotiations already seeded in DB (count={}).", negotiationRepository.count());
+                return;
+            }
+
+            log.info("Seeding / checking 12 negotiations into PostgreSQL database (current={})...", negotiationRepository.count());
+
+            MarketCompany atgH = marketCompanyRepository.findBySymbolIgnoreCase("ATG-H").orElse(null);
+            MarketCompany atgT = marketCompanyRepository.findBySymbolIgnoreCase("ATG-T").orElse(atgH);
+            MarketCompany atgE = marketCompanyRepository.findBySymbolIgnoreCase("ATG-E").orElse(atgH);
+            MarketCompany atgF = marketCompanyRepository.findBySymbolIgnoreCase("ATG-F").orElse(atgH);
+            MarketCompany atgL = marketCompanyRepository.findBySymbolIgnoreCase("ATG-L").orElse(atgH);
+            MarketCompany atgM = marketCompanyRepository.findBySymbolIgnoreCase("ATG-M").orElse(atgH);
+            MarketCompany atgR = marketCompanyRepository.findBySymbolIgnoreCase("ATG-R").orElse(atgH);
+
+            MarketCompany fvt = findOrCreateCompany("FVT", "Farm Vantara Technologies", "FVT", "Agri-Tech", new BigDecimal("186.50"));
+            MarketCompany gem = findOrCreateCompany("GEM", "Goeazymart", "GEM", "Retail & E-commerce", new BigDecimal("85.00"));
+            MarketCompany csi = findOrCreateCompany("CSI", "CS Interio", "CSI", "Home & Living", new BigDecimal("210.00"));
+            MarketCompany teb = findOrCreateCompany("TEB", "Tri Energy Battery", "TEB", "Clean Energy", new BigDecimal("310.00"));
+            MarketCompany rohe = findOrCreateCompany("ROHE", "Royal One Heating Equipments", "ROHE", "Industrial & Heating", new BigDecimal("150.00"));
+
+            UserAccount rakesh = findOrCreateUser("rakesh@farmvantara.com", "Rakesh Mehta", "9123456789", "ATG10056");
+            UserAccount priya = findOrCreateUser("priya@farmvantara.com", "Priya Sharma", "9123456788", "ATG10072");
+            UserAccount vikram = findOrCreateUser("vikram@goeazymart.com", "Vikram Reddy", "9123456787", "ATG10081");
+            UserAccount anita = findOrCreateUser("anita@csinterio.com", "Anita Desai", "9123456786", "ATG10063");
+            UserAccount suresh = findOrCreateUser("suresh.nair@trienergy.com", "Suresh Nair", "9123456783", "ATG10078");
+            UserAccount karan = findOrCreateUser("karan.malhotra@royalone.com", "Karan Malhotra", "9123456782", "ATG10069");
+            UserAccount rahul = findOrCreateUser("rahul.verma@atirathgroup.com", "Rahul Verma", "9123456781", "ATG10044");
+            UserAccount sneha = findOrCreateUser("sneha.patel@atirathgroup.com", "Sneha Patel", "9123456780", "ATG10052");
+            UserAccount manoj = findOrCreateUser("manoj.tiwari@atirathgroup.com", "Manoj Tiwari", "9123456779", "ATG10039");
+            UserAccount divya = findOrCreateUser("divya.kapoor@atirathgroup.com", "Divya Kapoor", "9123456778", "ATG10061");
+            UserAccount amit = findOrCreateUser("amit.joshi@atirathmining.com", "Amit Joshi", "9123456777", "ATG10048");
+            UserAccount pooja = findOrCreateUser("pooja.hegde@atirathrealty.com", "Pooja Hegde", "9123456776", "ATG10085");
+
+            UserAccount corp = indivAccount;
+            OffsetDateTime now = OffsetDateTime.now();
+
+            // Ensure all 12 seed negotiations belong to indivAccount (Sairam)
+            negotiationRepository.findAll().forEach(n -> {
+                if (n.getNegotiationNo().startsWith("NEG2509") && !n.getInitiatorUser().getUserId().equals(indivAccount.getUserId())) {
+                    n.setInitiatorUser(indivAccount);
+                    negotiationRepository.save(n);
+                }
+            });
+
+            record NegSeedItem(String negNo, MarketCompany comp, UserAccount init, UserAccount cp,
+                               Long qty, BigDecimal price, String status, OffsetDateTime updated, OffsetDateTime created) {}
+
+            List<NegSeedItem> seeds = List.of(
+                    new NegSeedItem("NEG250918001", atgH, indivAccount, rakesh, 1000L, new BigDecimal("242.00"), "AWAITING_RESPONSE", now.minusMinutes(15), now.minusDays(2)),
+                    new NegSeedItem("NEG250917003", fvt, corp, priya, 500L, new BigDecimal("190.00"), "ACTIVE", now.minusHours(3), now.minusDays(3)),
+                    new NegSeedItem("NEG250916007", gem, indivAccount, vikram, 1500L, new BigDecimal("82.00"), "UNDER_NEGOTIATION", now.minusHours(6), now.minusDays(4)),
+                    new NegSeedItem("NEG250915004", csi, corp, anita, 400L, new BigDecimal("205.00"), "ACCEPTED", now.minusHours(12), now.minusDays(5)),
+                    new NegSeedItem("NEG250914002", teb, indivAccount, suresh, 1200L, new BigDecimal("300.00"), "REJECTED", now.minusDays(1), now.minusDays(6)),
+                    new NegSeedItem("NEG250912006", rohe, corp, karan, 600L, new BigDecimal("148.00"), "EXPIRED", now.minusDays(2), now.minusDays(8)),
+                    new NegSeedItem("NEG250911001", atgT, indivAccount, rahul, 800L, new BigDecimal("1220.00"), "ACTIVE", now.minusDays(3), now.minusDays(9)),
+                    new NegSeedItem("NEG250910008", atgE, corp, sneha, 2000L, new BigDecimal("315.00"), "AWAITING_RESPONSE", now.minusDays(4), now.minusDays(10)),
+                    new NegSeedItem("NEG250909005", atgF, indivAccount, manoj, 750L, new BigDecimal("575.00"), "ACTIVE", now.minusDays(5), now.minusDays(11)),
+                    new NegSeedItem("NEG250908003", atgL, corp, divya, 1000L, new BigDecimal("420.00"), "ACCEPTED", now.minusDays(6), now.minusDays(12)),
+                    new NegSeedItem("NEG250906002", atgM, indivAccount, amit, 1500L, new BigDecimal("185.00"), "AWAITING_RESPONSE", now.minusDays(7), now.minusDays(14)),
+                    new NegSeedItem("NEG250905001", atgR, corp, pooja, 500L, new BigDecimal("750.00"), "EXPIRED", now.minusDays(8), now.minusDays(15))
+            );
+
+            MarketOrder defaultOrder = orderRepository.findByOrderNo("BUY25091814322").orElse(null);
+
+            for (NegSeedItem s : seeds) {
+                if (s.comp == null) continue;
+                if (negotiationRepository.findByNegotiationNo(s.negNo).isPresent()) {
+                    continue;
+                }
+                Negotiation neg = negotiationRepository.save(Negotiation.builder()
+                        .negotiationNo(s.negNo)
+                        .company(s.comp)
+                        .order("NEG250918001".equals(s.negNo) ? defaultOrder : null)
+                        .initiatorUser(s.init)
+                        .counterpartyUser(s.cp)
+                        .quantity(s.qty)
+                        .proposedPrice(s.price)
+                        .status(s.status)
+                        .expiresAt(s.created.plusDays(7))
+                        .createdAt(s.created)
+                        .updatedAt(s.updated)
+                        .build());
+
+                if ("NEG250918001".equals(s.negNo)) {
+                    seedNegotiationOffersAndAgreement(neg, indivAccount, rakesh, atgH);
+                }
+            }
+            log.info("-> Successfully seeded 12 negotiations in PostgreSQL database");
+        } catch (Exception e) {
+            log.warn("Negotiation seeding error: {}", e.getMessage(), e);
+        }
+    }
+
+    private MarketCompany findOrCreateCompany(String code, String name, String symbol, String sector, BigDecimal price) {
+        return marketCompanyRepository.findBySymbolIgnoreCase(symbol).orElseGet(() ->
+                marketCompanyRepository.save(MarketCompany.builder()
+                        .companyCode(code)
+                        .companyName(name)
+                        .symbol(symbol)
+                        .sector(sector)
+                        .description(name + " - Verified equity.")
+                        .status("ACTIVE")
+                        .foundedDate(LocalDate.of(2018, 1, 1))
+                        .headquarters("Hyderabad, India")
+                        .websiteUrl("https://atirathgroup.com/" + symbol.toLowerCase())
+                        .issuedShares(5000000L)
+                        .availableShares(1000000L)
+                        .build())
+        );
+    }
+
+    private UserAccount findOrCreateUser(String email, String fullName, String mobile, String refCode) {
+        return userAccountRepository.findByEmailIgnoreCase(email).orElseGet(() -> {
+            UserAccount acc = userAccountRepository.save(UserAccount.builder()
+                    .accountType(AccountType.INDIVIDUAL)
+                    .email(email)
+                    .mobileNumber(mobile)
+                    .referralCode(refCode)
+                    .accountStatus(AccountStatus.ACTIVE)
+                    .build());
+            individualProfileRepository.save(IndividualProfile.builder()
+                    .userAccount(acc)
+                    .fullName(fullName)
+                    .build());
+            userCredentialRepository.save(UserCredential.builder()
+                    .userAccount(acc)
+                    .passwordHash(passwordEncoder.encode("Password@123"))
+                    .passwordChangedAt(OffsetDateTime.now())
+                    .build());
+            return acc;
+        });
+    }
+
+    private void seedNegotiationOffersAndAgreement(Negotiation neg, UserAccount sairam, UserAccount rakesh, MarketCompany comp) {
+        OffsetDateTime t = neg.getCreatedAt();
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(rakesh).quantity(1000L).offeredPrice(new BigDecimal("250.00")).offerMessage("Initial offer from seller: ₹ 250.00").offerStatus("REJECTED").createdAt(t).build());
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(sairam).quantity(1000L).offeredPrice(new BigDecimal("235.00")).offerMessage("Counter offer from buyer: ₹ 235.00").offerStatus("REJECTED").createdAt(t.plusHours(2)).build());
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(rakesh).quantity(1000L).offeredPrice(new BigDecimal("245.00")).offerMessage("Counter offer from seller: ₹ 245.00").offerStatus("REJECTED").createdAt(t.plusHours(5)).build());
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(sairam).quantity(1000L).offeredPrice(new BigDecimal("240.00")).offerMessage("Counter offer from buyer: ₹ 240.00").offerStatus("REJECTED").createdAt(t.plusHours(7)).build());
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(rakesh).quantity(1000L).offeredPrice(new BigDecimal("248.00")).offerMessage("Best price offer from seller: ₹ 248.00").offerStatus("REJECTED").createdAt(t.plusDays(1)).build());
+        negotiationOfferRepository.save(NegotiationOffer.builder().negotiation(neg).offeredByUser(sairam).quantity(1000L).offeredPrice(new BigDecimal("242.00")).offerMessage("Latest proposal: ₹ 242.00").offerStatus("PENDING").createdAt(t.plusDays(1).plusHours(2)).build());
+
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(rakesh).messageText("Initial offer: ₹ 250.00 per share for 1,000 shares.").sentAt(t).build());
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(sairam).messageText("Counter offer: ₹ 235.00 per share for 1,000 shares.").sentAt(t.plusHours(2)).build());
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(rakesh).messageText("I can offer ₹ 245.00 per share for 1,000 shares.").sentAt(t.plusHours(5)).build());
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(sairam).messageText("I can increase to ₹ 240.00 per share for 1,000 shares.").sentAt(t.plusHours(7)).build());
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(rakesh).messageText("My best price is ₹ 248.00 per share for 1,000 shares.").sentAt(t.plusDays(1)).build());
+        negotiationMessageRepository.save(NegotiationMessage.builder().negotiation(neg).senderUser(sairam).messageText("I can do ₹ 242.00 per share for 1,000 shares. Please confirm.").sentAt(t.plusDays(1).plusHours(2)).build());
+
+        if (tradeAgreementRepository.findByAgreementNo("NEG250918001").isEmpty()) {
+            tradeAgreementRepository.save(TradeAgreement.builder()
+                    .agreementNo("NEG250918001")
+                    .negotiation(neg)
+                    .buyerUser(sairam)
+                    .sellerUser(rakesh)
+                    .company(comp)
+                    .agreedQuantity(1000L)
+                    .agreedPrice(new BigDecimal("242.00"))
+                    .agreementStatus("AGREEMENT_READY")
+                    .createdAt(OffsetDateTime.now())
+                    .build());
         }
     }
 

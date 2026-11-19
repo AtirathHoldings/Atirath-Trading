@@ -16,7 +16,7 @@ public interface NegotiationRepository extends JpaRepository<Negotiation, Long> 
 
     Optional<Negotiation> findByNegotiationNo(String negotiationNo);
 
-    @Query("SELECT n FROM Negotiation n WHERE n.initiatorUser.userId = :userId OR n.counterpartyUser.userId = :userId ORDER BY n.updatedAt DESC")
+    @Query("SELECT n FROM Negotiation n WHERE n.initiatorUser.userId = :userId OR n.counterpartyUser.userId = :userId ORDER BY n.updatedAt DESC, n.createdAt DESC")
     List<Negotiation> findAllForUser(@Param("userId") Long userId);
 
     @Query("SELECT n FROM Negotiation n WHERE (n.initiatorUser.userId = :userId OR n.counterpartyUser.userId = :userId) AND (:status IS NULL OR UPPER(n.status) = UPPER(:status)) ORDER BY n.updatedAt DESC")

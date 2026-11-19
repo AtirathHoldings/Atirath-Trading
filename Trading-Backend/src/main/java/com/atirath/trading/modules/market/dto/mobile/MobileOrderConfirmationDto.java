@@ -21,6 +21,7 @@ import java.util.List;
 public class MobileOrderConfirmationDto {
     private Long orderId;
     private String orderNo;
+    private String tradeId;
     private String symbol;
     private String companyName;
     private String side;             // BUY or SELL

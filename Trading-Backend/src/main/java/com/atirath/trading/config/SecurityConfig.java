@@ -31,6 +31,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final ClientIntegrityFilter clientIntegrityFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,14 +48,17 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+                .headers(headers -> headers
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+                )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(customAccessDeniedHandler)
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints: Registration, Login, Forgot Password, Web, Mobile, Swagger, Actuator
+                        // Public endpoints: Registration, Login, Forgot Password, OTP, Biometric, WebSockets, Documentation
                         .requestMatchers(
                                 "/api/v1/auth/register/**",
                                 "/api/v1/auth/login",
@@ -64,32 +68,17 @@ public class SecurityConfig {
                                 "/api/v1/auth/logout",
                                 "/api/v1/auth/web/register/**",
                                 "/api/v1/auth/web/login",
-                                "/api/v1/auth/web/forgot-password",
-                                "/api/v1/auth/web/forgot-password/mobile",
+                                "/api/v1/auth/web/forgot-password/**",
                                 "/api/v1/auth/web/reset-password",
                                 "/api/v1/auth/web/refresh-token",
                                 "/api/v1/auth/web/logout",
                                 "/api/v1/auth/web/otp/**",
                                 "/api/v1/auth/mobile/register/**",
                                 "/api/v1/auth/mobile/login",
-                                "/api/v1/auth/mobile/forgot-password",
+                                "/api/v1/auth/mobile/forgot-password/**",
                                 "/api/v1/auth/mobile/refresh-token",
                                 "/api/v1/auth/mobile/otp/**",
-                                "/api/v1/auth/mobile/biometric/initiate",
-                                "/api/v1/auth/mobile/biometric/verify",
-                                "/h2-console/**",
-                                "/api/v1/dashboard/**",
-                                "/api/v1/actions/**",
-                                "/api/v1/transactions/**",
-                                "/api/v1/market/**",
-                                "/api/v1/trade/**",
-                                "/api/v1/negotiations/**",
-                                "/api/v1/escrow/**",
-                                "/api/v1/portfolio/**",
-                                "/api/v1/notifications/**",
-                                "/api/v1/external-requests/**",
-                                "/api/v1/profile/**",
-                                "/api/v1/admin/**",
+                                "/api/v1/auth/mobile/biometric/**",
                                 "/ws-trading/**",
                                 "/ws-trading-raw/**",
                                 "/ws-market/**",
@@ -103,10 +92,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**"
                         ).permitAll()
-                        // Any other endpoint requires JWT Bearer Authentication
+                        // Admin-only endpoints
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Any other endpoint (Portfolio, Trade, Market, Negotiations, Escrow, Profile, Notifications) requires JWT Bearer Authentication
                         .anyRequest().authenticated()
                 );
 
+        http.addFilterBefore(clientIntegrityFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -115,9 +107,30 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Strict OWASP CORS whitelist: Only authorized local dev & production origins
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:8080",
+                "http://127.0.0.1:8080",
+                "https://trade.atirathgroup.com",
+                "https://portal.atirathgroup.com"
+        ));
+        configuration.setAllowedOriginPatterns(List.of("https://*.atirathgroup.com"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers",
+                "X-Client-App",
+                "X-Client-Key"
+        ));
         configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
