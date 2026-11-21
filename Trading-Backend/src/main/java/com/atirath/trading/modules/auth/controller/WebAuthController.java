@@ -7,6 +7,7 @@ import com.atirath.trading.modules.auth.dto.*;
 import com.atirath.trading.modules.auth.dto.common.AuthResponse;
 import com.atirath.trading.modules.auth.dto.common.LogoutRequest;
 import com.atirath.trading.modules.auth.dto.common.RefreshTokenRequest;
+import com.atirath.trading.modules.auth.dto.device.DisconnectAndLoginRequestDto;
 import com.atirath.trading.modules.auth.service.AuthService;
 import com.atirath.trading.modules.auth.service.OtpService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -52,6 +53,14 @@ public class WebAuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Web login successful"));
+    }
+
+    @PostMapping("/devices/disconnect-and-login")
+    @Operation(summary = "Web: Disconnect an active device and proceed with login", description = "Disconnects selected device (blacklists its tokens for auto-logout) and finishes login for new device")
+    public ResponseEntity<ApiResponse<AuthResponse>> disconnectAndLogin(
+            @Valid @RequestBody DisconnectAndLoginRequestDto request) {
+        AuthResponse response = authService.disconnectAndLogin(request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Device disconnected and login successful"));
     }
 
     @PostMapping("/forgot-password")

@@ -16,6 +16,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(DeviceLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDeviceLimitExceeded(DeviceLimitExceededException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.<Object>builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .data(ex.getLimitData())
+                        .timestamp(java.time.LocalDateTime.now())
+                        .build());
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse<Object>> handleApiException(ApiException ex) {
         return ResponseEntity.status(ex.getStatus())

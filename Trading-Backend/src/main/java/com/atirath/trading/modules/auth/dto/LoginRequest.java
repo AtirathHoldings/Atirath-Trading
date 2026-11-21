@@ -20,4 +20,13 @@ public class LoginRequest {
     @NotBlank(message = "Password is required")
     @Schema(description = "Account password", example = "Password@123")
     private String password;
+
+    @Schema(description = "Optional client device ID (UUID/fingerprint)", example = "dev-web-chrome-01")
+    private String deviceId;
+
+    @Schema(description = "Optional client device name", example = "Chrome on Windows 11")
+    private String deviceName;
+
+    @Schema(description = "Optional client device type: WEB or MOBILE", example = "WEB")
+    private String deviceType;
 }

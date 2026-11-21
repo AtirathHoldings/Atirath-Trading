@@ -241,9 +241,10 @@ public class ProfileSettingsController {
     @GetMapping("/devices")
     @Operation(summary = "Get Active Devices", description = "Retrieves currently logged in / enrolled devices, device limits, security tips, and recent device activity")
     public ResponseEntity<ApiResponse<ActiveDevicesPageDto>> getActiveDevices(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Device-Id", required = false) String currentDeviceId) {
         Long userId = requireAuthenticatedUserId(authHeader);
-        ActiveDevicesPageDto page = profileSettingsService.getActiveDevicesPage(userId);
+        ActiveDevicesPageDto page = profileSettingsService.getActiveDevicesPage(userId, currentDeviceId);
         return ResponseEntity.ok(ApiResponse.success(page, "Active devices retrieved successfully"));
     }
 

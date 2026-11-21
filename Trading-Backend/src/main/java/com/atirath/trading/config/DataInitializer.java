@@ -28,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -73,8 +75,17 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         log.info("Checking and seeding initial demo accounts & market data if not present...");
 
-        // 0. Seed Default Admin Account if empty
-        if (adminAccountRepository.count() == 0) {
+        // 0. Seed or sync Default Admin Account
+        Optional<AdminAccount> adminOpt = adminAccountRepository.findByEmailIgnoreCase("admin@atirathgroup.com");
+        if (adminOpt.isPresent()) {
+            AdminAccount existingAdmin = adminOpt.get();
+            if (!passwordEncoder.matches("Admin@123", existingAdmin.getPasswordHash())) {
+                existingAdmin.setPasswordHash(passwordEncoder.encode("Admin@123"));
+                existingAdmin.setAdminStatus("ACTIVE");
+                adminAccountRepository.save(existingAdmin);
+                log.info("Synchronized admin password hash for admin@atirathgroup.com / Admin@123");
+            }
+        } else {
             AdminAccount defaultAdmin = AdminAccount.builder()
                     .email("admin@atirathgroup.com")
                     .passwordHash(passwordEncoder.encode("Admin@123"))

@@ -7,6 +7,7 @@ import com.atirath.trading.modules.auth.dto.*;
 import com.atirath.trading.modules.auth.dto.common.AuthResponse;
 import com.atirath.trading.modules.auth.dto.common.LogoutRequest;
 import com.atirath.trading.modules.auth.dto.common.RefreshTokenRequest;
+import com.atirath.trading.modules.auth.dto.device.DisconnectAndLoginRequestDto;
 import com.atirath.trading.modules.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -50,6 +51,14 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @PostMapping("/devices/disconnect-and-login")
+    @Operation(summary = "Disconnect device and continue login when limit is reached")
+    public ResponseEntity<ApiResponse<AuthResponse>> disconnectAndLogin(
+            @Valid @RequestBody DisconnectAndLoginRequestDto request) {
+        AuthResponse response = authService.disconnectAndLogin(request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Device disconnected and login successful"));
     }
 
     @PostMapping("/forgot-password/email")

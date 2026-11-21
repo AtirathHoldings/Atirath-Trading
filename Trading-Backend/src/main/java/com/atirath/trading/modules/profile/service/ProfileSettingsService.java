@@ -8,6 +8,7 @@ import com.atirath.trading.common.ResourceNotFoundException;
 import com.atirath.trading.common.util.AESEncryptionUtil;
 import com.atirath.trading.modules.auth.model.*;
 import com.atirath.trading.modules.auth.repository.*;
+import com.atirath.trading.modules.auth.service.UserDeviceSessionManager;
 import com.atirath.trading.modules.market.model.AppNotification;
 import com.atirath.trading.modules.market.repository.AppNotificationRepository;
 import com.atirath.trading.modules.notification.model.MemberNotificationPreference;
@@ -53,6 +54,7 @@ public class ProfileSettingsService {
     private final PasswordEncoder passwordEncoder;
     private final AESEncryptionUtil aesEncryptionUtil;
     private final PortfolioDataHelper portfolioDataHelper;
+    private final UserDeviceSessionManager userDeviceSessionManager;
 
     private final ConcurrentHashMap<Long, UserProfileExtras> userExtrasMap = new ConcurrentHashMap<>();
     private final AtomicLong syntheticIdGenerator = new AtomicLong(10000L);
@@ -1086,44 +1088,33 @@ public class ProfileSettingsService {
 
     @Transactional(readOnly = true)
     public ActiveDevicesPageDto getActiveDevicesPage(Long userId) {
+        return getActiveDevicesPage(userId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ActiveDevicesPageDto getActiveDevicesPage(Long userId, String currentDeviceId) {
         UserAccount user = loadUser(userId);
         UserProfileExtras extras = getExtras(userId);
         SecurityOverviewDto sec = getSecurityOverview(userId);
 
-        List<DeviceItemDto> deviceList = new ArrayList<>();
-        deviceList.add(DeviceItemDto.builder()
-                .id("dev-current")
-                .name("Current Web Session")
-                .deviceType("LAPTOP")
-                .osBrowser("Web Browser (Active JWT Session)")
-                .location("Current Location")
-                .ipAddress("Active Session")
-                .status("Active Now")
-                .isCurrentDevice(true)
-                .lastActive("Now")
-                .canRevoke(false)
-                .build());
+        List<com.atirath.trading.modules.auth.dto.device.ActiveDeviceSessionDto> activeSessions =
+                userDeviceSessionManager.getActiveDevicesForUser(userId, currentDeviceId);
 
-        List<UserBiometricCredential> biometrics = userBiometricCredentialRepository.findByUserAccount_UserId(userId);
-        for (UserBiometricCredential bio : biometrics) {
-            boolean active = Boolean.TRUE.equals(bio.getIsActive());
+        List<DeviceItemDto> deviceList = new ArrayList<>();
+        for (com.atirath.trading.modules.auth.dto.device.ActiveDeviceSessionDto s : activeSessions) {
             deviceList.add(DeviceItemDto.builder()
-                    .id("bio-" + bio.getCredentialId())
-                    .name(isPresent(bio.getDeviceName()) ? bio.getDeviceName() : "Registered Mobile Device")
-                    .deviceType("MOBILE")
-                    .osBrowser("Device ID: " + bio.getDeviceId())
-                    .location("Biometric Enrolled")
-                    .ipAddress(bio.getDeviceId())
-                    .status(active ? "Active" : "Inactive")
-                    .isCurrentDevice(false)
-                    .lastActive(formatDateTime(bio.getLastUsedAt() != null ? bio.getLastUsedAt() : bio.getEnrolledAt()))
-                    .canRevoke(active)
+                    .id(s.getDeviceId())
+                    .name(s.getName())
+                    .deviceType(s.getDeviceType())
+                    .osBrowser(s.getOs())
+                    .location(s.getLocation())
+                    .ipAddress(s.getIpAddress())
+                    .status(s.isCurrent() ? "Active Now" : "Active")
+                    .isCurrentDevice(s.isCurrent())
+                    .lastActive(s.getLastActive())
+                    .canRevoke(!s.isCurrent())
                     .build());
         }
-
-        int activeCount = (int) deviceList.stream()
-                .filter(d -> !"Inactive".equalsIgnoreCase(d.getStatus()))
-                .count();
 
         return ActiveDevicesPageDto.builder()
                 .memberId(sec.getMemberId())
@@ -1137,13 +1128,13 @@ public class ProfileSettingsService {
                 .memberSince(sec.getMemberSince())
                 .avatarInitials(sec.getAvatarInitials())
                 .devices(deviceList)
-                .activeDevicesCount(activeCount)
-                .maxDevicesLimit(5)
+                .activeDevicesCount(deviceList.size())
+                .maxDevicesLimit(2) // STRICT MAXIMUM = 2
                 .securityTips(Arrays.asList(
-                        "Regularly review your active devices.",
-                        "Revoke access for devices you no longer use.",
-                        "If you notice any suspicious activity, change your password immediately.",
-                        "Do not share your login credentials with anyone."
+                        "Strict limit of 2 active devices allowed across Web and Mobile combined.",
+                        "If you log in on a 3rd device, you must log out of one of these 2 devices.",
+                        "Logged out devices are immediately terminated for your security.",
+                        "Never share your credentials with anyone."
                 ))
                 .recentActivity(sec.getLoginHistory())
                 .build();
@@ -1154,6 +1145,7 @@ public class ProfileSettingsService {
         if ("dev-current".equals(deviceId)) {
             throw new ApiException("Cannot revoke the current active browser session", HttpStatus.BAD_REQUEST);
         }
+        userDeviceSessionManager.disconnectDevice(userId, deviceId);
         terminateSession(userId, deviceId);
     }
 

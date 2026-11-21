@@ -5,6 +5,7 @@ import com.atirath.trading.config.JwtTokenProvider;
 import com.atirath.trading.modules.auth.dto.*;
 import com.atirath.trading.modules.auth.dto.biometric.*;
 import com.atirath.trading.modules.auth.dto.common.RefreshTokenRequest;
+import com.atirath.trading.modules.auth.dto.device.DisconnectAndLoginRequestDto;
 import com.atirath.trading.modules.auth.dto.mobile.MobileAuthResponse;
 import com.atirath.trading.modules.auth.dto.mobile.MobileProfileDto;
 import com.atirath.trading.modules.auth.service.AuthService;
@@ -68,6 +69,14 @@ public class MobileAuthController {
             @Valid @RequestBody LoginRequest request) {
         MobileAuthResponse response = authService.loginMobile(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @PostMapping("/devices/disconnect-and-login")
+    @Operation(summary = "Mobile: Disconnect active device and complete mobile login", description = "Revokes tokens of target device and completes login on mobile")
+    public ResponseEntity<ApiResponse<MobileAuthResponse>> disconnectAndLoginMobile(
+            @Valid @RequestBody DisconnectAndLoginRequestDto request) {
+        MobileAuthResponse response = authService.disconnectAndLoginMobile(request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Device disconnected and mobile login successful"));
     }
 
     @PostMapping("/forgot-password")
