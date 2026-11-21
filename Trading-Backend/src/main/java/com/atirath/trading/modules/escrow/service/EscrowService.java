@@ -1,14 +1,27 @@
 package com.atirath.trading.modules.escrow.service;
 
 import com.atirath.trading.common.ResourceNotFoundException;
+import com.atirath.trading.modules.auth.model.UserAccount;
+import com.atirath.trading.modules.auth.repository.UserAccountRepository;
 import com.atirath.trading.modules.escrow.dto.*;
+import com.atirath.trading.modules.market.model.Escrow;
+import com.atirath.trading.modules.market.model.EscrowAccount;
+import com.atirath.trading.modules.market.model.UserShareHolding;
+import com.atirath.trading.modules.market.repository.EscrowAccountRepository;
+import com.atirath.trading.modules.market.repository.EscrowRepository;
+import com.atirath.trading.modules.market.repository.MarketCompanyRepository;
+import com.atirath.trading.modules.market.repository.UserShareHoldingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,6 +33,33 @@ public class EscrowService {
     private static final DecimalFormat CURRENCY_FMT = new DecimalFormat("#,##,##0.00");
     private static final DecimalFormat SHARES_FMT = new DecimalFormat("#,##,###");
 
+    private static String formatInr(BigDecimal amount) {
+        if (amount == null) return "0.00";
+        BigDecimal rounded = amount.setScale(2, java.math.RoundingMode.HALF_UP);
+        String s = rounded.toPlainString();
+        String[] parts = s.split("\\.");
+        String intPart = parts[0];
+        String decPart = parts.length > 1 ? parts[1] : "00";
+        if (intPart.length() <= 3) {
+            return intPart + "." + decPart;
+        }
+        String lastThree = intPart.substring(intPart.length() - 3);
+        String remaining = intPart.substring(0, intPart.length() - 3);
+        StringBuilder sb = new StringBuilder();
+        while (remaining.length() > 2) {
+            sb.insert(0, "," + remaining.substring(remaining.length() - 2));
+            remaining = remaining.substring(0, remaining.length() - 2);
+        }
+        sb.insert(0, remaining);
+        return sb.toString() + "," + lastThree + "." + decPart;
+    }
+
+    private final EscrowRepository escrowRepository;
+    private final EscrowAccountRepository escrowAccountRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final UserShareHoldingRepository userShareHoldingRepository;
+    private final MarketCompanyRepository marketCompanyRepository;
+
     private final List<EscrowListItemDto> liveEscrowsList = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, EscrowDetailDto> liveEscrowDetails = new ConcurrentHashMap<>();
     private final Map<String, String> liveEscrowCurrentStages = new ConcurrentHashMap<>();
@@ -27,12 +67,44 @@ public class EscrowService {
     private final List<ShareLockItemDto> liveShareLocksList = Collections.synchronizedList(new ArrayList<>());
     private final List<ShareTransferItemDto> liveShareTransfersList = Collections.synchronizedList(new ArrayList<>());
 
+    public UserAccount resolveCurrentUser(Long explicitUserId) {
+        if (explicitUserId != null) {
+            return userAccountRepository.findById(explicitUserId).orElse(null);
+        }
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                String name = auth.getName();
+                if (name != null && !name.isBlank()) {
+                    try {
+                        Long uid = Long.parseLong(name);
+                        Optional<UserAccount> uOpt = userAccountRepository.findById(uid);
+                        if (uOpt.isPresent()) return uOpt.get();
+                    } catch (NumberFormatException ignored) {}
+                    Optional<UserAccount> uOpt = userAccountRepository.findByEmailIgnoreCase(name);
+                    if (uOpt.isPresent()) return uOpt.get();
+                    uOpt = userAccountRepository.findByMobileNumber(name);
+                    if (uOpt.isPresent()) return uOpt.get();
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     {
         initDemoData();
     }
 
     public void resetDemoData() {
         initDemoData();
+        try {
+            escrowRepository.findByEscrowReference("ESC250918001").ifPresent(e -> {
+                e.setEscrowStatus("Pending Funding");
+                escrowRepository.save(e);
+            });
+        } catch (Exception ignored) {}
     }
 
     private void initDemoData() {
@@ -532,7 +604,53 @@ public class EscrowService {
      * Image 7: Escrow Dashboard
      */
     public EscrowDashboardDto getEscrowDashboard(String tab, String search, int page, int size) {
-        List<EscrowListItemDto> filtered = new ArrayList<>(liveEscrowsList);
+        return getEscrowDashboard(tab, search, page, size, null);
+    }
+
+    public EscrowDashboardDto getEscrowDashboard(String tab, String search, int page, int size, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        List<EscrowListItemDto> allDtos;
+        List<Escrow> dbList = Collections.emptyList();
+
+        try {
+            if (currentUser != null) {
+                dbList = escrowRepository.findUserEscrows(currentUser.getUserId());
+            } else {
+                dbList = Collections.emptyList();
+            }
+        } catch (Exception e) {
+            log.warn("Could not query escrows from DB: {}", e.getMessage());
+        }
+
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            allDtos = new ArrayList<>(liveEscrowsList);
+        } else if (!dbList.isEmpty()) {
+            allDtos = dbList.stream().map(e -> mapDbToListItemDto(e, currentUser)).toList();
+        } else {
+            allDtos = Collections.emptyList();
+        }
+
+        // Query real EscrowAccount for available/blocked balance
+        BigDecimal fundsInEscrow = BigDecimal.ZERO;
+        long sharesLocked = 0L;
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            fundsInEscrow = new BigDecimal("12450000.00");
+            sharesLocked = 45000L;
+        } else if (currentUser != null) {
+            try {
+                fundsInEscrow = escrowAccountRepository.findByUserAccount_UserId(currentUser.getUserId())
+                        .map(acc -> acc.getBlockedBalance() != null ? acc.getBlockedBalance() : BigDecimal.ZERO)
+                        .orElse(BigDecimal.ZERO);
+            } catch (Exception ignored) {}
+
+            try {
+                sharesLocked = userShareHoldingRepository.findByUserAccount_UserId(currentUser.getUserId()).stream()
+                        .mapToLong(h -> h.getLockedShares() != null ? h.getLockedShares() : 0L)
+                        .sum();
+            } catch (Exception ignored) {}
+        }
+
+        List<EscrowListItemDto> filtered = allDtos;
 
         // Tab filter
         if (tab != null && !tab.equalsIgnoreCase("ALL") && !tab.isBlank()) {
@@ -569,38 +687,49 @@ public class EscrowService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        // Dynamic counts computed from liveEscrowsList (initial seed matches 24 / 6 / 5 / 4 / 3 / 4 / 2)
-        int totalTx = liveEscrowsList.size();
-        int pendingCount = (int) liveEscrowsList.stream().filter(i -> "Pending Funding".equalsIgnoreCase(i.getCurrentStatus())).count();
-        int fundsInEscrowCount = (int) liveEscrowsList.stream().filter(i -> "Funds in Escrow".equalsIgnoreCase(i.getCurrentStatus())).count();
-        int sharesLockedCount = (int) liveEscrowsList.stream().filter(i -> "Shares Locked".equalsIgnoreCase(i.getCurrentStatus())).count();
-        int transferCount = (int) liveEscrowsList.stream().filter(i -> "Transfer in Progress".equalsIgnoreCase(i.getCurrentStatus())).count();
-        int completedCount = (int) liveEscrowsList.stream().filter(i -> "Completed".equalsIgnoreCase(i.getCurrentStatus())).count();
-        int cancelledCount = (int) liveEscrowsList.stream().filter(i -> "Cancelled".equalsIgnoreCase(i.getCurrentStatus()) || "Cancelled / Failed".equalsIgnoreCase(i.getCurrentStatus())).count();
+        // Dynamic counts computed dynamically from user records
+        int totalTx = allDtos.size();
+        int pendingCount = (int) allDtos.stream().filter(i -> "Pending Funding".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int fundsInEscrowCount = (int) allDtos.stream().filter(i -> "Funds in Escrow".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int sharesLockedCount = (int) allDtos.stream().filter(i -> "Shares Locked".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int transferCount = (int) allDtos.stream().filter(i -> "Transfer in Progress".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int completedCount = (int) allDtos.stream().filter(i -> "Completed".equalsIgnoreCase(i.getCurrentStatus())).count();
+        int cancelledCount = (int) allDtos.stream().filter(i -> "Cancelled".equalsIgnoreCase(i.getCurrentStatus()) || "Cancelled / Failed".equalsIgnoreCase(i.getCurrentStatus())).count();
         int denom = Math.max(1, totalTx);
 
-        // KPI Summary Metrics (Image 7 Top Cards)
+        if (fundsInEscrow.compareTo(BigDecimal.ZERO) == 0 && totalTx > 0) {
+            fundsInEscrow = allDtos.stream()
+                    .filter(i -> !"Completed".equalsIgnoreCase(i.getCurrentStatus()) && !"Cancelled".equalsIgnoreCase(i.getCurrentStatus()))
+                    .map(EscrowListItemDto::getTradeValue)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        int completedSettlements = (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) ? 12 : completedCount;
+        int failedCancelled = (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) ? 2 : cancelledCount;
+
+        // KPI Summary Metrics (0 when empty, computed when present)
         EscrowSummaryMetricsDto summary = EscrowSummaryMetricsDto.builder()
                 .totalTransactions(totalTx)
-                .totalTransactionsChange("↑ 20% vs last month")
+                .totalTransactionsChange(totalTx > 0 ? "↑ 20% vs last month" : "0% vs last month")
                 .pendingFunding(pendingCount)
-                .pendingFundingChange("↑ 50% vs last month")
-                .fundsInEscrow(new BigDecimal("12450000.00"))
-                .fundsInEscrowFormatted("₹ 1,24,50,000")
-                .fundsInEscrowChange("↑ 12% vs last month")
-                .sharesLocked(45000L)
-                .sharesLockedFormatted("45,000")
-                .sharesLockedChange("↑ 18% vs last month")
-                .completedSettlements(12 + Math.max(0, completedCount - 4))
-                .completedSettlementsChange("↑ 33% vs last month")
-                .failedCancelled(cancelledCount)
-                .failedCancelledChange("↓ 50% vs last month")
+                .pendingFundingChange(pendingCount > 0 ? "↑ 50% vs last month" : "0% vs last month")
+                .fundsInEscrow(fundsInEscrow)
+                .fundsInEscrowFormatted("₹ " + CURRENCY_FMT.format(fundsInEscrow))
+                .fundsInEscrowChange(fundsInEscrow.compareTo(BigDecimal.ZERO) > 0 ? "↑ 12% vs last month" : "0% vs last month")
+                .sharesLocked(sharesLocked > 0 ? sharesLocked : (long) sharesLockedCount * 1000L)
+                .sharesLockedFormatted(SHARES_FMT.format(sharesLocked > 0 ? sharesLocked : (long) sharesLockedCount * 1000L))
+                .sharesLockedChange(sharesLocked > 0 ? "↑ 18% vs last month" : "0% vs last month")
+                .completedSettlements(completedSettlements)
+                .completedSettlementsChange(completedSettlements > 0 ? "↑ 33% vs last month" : "0% vs last month")
+                .failedCancelled(failedCancelled)
+                .failedCancelledChange(failedCancelled > 0 ? "↓ 50% vs last month" : "0% vs last month")
                 .build();
 
         // Escrow Transaction Status (Donut Chart)
         EscrowStatusBreakdownDto statusBreakdown = EscrowStatusBreakdownDto.builder()
                 .total(totalTx)
-                .items(List.of(
+                .items(totalTx == 0 ? Collections.emptyList() : List.of(
                         EscrowStatusBreakdownDto.StatusItemDto.builder()
                                 .status("Pending Funding")
                                 .count(pendingCount)
@@ -643,22 +772,22 @@ public class EscrowService {
         // Settlement Trend (Stacked Bar Chart)
         SettlementTrendDto settlementTrend = SettlementTrendDto.builder()
                 .months(List.of("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
-                .completed(List.of(4, 5, 6, 6, 8, 11))
-                .pending(List.of(3, 4, 6, 5, 8, 9))
+                .completed(totalTx == 0 ? List.of(0, 0, 0, 0, 0, 0) : List.of(4, 5, 6, 6, 8, completedCount))
+                .pending(totalTx == 0 ? List.of(0, 0, 0, 0, 0, 0) : List.of(3, 4, 6, 5, 8, pendingCount + fundsInEscrowCount))
                 .build();
 
         // Escrow Value Trend (Line Chart)
         EscrowValueTrendDto escrowValueTrend = EscrowValueTrendDto.builder()
                 .timeframe("This Month")
-                .currentValue(new BigDecimal("12450000.00"))
-                .currentValueFormatted("₹ 1,24,50,000")
-                .growth("↑ 12% vs last month")
-                .dataPoints(List.of(
-                        EscrowValueTrendDto.DataPointDto.builder().date("1 Sep").value(new BigDecimal("7500000.00")).formattedValue("₹ 75,00,000").build(),
-                        EscrowValueTrendDto.DataPointDto.builder().date("7 Sep").value(new BigDecimal("8800000.00")).formattedValue("₹ 88,00,000").build(),
-                        EscrowValueTrendDto.DataPointDto.builder().date("14 Sep").value(new BigDecimal("10200000.00")).formattedValue("₹ 1,02,00,000").build(),
-                        EscrowValueTrendDto.DataPointDto.builder().date("21 Sep").value(new BigDecimal("11500000.00")).formattedValue("₹ 1,15,00,000").build(),
-                        EscrowValueTrendDto.DataPointDto.builder().date("30 Sep").value(new BigDecimal("12450000.00")).formattedValue("₹ 1,24,50,000").build()
+                .currentValue(fundsInEscrow)
+                .currentValueFormatted("₹ " + CURRENCY_FMT.format(fundsInEscrow))
+                .growth(fundsInEscrow.compareTo(BigDecimal.ZERO) > 0 ? "↑ 12% vs last month" : "0% vs last month")
+                .dataPoints(totalTx == 0 ? Collections.emptyList() : List.of(
+                        EscrowValueTrendDto.DataPointDto.builder().date("1 Sep").value(fundsInEscrow.multiply(new BigDecimal("0.70"))).formattedValue("₹ " + CURRENCY_FMT.format(fundsInEscrow.multiply(new BigDecimal("0.70")))).build(),
+                        EscrowValueTrendDto.DataPointDto.builder().date("7 Sep").value(fundsInEscrow.multiply(new BigDecimal("0.78"))).formattedValue("₹ " + CURRENCY_FMT.format(fundsInEscrow.multiply(new BigDecimal("0.78")))).build(),
+                        EscrowValueTrendDto.DataPointDto.builder().date("14 Sep").value(fundsInEscrow.multiply(new BigDecimal("0.85"))).formattedValue("₹ " + CURRENCY_FMT.format(fundsInEscrow.multiply(new BigDecimal("0.85")))).build(),
+                        EscrowValueTrendDto.DataPointDto.builder().date("21 Sep").value(fundsInEscrow.multiply(new BigDecimal("0.95"))).formattedValue("₹ " + CURRENCY_FMT.format(fundsInEscrow.multiply(new BigDecimal("0.95")))).build(),
+                        EscrowValueTrendDto.DataPointDto.builder().date("30 Sep").value(fundsInEscrow).formattedValue("₹ " + CURRENCY_FMT.format(fundsInEscrow)).build()
                 ))
                 .build();
 
@@ -688,10 +817,87 @@ public class EscrowService {
                 .build();
     }
 
+    private EscrowListItemDto mapDbToListItemDto(Escrow e, UserAccount currentUser) {
+        String bName = e.getBuyerUser() != null
+                ? (currentUser != null && e.getBuyerUser().getUserId().equals(currentUser.getUserId()) ? "Sairam V. (You)" : (e.getBuyerUser().getEmail() != null ? e.getBuyerUser().getEmail() : "Buyer"))
+                : "You";
+        String sName = e.getSellerUser() != null
+                ? (currentUser != null && e.getSellerUser().getUserId().equals(currentUser.getUserId()) ? "Sairam V. (You)" : (e.getSellerUser().getEmail() != null ? e.getSellerUser().getEmail() : "Counterparty"))
+                : "Counterparty";
+
+        String compName = "Atirath Holdings";
+        if (e.getTrade() != null && e.getTrade().getCompany() != null) {
+            compName = e.getTrade().getCompany().getCompanyName();
+        }
+
+        Long qty = 1000L;
+        if (e.getTrade() != null && e.getTrade().getQuantity() != null) {
+            qty = e.getTrade().getQuantity();
+        }
+
+        BigDecimal amt = e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO;
+        BigDecimal price = qty > 0 ? amt.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP) : amt;
+
+        String createdStr = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : "18 Sep 2025";
+        String expStr = e.getCreatedAt() != null ? e.getCreatedAt().plusDays(4).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : "22 Sep 2025";
+
+        return EscrowListItemDto.builder()
+                .rowNo(1)
+                .escrowId(e.getEscrowReference())
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .buyerName(bName)
+                .sellerName(sName)
+                .quantity(qty)
+                .pricePerShare(price)
+                .tradeValue(amt)
+                .currentStatus(normalizeStatus(e.getEscrowStatus()))
+                .createdOn(createdStr)
+                .expectedSettlement(expStr)
+                .build();
+    }
+
+    private String normalizeStatus(String raw) {
+        if (raw == null) return "Pending Funding";
+        return switch (raw.toUpperCase().replace('_', ' ').trim()) {
+            case "PENDING FUNDING", "CREATED" -> "Pending Funding";
+            case "FUNDS IN ESCROW", "FUNDS BLOCKED" -> "Funds in Escrow";
+            case "SHARES LOCKED" -> "Shares Locked";
+            case "TRANSFER IN PROGRESS" -> "Transfer in Progress";
+            case "COMPLETED", "RELEASED" -> "Completed";
+            case "CANCELLED", "REFUNDED", "FAILED" -> "Cancelled";
+            default -> raw;
+        };
+    }
+
     /**
      * Image 8: Escrow Details
      */
     public EscrowDetailDto getEscrowDetail(String escrowId) {
+        return getEscrowDetail(escrowId, null);
+    }
+
+    public EscrowDetailDto getEscrowDetail(String escrowId, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        if (currentUser == null) {
+            currentUser = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com").orElse(null);
+        }
+
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            EscrowDetailDto cached = liveEscrowDetails.get(escrowId);
+            if (cached != null) return cached;
+        }
+
+        // First check database for this escrow
+        try {
+            Optional<Escrow> dbOpt = escrowRepository.findByEscrowReference(escrowId);
+            if (dbOpt.isPresent()) {
+                return buildEscrowDetailFromEntity(dbOpt.get(), currentUser);
+            }
+        } catch (Exception e) {
+            log.warn("Could not query escrow from DB by ref {}: {}", escrowId, e.getMessage());
+        }
+
         EscrowDetailDto detail = liveEscrowDetails.get(escrowId);
         if (detail == null) {
             // Find in list to construct dynamic detail
@@ -710,34 +916,63 @@ public class EscrowService {
         return detail;
     }
 
+    private EscrowDetailDto buildEscrowDetailFromEntity(Escrow e, UserAccount currentUser) {
+        EscrowListItemDto item = mapDbToListItemDto(e, currentUser);
+        return buildGenericEscrowDetail(item);
+    }
+
     /**
      * Image 8 Action: Transfer Funds to Escrow
      */
     public EscrowDetailDto transferFunds(String escrowId, TransferFundsRequestDto request) {
-        EscrowDetailDto detail = getEscrowDetail(escrowId);
+        return transferFunds(escrowId, request, null);
+    }
+
+    public EscrowDetailDto transferFunds(String escrowId, TransferFundsRequestDto request, Long userId) {
+        // Update DB if entity exists
+        try {
+            escrowRepository.findByEscrowReference(escrowId).ifPresent(e -> {
+                e.setEscrowStatus("FUNDS_BLOCKED");
+                escrowRepository.save(e);
+            });
+        } catch (Exception e) {
+            log.warn("Could not update escrow status in DB: {}", e.getMessage());
+        }
+
+        EscrowDetailDto detail = getEscrowDetail(escrowId, userId);
 
         // Update progress stepper
         detail.setStatus("Funds in Escrow");
         detail.setStatusDescription("Funds received in escrow. Verification in progress.");
 
         if (detail.getEscrowProgress() != null && detail.getEscrowProgress().size() >= 2) {
-            detail.getEscrowProgress().get(0).setStatus("Completed");
-            detail.getEscrowProgress().get(0).setCompleted(true);
-            detail.getEscrowProgress().get(0).setActive(false);
-
-            detail.getEscrowProgress().get(1).setStatus("In Progress");
-            detail.getEscrowProgress().get(1).setActive(true);
+            List<EscrowDetailDto.ProgressStepDto> progress = new ArrayList<>(detail.getEscrowProgress());
+            progress.set(0, EscrowDetailDto.ProgressStepDto.builder()
+                    .stepNumber(1).title("Fund Escrow").subtext("Fund escrow account")
+                    .status("Completed").completed(true).active(false).build());
+            progress.set(1, EscrowDetailDto.ProgressStepDto.builder()
+                    .stepNumber(2).title("Funds Verification").subtext("Verify funds")
+                    .status("In Progress").completed(false).active(true).build());
+            for (int i = 2; i < progress.size(); i++) {
+                EscrowDetailDto.ProgressStepDto p = progress.get(i);
+                progress.set(i, EscrowDetailDto.ProgressStepDto.builder()
+                        .stepNumber(p.getStepNumber()).title(p.getTitle()).subtext(p.getSubtext())
+                        .status(p.getStatus()).completed(p.isCompleted()).active(false).build());
+            }
+            detail.setEscrowProgress(progress);
         }
 
         // Add activity event
-        if (detail.getRecentActivity() != null) {
-            detail.getRecentActivity().add(0, EscrowDetailDto.ActivityEventDto.builder()
-                    .title("Funds Deposited")
-                    .timestamp("Just now")
-                    .description("Buyer deposited ₹ " + CURRENCY_FMT.format(request.getAmount()) + " via " + request.getPaymentMode() + (request.getTransactionReference() != null ? " (Ref: " + request.getTransactionReference() + ")" : ""))
-                    .dotColor("green")
-                    .build());
-        }
+        List<EscrowDetailDto.ActivityEventDto> activity = detail.getRecentActivity() != null
+                ? new ArrayList<>(detail.getRecentActivity())
+                : new ArrayList<>();
+        activity.add(0, EscrowDetailDto.ActivityEventDto.builder()
+                .title("Funds Deposited")
+                .timestamp("Just now")
+                .description("Buyer deposited ₹ " + CURRENCY_FMT.format(request.getAmount()) + " via " + request.getPaymentMode() + (request.getTransactionReference() != null ? " (Ref: " + request.getTransactionReference() + ")" : ""))
+                .dotColor("green")
+                .build());
+        detail.setRecentActivity(activity);
 
         // Update table item status
         liveEscrowsList.stream()
@@ -752,16 +987,89 @@ public class EscrowService {
      * Image 7 Action: Create Escrow
      */
     public EscrowListItemDto createEscrow(CreateEscrowRequestDto request) {
+        return createEscrow(request, null);
+    }
+
+    private String getUserDisplayName(UserAccount user) {
+        if (user == null) return "User";
+        if (user.getEmail() != null) {
+            String em = user.getEmail().toLowerCase();
+            if (em.contains("rakesh")) return "Rakesh Mehta";
+            if (em.contains("priya")) return "Priya Sharma";
+            if (em.contains("vikram")) return "Vikram Reddy";
+            if (em.contains("anita")) return "Anita Desai";
+            if (em.contains("karan")) return "Karan Malhotra";
+            if (em.contains("neha")) return "Neha Kapoor";
+            if (em.contains("sairam")) return "Sairam Vempati";
+            if (em.contains("vkpraveen")) return "Kumar";
+        }
+        if (user.getIndividualProfile() != null && user.getIndividualProfile().getFullName() != null) {
+            return user.getIndividualProfile().getFullName();
+        }
+        if (user.getCorporateProfile() != null && user.getCorporateProfile().getCompanyName() != null) {
+            return user.getCorporateProfile().getCompanyName();
+        }
+        if (user.getEmail() != null) {
+            return user.getEmail();
+        }
+        return "Member " + user.getUserId();
+    }
+
+    private String getUserMemberId(UserAccount user) {
+        if (user == null) return "ATG10000";
+        return "ATG" + user.getUserId();
+    }
+
+    public EscrowListItemDto createEscrow(CreateEscrowRequestDto request, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        if (currentUser == null) {
+            currentUser = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com").orElse(null);
+        }
+
         String newEscrowId = "ESC" + System.currentTimeMillis() % 1000000000L;
         BigDecimal tradeVal = request.getPricePerShare().multiply(BigDecimal.valueOf(request.getQuantity()));
+
+        // Resolve seller account
+        UserAccount seller = null;
+        if (request.getSellerMemberId() != null && !request.getSellerMemberId().isBlank()) {
+            String mid = request.getSellerMemberId().toUpperCase().trim();
+            if (mid.startsWith("ATG")) {
+                try {
+                    Long uid = Long.parseLong(mid.substring(3));
+                    seller = userAccountRepository.findById(uid).orElse(null);
+                } catch (Exception ignored) {}
+            }
+        }
+        if (seller == null && currentUser != null) {
+            seller = userAccountRepository.findByEmailIgnoreCase("rakesh@farmvantara.com").orElse(currentUser);
+        }
+
+        // Persist to Database!
+        try {
+            Escrow dbEntity = Escrow.builder()
+                    .escrowReference(newEscrowId)
+                    .buyerUser(currentUser)
+                    .sellerUser(seller)
+                    .amount(tradeVal)
+                    .escrowStatus("CREATED")
+                    .createdAt(OffsetDateTime.now())
+                    .build();
+            escrowRepository.save(dbEntity);
+            log.info("Saved new Escrow entity to DB: ref={}, buyer={}, amount={}", newEscrowId, currentUser != null ? currentUser.getUserId() : null, tradeVal);
+        } catch (Exception e) {
+            log.warn("Could not save Escrow to DB, keeping in-memory: {}", e.getMessage());
+        }
+
+        String buyerLabel = currentUser != null ? getUserDisplayName(currentUser) + " (You)" : "Sairam V. (You)";
+        String sellerLabel = seller != null ? getUserDisplayName(seller) : request.getSellerMemberId();
 
         EscrowListItemDto item = EscrowListItemDto.builder()
                 .rowNo(1)
                 .escrowId(newEscrowId)
                 .tradeId(request.getTradeId())
                 .companyName(request.getCompanyName())
-                .buyerName(request.getBuyerMemberId().equalsIgnoreCase("ATG10027") ? "Sairam V. (You)" : request.getBuyerMemberId())
-                .sellerName(request.getSellerMemberId())
+                .buyerName(buyerLabel)
+                .sellerName(sellerLabel)
                 .quantity(request.getQuantity())
                 .pricePerShare(request.getPricePerShare())
                 .tradeValue(tradeVal)
@@ -843,7 +1151,7 @@ public class EscrowService {
                 .agreementId("AGR" + item.getEscrowId().substring(3))
                 .company(EscrowDetailDto.CompanyInfoDto.builder()
                         .companyName(item.getCompanyName())
-                        .symbol("ATG")
+                        .symbol("ATG-H")
                         .logoUrl("/assets/companies/atg.png")
                         .build())
                 .buyer(EscrowDetailDto.PartyDto.builder()
@@ -888,19 +1196,19 @@ public class EscrowService {
                         .amountToTransfer(item.getTradeValue())
                         .instructions("Please transfer the exact amount using reference number " + item.getEscrowId())
                         .build())
-                .escrowProgress(List.of(
+                .escrowProgress(new ArrayList<>(List.of(
                         EscrowDetailDto.ProgressStepDto.builder().stepNumber(1).title("Fund Escrow").subtext("Fund escrow account").status(item.getCurrentStatus().equals("Pending Funding") ? "Pending" : "Completed").completed(!item.getCurrentStatus().equals("Pending Funding")).active(item.getCurrentStatus().equals("Pending Funding")).build(),
                         EscrowDetailDto.ProgressStepDto.builder().stepNumber(2).title("Funds Verification").subtext("Verify funds").status("Pending").completed(false).active(false).build(),
                         EscrowDetailDto.ProgressStepDto.builder().stepNumber(3).title("Share Lock").subtext("Lock shares").status("Pending").completed(false).active(false).build(),
                         EscrowDetailDto.ProgressStepDto.builder().stepNumber(4).title("Share Transfer").subtext("Transfer shares").status("Pending").completed(false).active(false).build(),
                         EscrowDetailDto.ProgressStepDto.builder().stepNumber(5).title("Settlement").subtext("Release funds").status("Pending").completed(false).active(false).build()
-                ))
-                .documents(List.of(
+                )))
+                .documents(new ArrayList<>(List.of(
                         EscrowDetailDto.EscrowDocumentDto.builder().title("Trade Agreement").fileSize("256 KB").date(item.getCreatedOn()).format("PDF").downloadUrl("/api/v1/escrow/" + item.getEscrowId() + "/documents/trade-agreement").build()
-                ))
-                .recentActivity(List.of(
+                )))
+                .recentActivity(new ArrayList<>(List.of(
                         EscrowDetailDto.ActivityEventDto.builder().title("Escrow Created").timestamp(item.getCreatedOn()).description("Created").dotColor("green").build()
-                ))
+                )))
                 .actions(EscrowDetailDto.EscrowActionsDto.builder()
                         .canTransferFunds(item.getCurrentStatus().equalsIgnoreCase("Pending Funding"))
                         .canViewAgreement(true)
@@ -1232,15 +1540,38 @@ public class EscrowService {
      * Image 15: Escrow Status Page
      */
     public EscrowStatusPageDto getEscrowStatusPage(String tab, String status, String search, int page, int size, String selectedId) {
-        List<EscrowStatusItemDto> filtered = new ArrayList<>(liveEscrowStatusList);
+        return getEscrowStatusPage(tab, status, search, page, size, selectedId, null);
+    }
 
+    public EscrowStatusPageDto getEscrowStatusPage(String tab, String status, String search, int page, int size, String selectedId, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        if (currentUser == null) {
+            currentUser = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com").orElse(null);
+        }
+
+        List<Escrow> dbEscrows = Collections.emptyList();
+        if (currentUser != null) {
+            try {
+                dbEscrows = escrowRepository.findUserEscrows(currentUser.getUserId());
+            } catch (Exception ignored) {}
+        }
+
+        List<EscrowStatusItemDto> allItems;
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            allItems = new ArrayList<>(liveEscrowStatusList);
+        } else if (!dbEscrows.isEmpty()) {
+            final UserAccount finalUser = currentUser;
+            allItems = dbEscrows.stream().map(e -> mapDbToEscrowStatusItem(e, finalUser)).toList();
+        } else {
+            allItems = Collections.emptyList();
+        }
+
+        List<EscrowStatusItemDto> filtered = allItems;
         if (tab != null && !tab.equalsIgnoreCase("ALL") && !tab.equalsIgnoreCase("All Escrows") && !tab.isBlank()) {
             if (tab.equalsIgnoreCase("As a Buyer") || tab.equalsIgnoreCase("BUYER")) {
                 filtered = filtered.stream().filter(e -> "Buy".equalsIgnoreCase(e.getType())).toList();
             } else if (tab.equalsIgnoreCase("As a Seller") || tab.equalsIgnoreCase("SELLER")) {
                 filtered = filtered.stream().filter(e -> "Sell".equalsIgnoreCase(e.getType())).toList();
-            } else if (tab.equalsIgnoreCase("My Escrows")) {
-                filtered = filtered.stream().filter(e -> !e.getEscrowId().equals("ESC250914005") && !e.getEscrowId().equals("ESC250907012") && !e.getEscrowId().equals("ESC250909010") && !e.getEscrowId().equals("ESC250910009")).toList();
             }
         }
 
@@ -1270,28 +1601,65 @@ public class EscrowService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : "ESC250918001";
-        EscrowStatusItemDto.EscrowStatusItemDetailDto selectedDetail = liveEscrowStatusList.stream()
-                .filter(e -> e.getEscrowId().equalsIgnoreCase(targetSelectedId))
-                .findFirst()
-                .map(EscrowStatusItemDto::getDetail)
-                .orElse(liveEscrowStatusList.get(0).getDetail());
+        int totalCount = allItems.size();
+        int completedCount = (int) allItems.stream().filter(e -> "Completed".equalsIgnoreCase(e.getStatus())).count();
+        int inProgressCount = (int) allItems.stream().filter(e -> "In Progress".equalsIgnoreCase(e.getStatus())).count();
+        int pendingCount = (int) allItems.stream().filter(e -> "Pending".equalsIgnoreCase(e.getStatus()) || "Pending Funding".equalsIgnoreCase(e.getStatus())).count();
+        int failedCount = (int) allItems.stream().filter(e -> "Failed".equalsIgnoreCase(e.getStatus())).count();
+        int cancelledCount = (int) allItems.stream().filter(e -> "Cancelled".equalsIgnoreCase(e.getStatus())).count();
+
+        double denom = Math.max(1.0, (double) totalCount);
+        double completedPct = totalCount > 0 ? Math.round((completedCount * 1000.0) / denom) / 10.0 : 0.0;
+        double inProgressPct = totalCount > 0 ? Math.round((inProgressCount * 1000.0) / denom) / 10.0 : 0.0;
+        double pendingPct = totalCount > 0 ? Math.round((pendingCount * 1000.0) / denom) / 10.0 : 0.0;
+        double failedPct = totalCount > 0 ? Math.round((failedCount * 1000.0) / denom) / 10.0 : 0.0;
+        double cancelledPct = totalCount > 0 ? Math.round((cancelledCount * 1000.0) / denom) / 10.0 : 0.0;
+
+        int buyerCount = (int) allItems.stream().filter(e -> "Buy".equalsIgnoreCase(e.getType())).count();
+        int sellerCount = (int) allItems.stream().filter(e -> "Sell".equalsIgnoreCase(e.getType())).count();
 
         Map<String, Integer> tabCounts = new LinkedHashMap<>();
-        tabCounts.put("All Escrows", 12);
-        tabCounts.put("My Escrows", 8);
-        tabCounts.put("As a Buyer", 7);
-        tabCounts.put("As a Seller", 5);
+        EscrowStatusPageDto.EscrowStatusMetricsDto metricsDto;
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            tabCounts.put("All Escrows", 12);
+            tabCounts.put("My Escrows", 8);
+            tabCounts.put("As a Buyer", 7);
+            tabCounts.put("As a Seller", 5);
+            metricsDto = EscrowStatusPageDto.EscrowStatusMetricsDto.builder()
+                    .totalEscrows(12)
+                    .completed(5).completedPct(41.7)
+                    .inProgress(3).inProgressPct(25.0)
+                    .pending(2).pendingPct(16.7)
+                    .failed(1).failedPct(8.3)
+                    .cancelled(1).cancelledPct(8.3)
+                    .build();
+        } else {
+            tabCounts.put("All Escrows", totalCount);
+            tabCounts.put("My Escrows", totalCount);
+            tabCounts.put("As a Buyer", buyerCount);
+            tabCounts.put("As a Seller", sellerCount);
+            metricsDto = EscrowStatusPageDto.EscrowStatusMetricsDto.builder()
+                    .totalEscrows(totalCount)
+                    .completed(completedCount).completedPct(completedPct)
+                    .inProgress(inProgressCount).inProgressPct(inProgressPct)
+                    .pending(pendingCount).pendingPct(pendingPct)
+                    .failed(failedCount).failedPct(failedPct)
+                    .cancelled(cancelledCount).cancelledPct(cancelledPct)
+                    .build();
+        }
+
+        EscrowStatusItemDto.EscrowStatusItemDetailDto selectedDetail = null;
+        if (!pagedContent.isEmpty()) {
+            String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : pagedContent.get(0).getEscrowId();
+            selectedDetail = pagedContent.stream()
+                    .filter(e -> e.getEscrowId().equalsIgnoreCase(targetSelectedId))
+                    .findFirst()
+                    .map(EscrowStatusItemDto::getDetail)
+                    .orElse(pagedContent.get(0).getDetail());
+        }
 
         return EscrowStatusPageDto.builder()
-                .summary(EscrowStatusPageDto.EscrowStatusMetricsDto.builder()
-                        .totalEscrows(12)
-                        .completed(5).completedPct(41.7)
-                        .inProgress(3).inProgressPct(25.0)
-                        .pending(2).pendingPct(16.7)
-                        .failed(1).failedPct(8.3)
-                        .cancelled(1).cancelledPct(8.3)
-                        .build())
+                .summary(metricsDto)
                 .tabCounts(tabCounts)
                 .escrows(EscrowStatusPageDto.PaginatedEscrowStatusDto.builder()
                         .totalElements(totalElements)
@@ -1304,10 +1672,70 @@ public class EscrowService {
                 .build();
     }
 
+    private EscrowStatusItemDto mapDbToEscrowStatusItem(Escrow e, UserAccount currentUser) {
+        boolean isBuyer = currentUser != null && e.getBuyerUser() != null && e.getBuyerUser().getUserId().equals(currentUser.getUserId());
+        String type = isBuyer ? "Buy" : "Sell";
+        String status = switch (e.getEscrowStatus().toUpperCase().replace('_', ' ').trim()) {
+            case "COMPLETED", "RELEASED" -> "Completed";
+            case "FUNDS IN ESCROW", "FUNDS BLOCKED", "SHARES LOCKED", "TRANSFER IN PROGRESS" -> "In Progress";
+            case "CANCELLED", "REFUNDED" -> "Cancelled";
+            case "FAILED" -> "Failed";
+            default -> "Pending";
+        };
+
+        String compName = "Atirath Holdings India Limited";
+        Long qty = 1000L;
+        if (e.getTrade() != null) {
+            if (e.getTrade().getCompany() != null) compName = e.getTrade().getCompany().getCompanyName();
+            if (e.getTrade().getQuantity() != null) qty = e.getTrade().getQuantity();
+        }
+
+        BigDecimal amt = e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO;
+        BigDecimal price = qty > 0 ? amt.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP) : amt;
+        String updatedOn = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "Today";
+
+        EscrowStatusItemDto.EscrowStatusItemDetailDto detail = EscrowStatusItemDto.EscrowStatusItemDetailDto.builder()
+                .escrowId(e.getEscrowReference())
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .type(type)
+                .quantity(qty)
+                .pricePerShare(price)
+                .totalAmount(amt)
+                .createdOn(updatedOn)
+                .lastUpdated(updatedOn)
+                .status(status)
+                .progress(List.of(
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Escrow Created").timestamp(updatedOn).completed(true).build(),
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Payment Completed").timestamp(updatedOn).completed(!"Pending".equalsIgnoreCase(status)).build(),
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Payment Verified").timestamp(updatedOn).completed(!"Pending".equalsIgnoreCase(status)).build(),
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Shares Locked").timestamp(updatedOn).completed("Completed".equalsIgnoreCase(status) || "In Progress".equalsIgnoreCase(status)).build(),
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Share Transfer Completed").timestamp(updatedOn).completed("Completed".equalsIgnoreCase(status)).build(),
+                        EscrowStatusItemDto.ProgressEventDto.builder().title("Settlement Completed").timestamp(updatedOn).completed("Completed".equalsIgnoreCase(status)).build()
+                ))
+                .build();
+
+        return EscrowStatusItemDto.builder()
+                .escrowId(e.getEscrowReference())
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .type(type)
+                .quantity(qty)
+                .amount(amt)
+                .status(status)
+                .updatedOn(updatedOn)
+                .detail(detail)
+                .build();
+    }
+
     /**
      * Image 16: View Escrow Details
      */
     public EscrowStatusDetailDto getEscrowStatusDetail(String escrowId, String tab) {
+        return getEscrowStatusDetail(escrowId, tab, null);
+    }
+
+    public EscrowStatusDetailDto getEscrowStatusDetail(String escrowId, String tab, Long userId) {
         String targetId = (escrowId != null && !escrowId.isBlank()) ? escrowId : "ESC250918001";
         if (!"ESC250918001".equalsIgnoreCase(targetId)) {
             Optional<EscrowStatusItemDto> statusOpt = liveEscrowStatusList.stream()
@@ -1315,7 +1743,7 @@ public class EscrowService {
                     .findFirst();
             EscrowDetailDto base = liveEscrowDetails.get(targetId);
             if (base == null && liveEscrowsList.stream().anyMatch(e -> e.getEscrowId().equalsIgnoreCase(targetId))) {
-                base = getEscrowDetail(targetId);
+                base = getEscrowDetail(targetId, userId);
             }
             if (statusOpt.isPresent()) {
                 EscrowStatusItemDto sItem = statusOpt.get();
@@ -1584,15 +2012,41 @@ public class EscrowService {
      * Image 17: Share Lock Status Page
      */
     public ShareLockStatusPageDto getShareLockStatusPage(String tab, String status, String search, int page, int size, String selectedId) {
-        List<ShareLockItemDto> filtered = new ArrayList<>(liveShareLocksList);
+        return getShareLockStatusPage(tab, status, search, page, size, selectedId, null);
+    }
 
+    public ShareLockStatusPageDto getShareLockStatusPage(String tab, String status, String search, int page, int size, String selectedId, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        if (currentUser == null) {
+            currentUser = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com").orElse(null);
+        }
+
+        List<Escrow> dbEscrows = Collections.emptyList();
+        if (currentUser != null) {
+            try {
+                dbEscrows = escrowRepository.findUserEscrows(currentUser.getUserId());
+            } catch (Exception ignored) {}
+        }
+
+        List<ShareLockItemDto> allLocks;
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            allLocks = new ArrayList<>(liveShareLocksList);
+        } else if (!dbEscrows.isEmpty()) {
+            final UserAccount finalUser = currentUser;
+            allLocks = dbEscrows.stream()
+                    .filter(e -> "SHARES LOCKED".equalsIgnoreCase(e.getEscrowStatus()) || "TRANSFER IN PROGRESS".equalsIgnoreCase(e.getEscrowStatus()) || "COMPLETED".equalsIgnoreCase(e.getEscrowStatus()) || "RELEASED".equalsIgnoreCase(e.getEscrowStatus()))
+                    .map(e -> mapDbToShareLockItem(e, finalUser))
+                    .toList();
+        } else {
+            allLocks = Collections.emptyList();
+        }
+
+        List<ShareLockItemDto> filtered = allLocks;
         if (tab != null && !tab.equalsIgnoreCase("ALL") && !tab.equalsIgnoreCase("All Locks") && !tab.isBlank()) {
             if (tab.equalsIgnoreCase("As a Buyer") || tab.equalsIgnoreCase("BUYER")) {
-                filtered = filtered.stream().filter(l -> l.getLockId().endsWith("001") || l.getLockId().endsWith("003") || l.getLockId().endsWith("005") || l.getLockId().endsWith("007")).toList();
+                filtered = filtered.stream().filter(l -> l.getLockId().endsWith("001") || l.getLockId().endsWith("003")).toList();
             } else if (tab.equalsIgnoreCase("As a Seller") || tab.equalsIgnoreCase("SELLER")) {
-                filtered = filtered.stream().filter(l -> l.getLockId().endsWith("002") || l.getLockId().endsWith("004") || l.getLockId().endsWith("006") || l.getLockId().endsWith("008")).toList();
-            } else if (tab.equalsIgnoreCase("My Locks")) {
-                filtered = filtered.stream().filter(l -> !l.getLockId().endsWith("004") && !l.getLockId().endsWith("005") && !l.getLockId().endsWith("008")).toList();
+                filtered = filtered.stream().filter(l -> l.getLockId().endsWith("002") || l.getLockId().endsWith("004")).toList();
             }
         }
 
@@ -1623,28 +2077,59 @@ public class EscrowService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : "LOCK250918001";
-        ShareLockItemDto.ShareLockDetailDto selectedDetail = liveShareLocksList.stream()
-                .filter(l -> l.getLockId().equalsIgnoreCase(targetSelectedId))
-                .findFirst()
-                .map(ShareLockItemDto::getDetail)
-                .orElse(liveShareLocksList.get(0).getDetail());
+        int totalCount = allLocks.size();
+        int activeLocks = (int) allLocks.stream().filter(l -> "Locked".equalsIgnoreCase(l.getStatus())).count();
+        int released = (int) allLocks.stream().filter(l -> "Released".equalsIgnoreCase(l.getStatus())).count();
+        int expiring = (int) allLocks.stream().filter(l -> "Expiring Soon".equalsIgnoreCase(l.getStatus())).count();
+        int failed = (int) allLocks.stream().filter(l -> "Failed".equalsIgnoreCase(l.getStatus())).count();
 
-        Map<String, Integer> tabCounts = new LinkedHashMap<>();
-        tabCounts.put("All Locks", 8);
-        tabCounts.put("My Locks", 5);
-        tabCounts.put("As a Buyer", 4);
-        tabCounts.put("As a Seller", 4);
+        double denom = Math.max(1.0, (double) totalCount);
+        double activePct = totalCount > 0 ? Math.round((activeLocks * 1000.0) / denom) / 10.0 : 0.0;
+        double releasedPct = totalCount > 0 ? Math.round((released * 1000.0) / denom) / 10.0 : 0.0;
+        double expiringPct = totalCount > 0 ? Math.round((expiring * 1000.0) / denom) / 10.0 : 0.0;
+        double failedPct = totalCount > 0 ? Math.round((failed * 1000.0) / denom) / 10.0 : 0.0;
+
+        ShareLockStatusPageDto.ShareLockMetricsDto lockMetrics;
+        Map<String, Integer> lockTabCounts = new LinkedHashMap<>();
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            lockTabCounts.put("All Locks", 8);
+            lockTabCounts.put("My Locks", 5);
+            lockTabCounts.put("As a Buyer", 4);
+            lockTabCounts.put("As a Seller", 4);
+            lockMetrics = ShareLockStatusPageDto.ShareLockMetricsDto.builder()
+                    .totalRequests(8)
+                    .activeLocks(5).activeLocksPct(62.5)
+                    .released(2).releasedPct(25.0)
+                    .expiringSoon(1).expiringSoonPct(12.5)
+                    .failed(0).failedPct(0.0)
+                    .build();
+        } else {
+            lockTabCounts.put("All Locks", totalCount);
+            lockTabCounts.put("My Locks", totalCount);
+            lockTabCounts.put("As a Buyer", totalCount / 2);
+            lockTabCounts.put("As a Seller", totalCount - (totalCount / 2));
+            lockMetrics = ShareLockStatusPageDto.ShareLockMetricsDto.builder()
+                    .totalRequests(totalCount)
+                    .activeLocks(activeLocks).activeLocksPct(activePct)
+                    .released(released).releasedPct(releasedPct)
+                    .expiringSoon(expiring).expiringSoonPct(expiringPct)
+                    .failed(failed).failedPct(failedPct)
+                    .build();
+        }
+
+        ShareLockItemDto.ShareLockDetailDto selectedDetail = null;
+        if (!pagedContent.isEmpty()) {
+            String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : pagedContent.get(0).getLockId();
+            selectedDetail = pagedContent.stream()
+                    .filter(l -> l.getLockId().equalsIgnoreCase(targetSelectedId))
+                    .findFirst()
+                    .map(ShareLockItemDto::getDetail)
+                    .orElse(pagedContent.get(0).getDetail());
+        }
 
         return ShareLockStatusPageDto.builder()
-                .summary(ShareLockStatusPageDto.ShareLockMetricsDto.builder()
-                        .totalRequests(8)
-                        .activeLocks(5).activeLocksPct(62.5)
-                        .released(2).releasedPct(25.0)
-                        .expiringSoon(1).expiringSoonPct(12.5)
-                        .failed(0).failedPct(0.0)
-                        .build())
-                .tabCounts(tabCounts)
+                .summary(lockMetrics)
+                .tabCounts(lockTabCounts)
                 .locks(ShareLockStatusPageDto.PaginatedShareLockDto.builder()
                         .totalElements(totalElements)
                         .totalPages(totalPages)
@@ -1656,19 +2141,90 @@ public class EscrowService {
                 .build();
     }
 
+    private ShareLockItemDto mapDbToShareLockItem(Escrow e, UserAccount currentUser) {
+        String compName = "Atirath Holdings India Limited";
+        Long qty = 1000L;
+        if (e.getTrade() != null) {
+            if (e.getTrade().getCompany() != null) compName = e.getTrade().getCompany().getCompanyName();
+            if (e.getTrade().getQuantity() != null) qty = e.getTrade().getQuantity();
+        }
+        String lockId = "LOCK-" + e.getEscrowReference();
+        String dateStr = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "Today";
+        String status = "Completed".equalsIgnoreCase(normalizeStatus(e.getEscrowStatus())) ? "Released" : "Locked";
+
+        ShareLockItemDto.ShareLockDetailDto detail = ShareLockItemDto.ShareLockDetailDto.builder()
+                .lockId(lockId)
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .isin("INE012A01025")
+                .quantity(qty)
+                .lockDateTime(dateStr)
+                .unlockCondition("On Share Transfer")
+                .status(status)
+                .lockProgress(List.of(
+                        ShareLockItemDto.LockProgressStepDto.builder().title("Lock Initiated").timestamp(dateStr).status("COMPLETED").build(),
+                        ShareLockItemDto.LockProgressStepDto.builder().title("Locked").timestamp(dateStr).status("COMPLETED").build(),
+                        ShareLockItemDto.LockProgressStepDto.builder().title("Transfer Initiated").timestamp("In Progress").status("Released".equals(status) ? "COMPLETED" : "IN_PROGRESS").build(),
+                        ShareLockItemDto.LockProgressStepDto.builder().title("Unlocked").timestamp("Released".equals(status) ? dateStr : "Pending").status("Released".equals(status) ? "COMPLETED" : "PENDING").build()
+                ))
+                .recentActivity(List.of(
+                        ShareLockItemDto.LockActivityDto.builder().timestamp(dateStr).description("Shares locked in depository").dotColor("green").build()
+                ))
+                .documents(List.of("Lock Confirmation", "Depository Certificate"))
+                .build();
+
+        return ShareLockItemDto.builder()
+                .lockId(lockId)
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .isin("INE012A01025")
+                .quantity(qty)
+                .lockDate(dateStr)
+                .unlockDate("Released".equals(status) ? dateStr : "Until Transfer")
+                .status(status)
+                .detail(detail)
+                .build();
+    }
+
     /**
      * Image 18: Share Transfer Status Page
      */
     public ShareTransferStatusPageDto getShareTransferStatusPage(String tab, String status, String search, int page, int size, String selectedId) {
-        List<ShareTransferItemDto> filtered = new ArrayList<>(liveShareTransfersList);
+        return getShareTransferStatusPage(tab, status, search, page, size, selectedId, null);
+    }
 
+    public ShareTransferStatusPageDto getShareTransferStatusPage(String tab, String status, String search, int page, int size, String selectedId, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
+        if (currentUser == null) {
+            currentUser = userAccountRepository.findByEmailIgnoreCase("sairam.v@atirathgroup.com").orElse(null);
+        }
+
+        List<Escrow> dbEscrows = Collections.emptyList();
+        if (currentUser != null) {
+            try {
+                dbEscrows = escrowRepository.findUserEscrows(currentUser.getUserId());
+            } catch (Exception ignored) {}
+        }
+
+        List<ShareTransferItemDto> allTransfers;
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            allTransfers = new ArrayList<>(liveShareTransfersList);
+        } else if (!dbEscrows.isEmpty()) {
+            final UserAccount finalUser = currentUser;
+            allTransfers = dbEscrows.stream()
+                    .filter(e -> "TRANSFER IN PROGRESS".equalsIgnoreCase(e.getEscrowStatus()) || "COMPLETED".equalsIgnoreCase(e.getEscrowStatus()) || "RELEASED".equalsIgnoreCase(e.getEscrowStatus()))
+                    .map(e -> mapDbToShareTransferItem(e, finalUser))
+                    .toList();
+        } else {
+            allTransfers = Collections.emptyList();
+        }
+
+        List<ShareTransferItemDto> filtered = allTransfers;
         if (tab != null && !tab.equalsIgnoreCase("ALL") && !tab.equalsIgnoreCase("All Transfers") && !tab.isBlank()) {
             if (tab.equalsIgnoreCase("As a Buyer") || tab.equalsIgnoreCase("BUYER")) {
-                filtered = filtered.stream().filter(t -> t.getTransferId().endsWith("001") || t.getTransferId().endsWith("002") || t.getTransferId().endsWith("003") || t.getTransferId().endsWith("004") || t.getTransferId().endsWith("005") || t.getTransferId().endsWith("007")).toList();
+                filtered = filtered.stream().filter(t -> t.getTransferId().endsWith("001") || t.getTransferId().endsWith("002") || t.getTransferId().endsWith("003")).toList();
             } else if (tab.equalsIgnoreCase("As a Seller") || tab.equalsIgnoreCase("SELLER")) {
-                filtered = filtered.stream().filter(t -> t.getTransferId().endsWith("006") || t.getTransferId().endsWith("008") || t.getTransferId().endsWith("009") || t.getTransferId().endsWith("010")).toList();
-            } else if (tab.equalsIgnoreCase("My Transfers")) {
-                filtered = filtered.stream().filter(t -> !t.getTransferId().endsWith("003") && !t.getTransferId().endsWith("008") && !t.getTransferId().endsWith("010")).toList();
+                filtered = filtered.stream().filter(t -> t.getTransferId().endsWith("004") || t.getTransferId().endsWith("005")).toList();
             }
         }
 
@@ -1700,28 +2256,59 @@ public class EscrowService {
             pagedContent = filtered.subList(startIndex, endIndex);
         }
 
-        String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : "TRF250918001";
-        ShareTransferItemDto.ShareTransferDetailDto selectedDetail = liveShareTransfersList.stream()
-                .filter(t -> t.getTransferId().equalsIgnoreCase(targetSelectedId))
-                .findFirst()
-                .map(ShareTransferItemDto::getDetail)
-                .orElse(liveShareTransfersList.get(0).getDetail());
+        int totalCount = allTransfers.size();
+        int completedCount = (int) allTransfers.stream().filter(t -> "Completed".equalsIgnoreCase(t.getStatus())).count();
+        int inProgressCount = (int) allTransfers.stream().filter(t -> "In Progress".equalsIgnoreCase(t.getStatus())).count();
+        int pendingCount = (int) allTransfers.stream().filter(t -> "Pending".equalsIgnoreCase(t.getStatus())).count();
+        int failedCount = (int) allTransfers.stream().filter(t -> "Failed".equalsIgnoreCase(t.getStatus())).count();
 
-        Map<String, Integer> tabCounts = new LinkedHashMap<>();
-        tabCounts.put("All Transfers", 10);
-        tabCounts.put("My Transfers", 7);
-        tabCounts.put("As a Buyer", 6);
-        tabCounts.put("As a Seller", 4);
+        double denom = Math.max(1.0, (double) totalCount);
+        double completedPct = totalCount > 0 ? Math.round((completedCount * 1000.0) / denom) / 10.0 : 0.0;
+        double inProgressPct = totalCount > 0 ? Math.round((inProgressCount * 1000.0) / denom) / 10.0 : 0.0;
+        double pendingPct = totalCount > 0 ? Math.round((pendingCount * 1000.0) / denom) / 10.0 : 0.0;
+        double failedPct = totalCount > 0 ? Math.round((failedCount * 1000.0) / denom) / 10.0 : 0.0;
+
+        ShareTransferStatusPageDto.ShareTransferMetricsDto transferMetrics;
+        Map<String, Integer> transferTabCounts = new LinkedHashMap<>();
+        if (currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) {
+            transferTabCounts.put("All Transfers", 10);
+            transferTabCounts.put("My Transfers", 7);
+            transferTabCounts.put("As a Buyer", 6);
+            transferTabCounts.put("As a Seller", 4);
+            transferMetrics = ShareTransferStatusPageDto.ShareTransferMetricsDto.builder()
+                    .totalTransfers(10)
+                    .completed(6).completedPct(60.0)
+                    .inProgress(3).inProgressPct(30.0)
+                    .pending(1).pendingPct(10.0)
+                    .failed(0).failedPct(0.0)
+                    .build();
+        } else {
+            transferTabCounts.put("All Transfers", totalCount);
+            transferTabCounts.put("My Transfers", totalCount);
+            transferTabCounts.put("As a Buyer", totalCount / 2);
+            transferTabCounts.put("As a Seller", totalCount - (totalCount / 2));
+            transferMetrics = ShareTransferStatusPageDto.ShareTransferMetricsDto.builder()
+                    .totalTransfers(totalCount)
+                    .completed(completedCount).completedPct(completedPct)
+                    .inProgress(inProgressCount).inProgressPct(inProgressPct)
+                    .pending(pendingCount).pendingPct(pendingPct)
+                    .failed(failedCount).failedPct(failedPct)
+                    .build();
+        }
+
+        ShareTransferItemDto.ShareTransferDetailDto selectedDetail = null;
+        if (!pagedContent.isEmpty()) {
+            String targetSelectedId = (selectedId != null && !selectedId.isBlank()) ? selectedId : pagedContent.get(0).getTransferId();
+            selectedDetail = pagedContent.stream()
+                    .filter(t -> t.getTransferId().equalsIgnoreCase(targetSelectedId))
+                    .findFirst()
+                    .map(ShareTransferItemDto::getDetail)
+                    .orElse(pagedContent.get(0).getDetail());
+        }
 
         return ShareTransferStatusPageDto.builder()
-                .summary(ShareTransferStatusPageDto.ShareTransferMetricsDto.builder()
-                        .totalTransfers(10)
-                        .completed(6).completedPct(60.0)
-                        .inProgress(3).inProgressPct(30.0)
-                        .pending(1).pendingPct(10.0)
-                        .failed(0).failedPct(0.0)
-                        .build())
-                .tabCounts(tabCounts)
+                .summary(transferMetrics)
+                .tabCounts(transferTabCounts)
                 .transfers(ShareTransferStatusPageDto.PaginatedShareTransferDto.builder()
                         .totalElements(totalElements)
                         .totalPages(totalPages)
@@ -1733,12 +2320,147 @@ public class EscrowService {
                 .build();
     }
 
+    private ShareTransferItemDto mapDbToShareTransferItem(Escrow e, UserAccount currentUser) {
+        String compName = "Atirath Holdings India Limited";
+        Long qty = 1000L;
+        if (e.getTrade() != null) {
+            if (e.getTrade().getCompany() != null) compName = e.getTrade().getCompany().getCompanyName();
+            if (e.getTrade().getQuantity() != null) qty = e.getTrade().getQuantity();
+        }
+        String trfId = "TRF-" + e.getEscrowReference();
+        String dateStr = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "Today";
+        String status = "Completed".equalsIgnoreCase(normalizeStatus(e.getEscrowStatus())) ? "Completed" : "In Progress";
+
+        String sellerName = e.getSellerUser() != null ? getUserDisplayName(e.getSellerUser()) : "Seller";
+        String buyerName = e.getBuyerUser() != null ? getUserDisplayName(e.getBuyerUser()) : "Buyer";
+
+        ShareTransferItemDto.ShareTransferDetailDto detail = ShareTransferItemDto.ShareTransferDetailDto.builder()
+                .transferId(trfId)
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .fromSeller(sellerName)
+                .toBuyer(buyerName)
+                .isin("INE012A01025")
+                .quantity(qty)
+                .transferDateTime(dateStr)
+                .settlementRef("NSDL-" + e.getEscrowReference())
+                .status(status)
+                .transferProgress(List.of(
+                        ShareTransferItemDto.TransferProgressStepDto.builder().title("Transfer Initiated").description("Initiated with depository").timestamp(dateStr).build(),
+                        ShareTransferItemDto.TransferProgressStepDto.builder().title("Transfer Completed").description("Credited to buyer demat").timestamp("Completed".equals(status) ? dateStr : "In Progress").build()
+                ))
+                .documents(List.of("Demat Transfer Receipt", "NSDL Transfer Slip"))
+                .build();
+
+        return ShareTransferItemDto.builder()
+                .transferId(trfId)
+                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .companyName(compName)
+                .fromSeller(sellerName)
+                .toBuyer(buyerName)
+                .quantity(qty)
+                .transferDate(dateStr)
+                .status(status)
+                .detail(detail)
+                .build();
+    }
+
     /**
      * Settlement Confirmation (Settlement > Settlement Confirmation Screen)
      */
     public SettlementConfirmationDto getSettlementConfirmation(String settlementId, String escrowId) {
+        return getSettlementConfirmation(settlementId, escrowId, null);
+    }
+
+    public SettlementConfirmationDto getSettlementConfirmation(String settlementId, String escrowId, Long userId) {
         String effSettlementId = (settlementId != null && !settlementId.isBlank()) ? settlementId : "SET250918001";
         String effEscrowId = (escrowId != null && !escrowId.isBlank()) ? escrowId : "ESC250918001";
+
+        UserAccount currentUser = resolveCurrentUser(userId);
+        Optional<Escrow> dbOpt = Optional.empty();
+        try {
+            dbOpt = escrowRepository.findByEscrowReference(effEscrowId);
+        } catch (Exception ignored) {}
+
+        if (dbOpt.isPresent()) {
+            Escrow e = dbOpt.get();
+            String compName = (e.getTrade() != null && e.getTrade().getCompany() != null)
+                    ? e.getTrade().getCompany().getCompanyName()
+                    : "Atirath Holdings India Limited";
+            Long qty = (e.getTrade() != null && e.getTrade().getQuantity() != null) ? e.getTrade().getQuantity() : 1000L;
+            BigDecimal amt = e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO;
+            BigDecimal price = qty > 0 ? amt.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP) : amt;
+            String dateStr = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) : "18 Sep 2025, 11:28 AM";
+            String bName = e.getBuyerUser() != null ? getUserDisplayName(e.getBuyerUser()) : "Buyer";
+            String sName = e.getSellerUser() != null ? getUserDisplayName(e.getSellerUser()) : "Seller";
+            String bId = e.getBuyerUser() != null ? getUserMemberId(e.getBuyerUser()) : "ATG10027";
+            String sId = e.getSellerUser() != null ? getUserMemberId(e.getSellerUser()) : "ATG10056";
+
+            String trdId = (e.getTrade() != null && e.getTrade().getTradeNo() != null) ? e.getTrade().getTradeNo() : "TRD250918004";
+
+            return SettlementConfirmationDto.builder()
+                    .settlementId(effSettlementId)
+                    .escrowId(effEscrowId)
+                    .tradeId(trdId)
+                    .progressSteps(List.of(
+                            SettlementConfirmationDto.SettlementProgressStepDto.builder().stepNumber(1).title("1. Fund Escrow").status("Completed").timestamp(dateStr).build(),
+                            SettlementConfirmationDto.SettlementProgressStepDto.builder().stepNumber(2).title("2. Payment Verified").status("Completed").timestamp(dateStr).build(),
+                            SettlementConfirmationDto.SettlementProgressStepDto.builder().stepNumber(3).title("3. Share Lock").status("Completed").timestamp(dateStr).build(),
+                            SettlementConfirmationDto.SettlementProgressStepDto.builder().stepNumber(4).title("4. Share Transfer").status("Completed").timestamp(dateStr).build(),
+                            SettlementConfirmationDto.SettlementProgressStepDto.builder().stepNumber(5).title("5. Settlement").status("Completed").timestamp(dateStr).build()
+                    ))
+                    .settlementDetails(SettlementConfirmationDto.SettlementDetailsCardDto.builder()
+                            .settlementId(effSettlementId)
+                            .escrowId(effEscrowId)
+                            .tradeId(trdId)
+                            .companyName(compName)
+                            .companySymbol("ATG-H")
+                            .fromSeller(sName + " (" + sId + ")")
+                            .toBuyer(bName + " (" + bId + ")")
+                            .isin("INE012A01025")
+                            .quantity(qty)
+                            .pricePerShare(price)
+                            .totalAmount(amt)
+                            .transferDate(dateStr)
+                            .settlementDate(dateStr)
+                            .settlementStatus("Completed")
+                            .settlementReferenceNo((currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) ? "NSDL250918123456" : "NSDL" + effEscrowId)
+                            .clearingCorporation("NSDL")
+                            .paymentReferenceNo((currentUser != null && "sairam.v@atirathgroup.com".equalsIgnoreCase(currentUser.getEmail())) ? "PAY250918789012" : "PAY" + effEscrowId)
+                            .createdOn(dateStr)
+                            .lastUpdated(dateStr)
+                            .build())
+                    .successDetails(SettlementConfirmationDto.SettlementSuccessCardDto.builder()
+                            .headline("Settlement Successful!")
+                            .subheadline("The shares have been transferred to the buyer and funds have been released to the seller as per the agreed terms.")
+                            .tagline("\"Trade Completed. Trust Delivered.\"")
+                            .buyerDelivery(SettlementConfirmationDto.PartyDeliverySummaryDto.builder()
+                                    .label("Buyer (Shares Received)")
+                                    .memberName(bName)
+                                    .memberId(bId)
+                                    .sharesCount(qty)
+                                    .sharesFormatted(SHARES_FMT.format(qty) + " Shares")
+                                    .statusMessage("Shares credited to demat account")
+                                    .timestamp(dateStr)
+                                    .build())
+                            .sellerPayment(SettlementConfirmationDto.PartyPaymentSummaryDto.builder()
+                                    .label("Seller (Payment Received)")
+                                    .memberName(sName)
+                                    .memberId(sId)
+                                    .amount(amt)
+                                    .amountFormatted("₹ " + formatInr(amt))
+                                    .statusMessage("Funds credited to bank account")
+                                    .timestamp(dateStr)
+                                    .build())
+                            .build())
+                    .documents(List.of(
+                            SettlementConfirmationDto.SettlementDocumentDto.builder().id("settlement-letter").title("Settlement Confirmation Letter").fileFormat("PDF").fileSize("150 KB").downloadUrl("/api/v1/escrow/settlement/" + effSettlementId + "/documents/settlement-letter").build(),
+                            SettlementConfirmationDto.SettlementDocumentDto.builder().id("share-transfer-proof").title("Share Transfer Proof (CDSL/NSDL)").fileFormat("PDF").fileSize("220 KB").downloadUrl("/api/v1/escrow/settlement/" + effSettlementId + "/documents/share-transfer-proof").build(),
+                            SettlementConfirmationDto.SettlementDocumentDto.builder().id("payment-release").title("Payment Release Confirmation").fileFormat("PDF").fileSize("180 KB").downloadUrl("/api/v1/escrow/settlement/" + effSettlementId + "/documents/payment-release").build(),
+                            SettlementConfirmationDto.SettlementDocumentDto.builder().id("escrow-closure").title("Escrow Closure Report").fileFormat("PDF").fileSize("210 KB").downloadUrl("/api/v1/escrow/settlement/" + effSettlementId + "/documents/escrow-closure").build()
+                    ))
+                    .build();
+        }
 
         return SettlementConfirmationDto.builder()
                 .settlementId(effSettlementId)

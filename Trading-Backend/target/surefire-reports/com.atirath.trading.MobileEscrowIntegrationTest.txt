@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.atirath.trading.MobileEscrowIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 43.93 s -- in com.atirath.trading.MobileEscrowIntegrationTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.893 s -- in com.atirath.trading.MobileEscrowIntegrationTest

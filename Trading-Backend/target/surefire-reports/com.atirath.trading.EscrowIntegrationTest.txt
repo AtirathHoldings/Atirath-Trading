@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.atirath.trading.EscrowIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 37.23 s -- in com.atirath.trading.EscrowIntegrationTest
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 80.57 s -- in com.atirath.trading.EscrowIntegrationTest

@@ -996,6 +996,7 @@ com\atirath\trading\modules\market\service\WatchlistService.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareTransferRulesPageDto$ShareTransferRuleItemDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\RecordCompanyTransactionRequestDto.class
 com\atirath\trading\modules\market\repository\TradeOrderChargeRepository.class
+com\atirath\trading\config\DataInitializer$1EscrowSeed.class
 com\atirath\trading\modules\admin\subsidiary\dto\MonitoredTransactionDetailDto.class
 com\atirath\trading\modules\externalrequest\service\ExternalRequestService.class
 com\atirath\trading\modules\admin\parent\dto\ParentDashboardDto$GroupCompanyPerformanceDto.class

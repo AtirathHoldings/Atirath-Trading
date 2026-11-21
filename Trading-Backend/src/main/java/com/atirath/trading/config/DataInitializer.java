@@ -65,6 +65,7 @@ public class DataInitializer implements CommandLineRunner {
     private final MarketOrderRepository orderRepository;
     private final MarketBroadcastService broadcastService;
     private final EscrowAccountRepository escrowAccountRepository;
+    private final EscrowRepository escrowRepository;
     private final UserShareHoldingRepository userShareHoldingRepository;
     private final NegotiationRepository negotiationRepository;
     private final NegotiationOfferRepository negotiationOfferRepository;
@@ -212,6 +213,9 @@ public class DataInitializer implements CommandLineRunner {
 
             // Seed real Negotiations in PostgreSQL DB
             seedNegotiations(indivAccount, corpAccount);
+
+            // Seed real Escrows in PostgreSQL DB
+            seedEscrows(indivAccount, corpAccount);
         }
     }
 
@@ -380,6 +384,80 @@ public class DataInitializer implements CommandLineRunner {
                     .agreementStatus("AGREEMENT_READY")
                     .createdAt(OffsetDateTime.now())
                     .build());
+        }
+    }
+
+    private void seedEscrows(UserAccount indivAccount, UserAccount corpAccount) {
+        if (indivAccount == null) return;
+        try {
+            if (escrowRepository.count() >= 24) {
+                log.info("Escrows already seeded in DB (count={}).", escrowRepository.count());
+                return;
+            }
+
+            log.info("Seeding / checking 24 demo escrows into PostgreSQL database for Sairam (indivAccount)...");
+
+            UserAccount rakesh = findOrCreateUser("rakesh@farmvantara.com", "Rakesh Mehta", "9123456789", "ATG10056");
+            UserAccount priya = findOrCreateUser("priya@farmvantara.com", "Priya Sharma", "9123456788", "ATG10072");
+            UserAccount vikram = findOrCreateUser("vikram@goeazymart.com", "Vikram Reddy", "9123456787", "ATG10081");
+            UserAccount anita = findOrCreateUser("anita@csinterio.com", "Anita Desai", "9123456786", "ATG10063");
+            UserAccount suresh = findOrCreateUser("suresh.nair@trienergy.com", "Suresh Nair", "9123456783", "ATG10078");
+            UserAccount karan = findOrCreateUser("karan.malhotra@royalone.com", "Karan Malhotra", "9123456782", "ATG10069");
+            UserAccount rahul = findOrCreateUser("rahul.verma@atirathgroup.com", "Rahul Verma", "9123456781", "ATG10044");
+            UserAccount sneha = findOrCreateUser("sneha.patel@atirathgroup.com", "Sneha Patel", "9123456780", "ATG10052");
+            UserAccount manoj = findOrCreateUser("manoj.tiwari@atirathgroup.com", "Manoj Tiwari", "9123456779", "ATG10039");
+            UserAccount divya = findOrCreateUser("divya.kapoor@atirathgroup.com", "Divya Kapoor", "9123456778", "ATG10061");
+            UserAccount amit = findOrCreateUser("amit.joshi@atirathmining.com", "Amit Joshi", "9123456777", "ATG10048");
+            UserAccount pooja = findOrCreateUser("pooja.hegde@atirathrealty.com", "Pooja Hegde", "9123456776", "ATG10085");
+            UserAccount neha = findOrCreateUser("neha.kapoor@atirathgroup.com", "Neha Kapoor", "9123456775", "ATG10090");
+
+            record EscrowSeed(String ref, UserAccount buyer, UserAccount seller, BigDecimal amount, String status, OffsetDateTime created) {}
+            OffsetDateTime now = OffsetDateTime.now();
+
+            List<EscrowSeed> seeds = List.of(
+                    new EscrowSeed("ESC250918001", indivAccount, rakesh, new BigDecimal("242000.00"), "Pending Funding", now.minusHours(4)),
+                    new EscrowSeed("ESC250917003", priya, indivAccount, new BigDecimal("95000.00"), "Funds in Escrow", now.minusDays(1)),
+                    new EscrowSeed("ESC250916001", vikram, indivAccount, new BigDecimal("470000.00"), "Shares Locked", now.minusDays(2)),
+                    new EscrowSeed("ESC250914008", anita, karan, new BigDecimal("248000.00"), "Transfer in Progress", now.minusDays(4)),
+                    new EscrowSeed("ESC250912005", indivAccount, neha, new BigDecimal("360000.00"), "Completed", now.minusDays(6)),
+                    new EscrowSeed("ESC250910004", rakesh, priya, new BigDecimal("220000.00"), "Completed", now.minusDays(8)),
+                    new EscrowSeed("ESC250908002", indivAccount, vikram, new BigDecimal("108000.00"), "Cancelled", now.minusDays(10)),
+                    new EscrowSeed("ESC250905001", indivAccount, pooja, new BigDecimal("150000.00"), "Completed", now.minusDays(13)),
+                    new EscrowSeed("ESC250904001", indivAccount, rahul, new BigDecimal("190400.00"), "Pending Funding", now.minusDays(14)),
+                    new EscrowSeed("ESC250903002", sneha, indivAccount, new BigDecimal("206800.00"), "Pending Funding", now.minusDays(15)),
+                    new EscrowSeed("ESC250902003", indivAccount, manoj, new BigDecimal("213500.00"), "Pending Funding", now.minusDays(16)),
+                    new EscrowSeed("ESC250901004", pooja, amit, new BigDecimal("172900.00"), "Pending Funding", now.minusDays(17)),
+                    new EscrowSeed("ESC250830005", indivAccount, divya, new BigDecimal("313300.00"), "Pending Funding", now.minusDays(18)),
+                    new EscrowSeed("ESC250828006", rahul, indivAccount, new BigDecimal("285600.00"), "Funds in Escrow", now.minusDays(20)),
+                    new EscrowSeed("ESC250826007", anita, neha, new BigDecimal("121550.00"), "Funds in Escrow", now.minusDays(22)),
+                    new EscrowSeed("ESC250824008", indivAccount, karan, new BigDecimal("138750.00"), "Funds in Escrow", now.minusDays(24)),
+                    new EscrowSeed("ESC250822009", vikram, priya, new BigDecimal("277200.00"), "Shares Locked", now.minusDays(26)),
+                    new EscrowSeed("ESC250820010", neha, indivAccount, new BigDecimal("382400.00"), "Shares Locked", now.minusDays(28)),
+                    new EscrowSeed("ESC250818011", indivAccount, amit, new BigDecimal("236900.00"), "Shares Locked", now.minusDays(30)),
+                    new EscrowSeed("ESC250816012", karan, indivAccount, new BigDecimal("160650.00"), "Transfer in Progress", now.minusDays(32)),
+                    new EscrowSeed("ESC250814013", indivAccount, sneha, new BigDecimal("92000.00"), "Transfer in Progress", now.minusDays(34)),
+                    new EscrowSeed("ESC250812014", pooja, vikram, new BigDecimal("295000.00"), "Completed", now.minusDays(36)),
+                    new EscrowSeed("ESC250810015", indivAccount, rahul, new BigDecimal("302000.00"), "Completed", now.minusDays(38)),
+                    new EscrowSeed("ESC250808016", amit, priya, new BigDecimal("140000.00"), "Cancelled", now.minusDays(40))
+            );
+
+            for (EscrowSeed s : seeds) {
+                if (escrowRepository.findByEscrowReference(s.ref).isPresent()) {
+                    continue;
+                }
+                escrowRepository.save(Escrow.builder()
+                        .escrowReference(s.ref)
+                        .buyerUser(s.buyer)
+                        .sellerUser(s.seller)
+                        .amount(s.amount)
+                        .escrowStatus(s.status)
+                        .createdAt(s.created)
+                        .releasedAt("Completed".equalsIgnoreCase(s.status) ? s.created.plusDays(2) : null)
+                        .build());
+            }
+            log.info("-> Successfully seeded 24 escrows in PostgreSQL database");
+        } catch (Exception e) {
+            log.warn("Escrow seeding error: {}", e.getMessage(), e);
         }
     }
 

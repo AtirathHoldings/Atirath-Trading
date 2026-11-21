@@ -1,6 +1,7 @@
 package com.atirath.trading.modules.escrow.controller;
 
 import com.atirath.trading.common.ApiResponse;
+import com.atirath.trading.config.JwtTokenProvider;
 import com.atirath.trading.modules.escrow.dto.*;
 import com.atirath.trading.modules.escrow.service.EscrowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,19 @@ import org.springframework.web.bind.annotation.*;
 public class EscrowController {
 
     private final EscrowService escrowService;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    private Long extractUserId(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                String token = authHeader.substring(7).trim();
+                return jwtTokenProvider.getUserIdFromToken(token);
+            } catch (Exception e) {
+                log.debug("[EscrowController] Could not parse JWT: {}", e.getMessage());
+            }
+        }
+        return null;
+    }
 
     @GetMapping("/dashboard")
     @Operation(summary = "Get Escrow Dashboard",
@@ -29,9 +43,11 @@ public class EscrowController {
             @RequestParam(value = "tab", required = false, defaultValue = "ALL") String tab,
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
-            @RequestParam(value = "size", required = false, defaultValue = "8") int size) {
+            @RequestParam(value = "size", required = false, defaultValue = "8") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowDashboardDto dashboard = escrowService.getEscrowDashboard(tab, search, page, size);
+        Long userId = extractUserId(authHeader);
+        EscrowDashboardDto dashboard = escrowService.getEscrowDashboard(tab, search, page, size, userId);
         return ResponseEntity.ok(ApiResponse.success(dashboard, "Escrow dashboard retrieved successfully"));
     }
 
@@ -39,9 +55,11 @@ public class EscrowController {
     @Operation(summary = "Get Escrow Transaction Details",
             description = "Returns complete escrow transaction details: Buyer/Seller profiles, Trade & Escrow terms, Bank Escrow Account Details, 5-Step Stepper Progress, Legal Documents, and Activity Timeline")
     public ResponseEntity<ApiResponse<EscrowDetailDto>> getEscrowDetail(
-            @PathVariable("escrowId") String escrowId) {
+            @PathVariable("escrowId") String escrowId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowDetailDto detail = escrowService.getEscrowDetail(escrowId);
+        Long userId = extractUserId(authHeader);
+        EscrowDetailDto detail = escrowService.getEscrowDetail(escrowId, userId);
         return ResponseEntity.ok(ApiResponse.success(detail, "Escrow details retrieved successfully"));
     }
 
@@ -49,9 +67,11 @@ public class EscrowController {
     @Operation(summary = "Create New Escrow Transaction",
             description = "Initiates a new escrow transaction for trade settlement")
     public ResponseEntity<ApiResponse<EscrowListItemDto>> createEscrow(
-            @Valid @RequestBody CreateEscrowRequestDto request) {
+            @Valid @RequestBody CreateEscrowRequestDto request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowListItemDto item = escrowService.createEscrow(request);
+        Long userId = extractUserId(authHeader);
+        EscrowListItemDto item = escrowService.createEscrow(request, userId);
         return ResponseEntity.ok(ApiResponse.success(item, "Escrow transaction created successfully"));
     }
 
@@ -60,9 +80,11 @@ public class EscrowController {
             description = "Submits deposit confirmation for escrow funding, transitioning status to Funds in Escrow")
     public ResponseEntity<ApiResponse<EscrowDetailDto>> transferFunds(
             @PathVariable("escrowId") String escrowId,
-            @Valid @RequestBody TransferFundsRequestDto request) {
+            @Valid @RequestBody TransferFundsRequestDto request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowDetailDto detail = escrowService.transferFunds(escrowId, request);
+        Long userId = extractUserId(authHeader);
+        EscrowDetailDto detail = escrowService.transferFunds(escrowId, request, userId);
         return ResponseEntity.ok(ApiResponse.success(detail, "Funds transferred to escrow successfully. Verification in progress."));
     }
 
@@ -152,9 +174,11 @@ public class EscrowController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
             @RequestParam(value = "size", required = false, defaultValue = "8") int size,
-            @RequestParam(value = "selectedId", required = false) String selectedId) {
+            @RequestParam(value = "selectedId", required = false) String selectedId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowStatusPageDto result = escrowService.getEscrowStatusPage(tab, status, search, page, size, selectedId);
+        Long userId = extractUserId(authHeader);
+        EscrowStatusPageDto result = escrowService.getEscrowStatusPage(tab, status, search, page, size, selectedId, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "Escrow status page retrieved successfully"));
     }
 
@@ -163,9 +187,11 @@ public class EscrowController {
             description = "Returns full escrow status detail view including horizontal 5-step tracker, overview summary, tab navigation, quick actions, and downloadable documents")
     public ResponseEntity<ApiResponse<EscrowStatusDetailDto>> getEscrowStatusDetail(
             @PathVariable("escrowId") String escrowId,
-            @RequestParam(value = "tab", required = false, defaultValue = "Overview") String tab) {
+            @RequestParam(value = "tab", required = false, defaultValue = "Overview") String tab,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        EscrowStatusDetailDto result = escrowService.getEscrowStatusDetail(escrowId, tab);
+        Long userId = extractUserId(authHeader);
+        EscrowStatusDetailDto result = escrowService.getEscrowStatusDetail(escrowId, tab, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "Escrow status details retrieved successfully"));
     }
 
@@ -178,9 +204,11 @@ public class EscrowController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
             @RequestParam(value = "size", required = false, defaultValue = "8") int size,
-            @RequestParam(value = "selectedId", required = false) String selectedId) {
+            @RequestParam(value = "selectedId", required = false) String selectedId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        ShareLockStatusPageDto result = escrowService.getShareLockStatusPage(tab, status, search, page, size, selectedId);
+        Long userId = extractUserId(authHeader);
+        ShareLockStatusPageDto result = escrowService.getShareLockStatusPage(tab, status, search, page, size, selectedId, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "Share lock status page retrieved successfully"));
     }
 
@@ -193,9 +221,11 @@ public class EscrowController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
             @RequestParam(value = "size", required = false, defaultValue = "8") int size,
-            @RequestParam(value = "selectedId", required = false) String selectedId) {
+            @RequestParam(value = "selectedId", required = false) String selectedId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        ShareTransferStatusPageDto result = escrowService.getShareTransferStatusPage(tab, status, search, page, size, selectedId);
+        Long userId = extractUserId(authHeader);
+        ShareTransferStatusPageDto result = escrowService.getShareTransferStatusPage(tab, status, search, page, size, selectedId, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "Share transfer status page retrieved successfully"));
     }
 
@@ -204,9 +234,11 @@ public class EscrowController {
             description = "Returns complete settlement confirmation: 5-step completed stepper, settlement details (ISIN, clearing corp, references), celebration card with buyer/seller delivery metrics, and 4 downloadable legal settlement documents")
     public ResponseEntity<ApiResponse<SettlementConfirmationDto>> getSettlementConfirmationQuery(
             @RequestParam(value = "settlementId", required = false) String settlementId,
-            @RequestParam(value = "escrowId", required = false) String escrowId) {
+            @RequestParam(value = "escrowId", required = false) String escrowId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        SettlementConfirmationDto result = escrowService.getSettlementConfirmation(settlementId, escrowId);
+        Long userId = extractUserId(authHeader);
+        SettlementConfirmationDto result = escrowService.getSettlementConfirmation(settlementId, escrowId, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "Settlement confirmation retrieved successfully"));
     }
 

@@ -29,48 +29,27 @@ public class MobileEscrowService {
      * 1. Escrow Dashboard (EscrowScreen)
      */
     public MobileEscrowDashboardDto getMobileDashboard(Long userId) {
-        EscrowDashboardDto webDash = escrowService.getEscrowDashboard("ALL", null, 1, 10);
+        EscrowDashboardDto webDash = escrowService.getEscrowDashboard("ALL", null, 1, 10, userId);
 
         List<MobileEscrowCardDto> activeCards = new ArrayList<>();
+        List<MobileSettledRowDto> settledRows = new ArrayList<>();
+
         if (webDash.getTransactions() != null && webDash.getTransactions().getContent() != null) {
             for (EscrowListItemDto item : webDash.getTransactions().getContent()) {
-                if (!"Completed".equalsIgnoreCase(item.getCurrentStatus()) && !"Cancelled".equalsIgnoreCase(item.getCurrentStatus())) {
+                if ("Completed".equalsIgnoreCase(item.getCurrentStatus())) {
+                    settledRows.add(MobileSettledRowDto.builder()
+                            .id(item.getEscrowId())
+                            .company(item.getCompanyName())
+                            .date(item.getCreatedOn())
+                            .amount("₹" + CURRENCY_FMT.format(item.getTradeValue()))
+                            .build());
+                } else if (!"Cancelled".equalsIgnoreCase(item.getCurrentStatus())) {
                     activeCards.add(mapToActiveCard(item));
                 }
             }
         }
 
-        // If activeCards is empty in demo seed, provide standard active card
-        if (activeCards.isEmpty()) {
-            activeCards.add(MobileEscrowCardDto.builder()
-                    .id("ESC-2024-000312")
-                    .tradeId("TRD-2024-001754")
-                    .agreementId("AGR-2024-000441")
-                    .company("ARE")
-                    .companyFullName("Atirath Real Estate (ARE)")
-                    .shares(30L)
-                    .price(new BigDecimal("3395"))
-                    .amount(new BigDecimal("101850"))
-                    .amountFormatted("₹1,01,850")
-                    .buyer("Rajesh Kumar Sharma")
-                    .buyerId("ATR-MBR-20248417")
-                    .seller("Amit Verma")
-                    .sellerId("ATR-MBR-18240091")
-                    .status("funds_received")
-                    .statusBadge("Funds Received")
-                    .statusColor("green")
-                    .createdAt("Sep 21, 2026")
-                    .updatedAt("Sep 22, 2026")
-                    .build());
-        }
-
-        List<MobileSettledRowDto> settledRows = new ArrayList<>(Arrays.asList(
-                MobileSettledRowDto.builder().id("ESC-2024-000298").company("AIL").date("Sep 22").amount("₹1,41,000").build(),
-                MobileSettledRowDto.builder().id("ESC-2024-000285").company("ALG").date("Sep 18").amount("₹1,29,600").build(),
-                MobileSettledRowDto.builder().id("ESC-2024-000270").company("ATH").date("Sep 15").amount("₹95,000").build()
-        ));
-
-        int activeCount = Math.max(1, activeCards.size());
+        int activeCount = activeCards.size();
         int pendingFunding = (int) activeCards.stream().filter(c -> "pending_funding".equalsIgnoreCase(c.getStatus())).count();
         int inTransfer = (int) activeCards.stream().filter(c -> "transfer_in_progress".equalsIgnoreCase(c.getStatus())).count();
 
@@ -78,7 +57,7 @@ public class MobileEscrowService {
                 .activeEscrow(activeCount)
                 .pendingFunding(pendingFunding)
                 .inTransfer(inTransfer)
-                .settledMtd(3)
+                .settledMtd(settledRows.size())
                 .activeEscrows(activeCards)
                 .recentlySettled(settledRows)
                 .build();
@@ -89,7 +68,7 @@ public class MobileEscrowService {
      */
     public MobileEscrowDetailDto getMobileEscrowDetail(String escrowId, Long userId) {
         String effId = resolveEscrowId(escrowId);
-        EscrowDetailDto detail = safeGetEscrowDetail(effId);
+        EscrowDetailDto detail = safeGetEscrowDetail(effId, userId);
 
         String companyCode = detail.getCompany() != null && detail.getCompany().getSymbol() != null
                 ? detail.getCompany().getSymbol() : "ARE";
@@ -371,13 +350,13 @@ public class MobileEscrowService {
         return "ESC-2024-000312";
     }
 
-    private EscrowDetailDto safeGetEscrowDetail(String escrowId) {
+    private EscrowDetailDto safeGetEscrowDetail(String escrowId, Long userId) {
         try {
-            return escrowService.getEscrowDetail(escrowId);
+            return escrowService.getEscrowDetail(escrowId, userId);
         } catch (ResourceNotFoundException e) {
             // If not found in web map, try first from liveEscrowsList or fallback generic
             try {
-                return escrowService.getEscrowDetail("ESC250918001");
+                return escrowService.getEscrowDetail("ESC250918001", userId);
             } catch (Exception ex) {
                 return EscrowDetailDto.builder()
                         .escrowId(escrowId)

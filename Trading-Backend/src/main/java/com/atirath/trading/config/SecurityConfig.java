@@ -132,7 +132,11 @@ public class SecurityConfig {
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers",
                 "X-Client-App",
-                "X-Client-Key"
+                "X-Client-Key",
+                "X-Device-Id",
+                "X-Device-Name",
+                "X-Device-Type",
+                "*"
         ));
         configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Authorization"));
         configuration.setAllowCredentials(true);
