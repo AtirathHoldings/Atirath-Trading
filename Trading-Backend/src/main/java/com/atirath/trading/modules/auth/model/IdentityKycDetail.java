@@ -41,6 +41,15 @@ public class IdentityKycDetail {
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
+    @Column(name = "company_pan_number", length = 10)
+    private String companyPanNumber;
+
+    @Column(name = "gst_number", length = 15)
+    private String gstNumber;
+
+    @Column(name = "tan_number", length = 10)
+    private String tanNumber;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

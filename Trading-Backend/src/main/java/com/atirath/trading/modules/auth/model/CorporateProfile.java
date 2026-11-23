@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -36,6 +37,15 @@ public class CorporateProfile {
 
     @Column(name = "contact_person_name", nullable = false, length = 150)
     private String contactPersonName;
+
+    @Column(name = "industry", length = 150)
+    private String industry;
+
+    @Column(name = "incorporation_date")
+    private LocalDate incorporationDate;
+
+    @Column(name = "company_type", length = 50)
+    private String companyType;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

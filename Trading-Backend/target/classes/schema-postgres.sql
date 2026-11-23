@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS individual_profiles (
     individual_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL UNIQUE REFERENCES user_accounts(user_id) ON DELETE CASCADE,
     full_name VARCHAR(150) NOT NULL,
+    company_name VARCHAR(200),
+    gender VARCHAR(20),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -36,6 +38,9 @@ CREATE TABLE IF NOT EXISTS corporate_profiles (
     company_name VARCHAR(200) NOT NULL,
     registration_id VARCHAR(30) NOT NULL UNIQUE,
     contact_person_name VARCHAR(150) NOT NULL,
+    industry VARCHAR(150),
+    incorporation_date DATE,
+    company_type VARCHAR(50),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -48,6 +53,9 @@ CREATE TABLE IF NOT EXISTS identity_kyc_details (
     aadhaar_number_encrypted TEXT NOT NULL,
     pan_full_name VARCHAR(150) NOT NULL,
     date_of_birth DATE NOT NULL,
+    company_pan_number VARCHAR(10),
+    gst_number VARCHAR(15),
+    tan_number VARCHAR(10),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -613,5 +621,18 @@ CREATE TABLE IF NOT EXISTS admin_login_attempts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_attempts_admin_id ON admin_login_attempts(admin_id);
+
+-- DDL Updates for individual_profiles, corporate_profiles, identity_kyc_details
+ALTER TABLE public.individual_profiles ADD COLUMN IF NOT EXISTS company_name VARCHAR(200);
+ALTER TABLE public.individual_profiles ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+
+ALTER TABLE public.corporate_profiles ADD COLUMN IF NOT EXISTS industry VARCHAR(150);
+ALTER TABLE public.corporate_profiles ADD COLUMN IF NOT EXISTS incorporation_date DATE;
+ALTER TABLE public.corporate_profiles ADD COLUMN IF NOT EXISTS company_type VARCHAR(50);
+
+ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS company_pan_number VARCHAR(10);
+ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS gst_number VARCHAR(15);
+ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS tan_number VARCHAR(10);
+
 
 

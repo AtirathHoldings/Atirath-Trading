@@ -11,6 +11,8 @@ import com.atirath.trading.modules.market.repository.EscrowAccountRepository;
 import com.atirath.trading.modules.market.repository.EscrowRepository;
 import com.atirath.trading.modules.market.repository.MarketCompanyRepository;
 import com.atirath.trading.modules.market.repository.UserShareHoldingRepository;
+import com.atirath.trading.modules.negotiation.model.TradeAgreement;
+import com.atirath.trading.modules.negotiation.repository.TradeAgreementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -59,6 +61,7 @@ public class EscrowService {
     private final UserAccountRepository userAccountRepository;
     private final UserShareHoldingRepository userShareHoldingRepository;
     private final MarketCompanyRepository marketCompanyRepository;
+    private final TradeAgreementRepository tradeAgreementRepository;
 
     private final List<EscrowListItemDto> liveEscrowsList = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, EscrowDetailDto> liveEscrowDetails = new ConcurrentHashMap<>();
@@ -607,10 +610,38 @@ public class EscrowService {
         return getEscrowDashboard(tab, search, page, size, null);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public EscrowDashboardDto getEscrowDashboard(String tab, String search, int page, int size, Long userId) {
         UserAccount currentUser = resolveCurrentUser(userId);
         List<EscrowListItemDto> allDtos;
         List<Escrow> dbList = Collections.emptyList();
+
+        // Auto-sync any confirmed trade agreements into escrows table if missing
+        try {
+            if (currentUser != null) {
+                List<TradeAgreement> confirmedAgreements = tradeAgreementRepository.findUserConfirmedAgreements(currentUser.getUserId());
+                for (TradeAgreement ag : confirmedAgreements) {
+                    if (escrowRepository.findByAgreementId(ag.getAgreementId()).isEmpty()) {
+                        String cleanNum = ag.getAgreementNo() != null ? ag.getAgreementNo().replace("NEG", "").replace("AGR", "") : String.valueOf(System.currentTimeMillis() % 1000000000L);
+                        String ref = "ESC" + cleanNum;
+                        BigDecimal totalVal = ag.getAgreedPrice().multiply(BigDecimal.valueOf(ag.getAgreedQuantity()));
+                        Escrow e = Escrow.builder()
+                                .escrowReference(ref)
+                                .agreementId(ag.getAgreementId())
+                                .buyerUser(ag.getBuyerUser() != null ? ag.getBuyerUser() : currentUser)
+                                .sellerUser(ag.getSellerUser() != null ? ag.getSellerUser() : currentUser)
+                                .amount(totalVal)
+                                .escrowStatus("CREATED")
+                                .createdAt(ag.getBuyerAcceptedAt() != null ? ag.getBuyerAcceptedAt() : OffsetDateTime.now())
+                                .build();
+                        escrowRepository.save(e);
+                        log.info("Auto-synced Escrow {} for confirmed agreement {}", ref, ag.getAgreementNo());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Could not sync confirmed trade agreements to escrows: {}", ex.getMessage());
+        }
 
         try {
             if (currentUser != null) {
@@ -628,6 +659,12 @@ public class EscrowService {
             allDtos = dbList.stream().map(e -> mapDbToListItemDto(e, currentUser)).toList();
         } else {
             allDtos = Collections.emptyList();
+        }
+
+        // Ensure continuous 1-based row numbers
+        allDtos = new ArrayList<>(allDtos);
+        for (int i = 0; i < allDtos.size(); i++) {
+            allDtos.get(i).setRowNo(i + 1);
         }
 
         // Query real EscrowAccount for available/blocked balance
@@ -819,24 +856,54 @@ public class EscrowService {
 
     private EscrowListItemDto mapDbToListItemDto(Escrow e, UserAccount currentUser) {
         String bName = e.getBuyerUser() != null
-                ? (currentUser != null && e.getBuyerUser().getUserId().equals(currentUser.getUserId()) ? "Sairam V. (You)" : (e.getBuyerUser().getEmail() != null ? e.getBuyerUser().getEmail() : "Buyer"))
+                ? (currentUser != null && e.getBuyerUser().getUserId().equals(currentUser.getUserId()) ? getUserDisplayName(e.getBuyerUser()) + " (You)" : getUserDisplayName(e.getBuyerUser()))
                 : "You";
         String sName = e.getSellerUser() != null
-                ? (currentUser != null && e.getSellerUser().getUserId().equals(currentUser.getUserId()) ? "Sairam V. (You)" : (e.getSellerUser().getEmail() != null ? e.getSellerUser().getEmail() : "Counterparty"))
+                ? (currentUser != null && e.getSellerUser().getUserId().equals(currentUser.getUserId()) ? getUserDisplayName(e.getSellerUser()) + " (You)" : getUserDisplayName(e.getSellerUser()))
                 : "Counterparty";
 
         String compName = "Atirath Holdings";
-        if (e.getTrade() != null && e.getTrade().getCompany() != null) {
-            compName = e.getTrade().getCompany().getCompanyName();
-        }
-
         Long qty = 1000L;
-        if (e.getTrade() != null && e.getTrade().getQuantity() != null) {
-            qty = e.getTrade().getQuantity();
+        BigDecimal price = BigDecimal.ZERO;
+        String tradeId = "TRD" + e.getEscrowId();
+
+        if (e.getTrade() != null) {
+            if (e.getTrade().getCompany() != null) {
+                compName = e.getTrade().getCompany().getCompanyName();
+            }
+            if (e.getTrade().getQuantity() != null) {
+                qty = e.getTrade().getQuantity();
+            }
+            if (e.getTrade().getTradeNo() != null) {
+                tradeId = e.getTrade().getTradeNo();
+            }
+        } else if (e.getAgreementId() != null) {
+            try {
+                Optional<TradeAgreement> agOpt = tradeAgreementRepository.findWithDetailsById(e.getAgreementId());
+                if (agOpt.isPresent()) {
+                    TradeAgreement ag = agOpt.get();
+                    if (ag.getCompany() != null) {
+                        compName = ag.getCompany().getCompanyName();
+                    }
+                    if (ag.getAgreedQuantity() != null) {
+                        qty = ag.getAgreedQuantity();
+                    }
+                    if (ag.getAgreedPrice() != null) {
+                        price = ag.getAgreedPrice();
+                    }
+                    if (ag.getAgreementNo() != null) {
+                        tradeId = ag.getAgreementNo().replace("AGR", "TRD");
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("Could not load trade agreement {}: {}", e.getAgreementId(), ex.getMessage());
+            }
         }
 
         BigDecimal amt = e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO;
-        BigDecimal price = qty > 0 ? amt.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP) : amt;
+        if (price.compareTo(BigDecimal.ZERO) == 0 && qty > 0) {
+            price = amt.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP);
+        }
 
         String createdStr = e.getCreatedAt() != null ? e.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : "18 Sep 2025";
         String expStr = e.getCreatedAt() != null ? e.getCreatedAt().plusDays(4).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : "22 Sep 2025";
@@ -844,7 +911,7 @@ public class EscrowService {
         return EscrowListItemDto.builder()
                 .rowNo(1)
                 .escrowId(e.getEscrowReference())
-                .tradeId(e.getTrade() != null ? e.getTrade().getTradeNo() : "TRD" + e.getEscrowId())
+                .tradeId(tradeId)
                 .companyName(compName)
                 .buyerName(bName)
                 .sellerName(sName)

@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -47,4 +49,15 @@ public class CorporateRegisterRequest {
     @Size(max = 50, message = "Referral code cannot exceed 50 characters")
     @Schema(description = "Optional referral code", example = "CORP_REF", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String referralCode;
+
+    @Size(max = 150, message = "Industry cannot exceed 150 characters")
+    @Schema(description = "Optional industry domain", example = "Information Technology", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String industry;
+
+    @Schema(description = "Optional date of incorporation (YYYY-MM-DD)", example = "2020-01-15", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private LocalDate incorporationDate;
+
+    @Size(max = 50, message = "Company type cannot exceed 50 characters")
+    @Schema(description = "Optional company type", example = "Private Limited", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String companyType;
 }

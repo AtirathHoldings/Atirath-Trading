@@ -30,6 +30,12 @@ public class IndividualProfile {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
+    @Column(name = "company_name", length = 200)
+    private String companyName;
+
+    @Column(name = "gender", length = 20)
+    private String gender;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

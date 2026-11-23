@@ -111,6 +111,8 @@ public class AuthService {
         IndividualProfile profile = IndividualProfile.builder()
                 .userAccount(savedAccount)
                 .fullName(request.getFullName().trim())
+                .companyName(request.getCompanyName() != null ? request.getCompanyName().trim() : null)
+                .gender(request.getGender() != null ? request.getGender().trim() : null)
                 .build();
         individualProfileRepository.save(profile);
 
@@ -162,6 +164,9 @@ public class AuthService {
                 .companyName(request.getCompanyName().trim())
                 .registrationId(regId)
                 .contactPersonName(request.getContactPersonName().trim())
+                .industry(request.getIndustry() != null ? request.getIndustry().trim() : null)
+                .incorporationDate(request.getIncorporationDate())
+                .companyType(request.getCompanyType() != null ? request.getCompanyType().trim() : null)
                 .build();
         corporateProfileRepository.save(profile);
 
@@ -483,6 +488,15 @@ public class AuthService {
         kyc.setAadhaarNumberEncrypted(encryptedAadhaar);
         kyc.setPanFullName(request.getPanFullName().trim());
         kyc.setDateOfBirth(request.getDateOfBirth());
+        if (request.getCompanyPanNumber() != null && !request.getCompanyPanNumber().isBlank()) {
+            kyc.setCompanyPanNumber(request.getCompanyPanNumber().trim().toUpperCase());
+        }
+        if (request.getGstNumber() != null && !request.getGstNumber().isBlank()) {
+            kyc.setGstNumber(request.getGstNumber().trim().toUpperCase());
+        }
+        if (request.getTanNumber() != null && !request.getTanNumber().isBlank()) {
+            kyc.setTanNumber(request.getTanNumber().trim().toUpperCase());
+        }
 
         identityKycDetailRepository.save(kyc);
         log.info("KYC details submitted for User ID: {}", userId);
@@ -654,6 +668,8 @@ public class AuthService {
                 builder.individualProfile(UserProfileDto.IndividualProfileDto.builder()
                         .individualId(p.getIndividualId())
                         .fullName(p.getFullName())
+                        .companyName(p.getCompanyName())
+                        .gender(p.getGender())
                         .createdAt(p.getCreatedAt())
                         .build())
         );
@@ -665,6 +681,9 @@ public class AuthService {
                         .companyName(p.getCompanyName())
                         .registrationId(p.getRegistrationId())
                         .contactPersonName(p.getContactPersonName())
+                        .industry(p.getIndustry())
+                        .incorporationDate(p.getIncorporationDate())
+                        .companyType(p.getCompanyType())
                         .createdAt(p.getCreatedAt())
                         .build())
         );
@@ -681,6 +700,9 @@ public class AuthService {
                     .panFullName(k.getPanFullName())
                     .maskedAadhaarNumber(AESEncryptionUtil.maskAadhaar(decryptedAadhaar))
                     .dateOfBirth(k.getDateOfBirth())
+                    .companyPanNumber(k.getCompanyPanNumber())
+                    .gstNumber(k.getGstNumber())
+                    .tanNumber(k.getTanNumber())
                     .kycCompleted(true)
                     .build());
         });

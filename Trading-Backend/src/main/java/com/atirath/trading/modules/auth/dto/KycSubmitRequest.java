@@ -34,4 +34,16 @@ public class KycSubmitRequest {
     @Past(message = "Date of birth must be in the past")
     @Schema(description = "Date of birth (YYYY-MM-DD)", example = "1995-05-15")
     private LocalDate dateOfBirth;
+
+    @Size(max = 10, message = "Company PAN cannot exceed 10 characters")
+    @Schema(description = "Optional Company PAN number", example = "ABCDE1234F", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String companyPanNumber;
+
+    @Size(max = 15, message = "GST number cannot exceed 15 characters")
+    @Schema(description = "Optional GST number", example = "36ABCDE1234F1Z5", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String gstNumber;
+
+    @Size(max = 10, message = "TAN number cannot exceed 10 characters")
+    @Schema(description = "Optional TAN number", example = "HYDE12345F", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String tanNumber;
 }

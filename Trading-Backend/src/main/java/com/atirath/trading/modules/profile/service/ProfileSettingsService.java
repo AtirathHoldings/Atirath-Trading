@@ -223,6 +223,7 @@ public class ProfileSettingsService {
         UserAccount user = loadUser(userId);
         UserProfileExtras extras = getExtras(userId);
         String fullName = portfolioDataHelper.resolveUserFullName(user);
+        IndividualProfile indiv = individualProfileRepository.findByUserAccount_UserId(userId).orElse(null);
         CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
         IdentityKycDetail kyc = identityKycDetailRepository.findByUserAccount_UserId(userId).orElse(null);
         BankDetail bank = bankDetailRepository.findByUserAccount_UserId(userId).orElse(null);
@@ -232,10 +233,24 @@ public class ProfileSettingsService {
                 ? (user.getAccountStatus() == AccountStatus.ACTIVE ? "Verified" : "Submitted")
                 : "Not Provided";
 
+        String gender = (indiv != null && isPresent(indiv.getGender())) ? indiv.getGender() : (extras.gender != null ? extras.gender : "");
+        String companyName = (corp != null && isPresent(corp.getCompanyName()))
+                ? corp.getCompanyName()
+                : ((indiv != null && isPresent(indiv.getCompanyName())) ? indiv.getCompanyName() : "");
+        String industry = (corp != null && isPresent(corp.getIndustry()))
+                ? corp.getIndustry()
+                : (extras.companyIndustry != null ? extras.companyIndustry : "");
+        String companyType = (corp != null && isPresent(corp.getCompanyType()))
+                ? corp.getCompanyType()
+                : (extras.companyType != null ? extras.companyType : (corp != null ? "Registered Entity" : ""));
+        String companyPan = (kyc != null && isPresent(kyc.getCompanyPanNumber()))
+                ? kyc.getCompanyPanNumber()
+                : (extras.companyPan != null ? extras.companyPan : "");
+
         PersonalInfoDto personal = PersonalInfoDto.builder()
                 .fullName(fullName)
                 .dateOfBirth(kyc != null && kyc.getDateOfBirth() != null ? kyc.getDateOfBirth().format(DISPLAY_DATE_FMT) : "")
-                .gender(extras.gender != null ? extras.gender : "")
+                .gender(gender)
                 .nationality(extras.nationality != null ? extras.nationality : "Indian")
                 .panNumber(kyc != null && kyc.getPanNumber() != null ? kyc.getPanNumber() : "")
                 .aadhaarNumber(maskedAadhaar != null ? maskedAadhaar : "")
@@ -245,11 +260,11 @@ public class ProfileSettingsService {
                 .build();
 
         OrganizationInfoDto org = OrganizationInfoDto.builder()
-                .companyName(corp != null && corp.getCompanyName() != null ? corp.getCompanyName() : "")
-                .industry(extras.companyIndustry != null ? extras.companyIndustry : "")
-                .companyType(extras.companyType != null ? extras.companyType : (corp != null ? "Registered Entity" : ""))
+                .companyName(companyName)
+                .industry(industry)
+                .companyType(companyType)
                 .designation(extras.designation != null ? extras.designation : (corp != null && isPresent(corp.getContactPersonName()) ? "Authorized Signatory" : ""))
-                .companyPan(extras.companyPan != null ? extras.companyPan : "")
+                .companyPan(companyPan)
                 .registrationNumber(corp != null && corp.getRegistrationId() != null ? corp.getRegistrationId() : "")
                 .companyAddress(extras.companyAddress != null ? extras.companyAddress : "")
                 .website(extras.website != null ? extras.website : "")
@@ -347,7 +362,16 @@ public class ProfileSettingsService {
             });
         }
 
-        if (update.getGender() != null) extras.gender = update.getGender().trim();
+        if (update.getGender() != null) {
+            String g = update.getGender().trim();
+            extras.gender = g;
+            if (user.getAccountType() == AccountType.INDIVIDUAL) {
+                individualProfileRepository.findByUserAccount_UserId(userId).ifPresent(indiv -> {
+                    indiv.setGender(g);
+                    individualProfileRepository.save(indiv);
+                });
+            }
+        }
         if (update.getNationality() != null) extras.nationality = update.getNationality().trim();
         if (update.getOccupation() != null) extras.occupation = update.getOccupation().trim();
         if (update.getLinkedInProfile() != null) extras.linkedInProfile = update.getLinkedInProfile().trim();
@@ -371,12 +395,19 @@ public class ProfileSettingsService {
         UserAccount user = loadUser(userId);
         UserProfileExtras extras = getExtras(userId);
 
-        if (isPresent(update.getCompanyName()) || isPresent(update.getRegistrationNumber())) {
+        if (isPresent(update.getCompanyName()) || isPresent(update.getRegistrationNumber()) || update.getIndustry() != null || update.getCompanyType() != null) {
             CorporateProfile corp = corporateProfileRepository.findByUserAccount_UserId(userId).orElse(null);
             if (corp != null) {
                 if (isPresent(update.getCompanyName())) corp.setCompanyName(update.getCompanyName().trim());
                 if (isPresent(update.getRegistrationNumber())) corp.setRegistrationId(update.getRegistrationNumber().trim());
+                if (update.getIndustry() != null) corp.setIndustry(update.getIndustry().trim());
+                if (update.getCompanyType() != null) corp.setCompanyType(update.getCompanyType().trim());
                 corporateProfileRepository.save(corp);
+            } else if (user.getAccountType() == AccountType.INDIVIDUAL && isPresent(update.getCompanyName())) {
+                individualProfileRepository.findByUserAccount_UserId(userId).ifPresent(indiv -> {
+                    indiv.setCompanyName(update.getCompanyName().trim());
+                    individualProfileRepository.save(indiv);
+                });
             } else if (isPresent(update.getCompanyName()) && isPresent(update.getRegistrationNumber())) {
                 String regId = update.getRegistrationNumber().trim();
                 if (corporateProfileRepository.existsByRegistrationId(regId)) {
@@ -387,6 +418,8 @@ public class ProfileSettingsService {
                         .companyName(update.getCompanyName().trim())
                         .registrationId(regId)
                         .contactPersonName(portfolioDataHelper.resolveUserFullName(user))
+                        .industry(update.getIndustry() != null ? update.getIndustry().trim() : null)
+                        .companyType(update.getCompanyType() != null ? update.getCompanyType().trim() : null)
                         .build();
                 corporateProfileRepository.save(newCorp);
             }
@@ -395,7 +428,14 @@ public class ProfileSettingsService {
         if (update.getIndustry() != null) extras.companyIndustry = update.getIndustry().trim();
         if (update.getCompanyType() != null) extras.companyType = update.getCompanyType().trim();
         if (update.getDesignation() != null) extras.designation = update.getDesignation().trim();
-        if (update.getCompanyPan() != null) extras.companyPan = update.getCompanyPan().trim();
+        if (update.getCompanyPan() != null) {
+            String cp = update.getCompanyPan().trim().toUpperCase(Locale.ENGLISH);
+            extras.companyPan = cp;
+            identityKycDetailRepository.findByUserAccount_UserId(userId).ifPresent(kyc -> {
+                kyc.setCompanyPanNumber(cp);
+                identityKycDetailRepository.save(kyc);
+            });
+        }
         if (update.getCompanyAddress() != null) extras.companyAddress = update.getCompanyAddress().trim();
         if (update.getWebsite() != null) extras.website = update.getWebsite().trim();
         if (update.getLogoUrl() != null) extras.logoUrl = update.getLogoUrl().trim();

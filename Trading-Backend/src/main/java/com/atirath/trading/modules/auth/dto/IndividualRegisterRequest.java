@@ -37,4 +37,12 @@ public class IndividualRegisterRequest {
     @Size(max = 50, message = "Referral code cannot exceed 50 characters")
     @Schema(description = "Optional referral code", example = "REF12345", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String referralCode;
+
+    @Size(max = 200, message = "Company name cannot exceed 200 characters")
+    @Schema(description = "Optional company or employer name", example = "TechCorp Inc", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String companyName;
+
+    @Size(max = 20, message = "Gender cannot exceed 20 characters")
+    @Schema(description = "Optional gender", example = "Male", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String gender;
 }

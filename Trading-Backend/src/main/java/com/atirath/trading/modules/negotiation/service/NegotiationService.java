@@ -9,7 +9,9 @@ import com.atirath.trading.modules.auth.repository.CorporateProfileRepository;
 import com.atirath.trading.modules.auth.repository.IndividualProfileRepository;
 import com.atirath.trading.modules.auth.repository.UserAccountRepository;
 import com.atirath.trading.modules.market.dto.MarketTickDto;
+import com.atirath.trading.modules.market.model.Escrow;
 import com.atirath.trading.modules.market.model.MarketCompany;
+import com.atirath.trading.modules.market.repository.EscrowRepository;
 import com.atirath.trading.modules.market.repository.MarketCompanyRepository;
 import com.atirath.trading.modules.market.repository.MarketOrderRepository;
 import com.atirath.trading.modules.market.service.MarketBroadcastService;
@@ -46,6 +48,7 @@ public class NegotiationService {
     private final UserAccountRepository userAccountRepository;
     private final IndividualProfileRepository individualProfileRepository;
     private final CorporateProfileRepository corporateProfileRepository;
+    private final EscrowRepository escrowRepository;
     private final MarketBroadcastService broadcastService;
 
     private static final DecimalFormat CURRENCY_FMT = new DecimalFormat("#,##,##0.00");
@@ -1390,6 +1393,7 @@ public class NegotiationService {
     }
 
     public TradeAgreementDto confirmAgreement(String negotiationNo, TradeAgreementConfirmRequestDto request, Long userId) {
+        UserAccount currentUser = resolveCurrentUser(userId);
         try {
             Optional<TradeAgreement> optAg = tradeAgreementRepository.findByNegotiation_NegotiationNo(negotiationNo);
             if (optAg.isPresent()) {
@@ -1403,6 +1407,27 @@ public class NegotiationService {
                     n.setStatus("AGREEMENT_CONFIRMED");
                     n.setUpdatedAt(OffsetDateTime.now());
                     negotiationRepository.save(n);
+                }
+
+                // Create and link Escrow record in DB
+                try {
+                    if (escrowRepository.findByAgreementId(ag.getAgreementId()).isEmpty()) {
+                        String ref = "ESC" + (n != null ? n.getNegotiationNo().replace("NEG", "") : String.valueOf(System.currentTimeMillis() % 1000000000L));
+                        BigDecimal totalVal = ag.getAgreedPrice().multiply(BigDecimal.valueOf(ag.getAgreedQuantity()));
+                        Escrow escrowEntity = Escrow.builder()
+                                .escrowReference(ref)
+                                .agreementId(ag.getAgreementId())
+                                .buyerUser(ag.getBuyerUser() != null ? ag.getBuyerUser() : (currentUser != null ? currentUser : (n != null ? n.getInitiatorUser() : null)))
+                                .sellerUser(ag.getSellerUser() != null ? ag.getSellerUser() : (currentUser != null ? currentUser : (n != null ? n.getCounterpartyUser() : null)))
+                                .amount(totalVal)
+                                .escrowStatus("CREATED")
+                                .createdAt(OffsetDateTime.now())
+                                .build();
+                        escrowRepository.save(escrowEntity);
+                        log.info("Created Escrow {} for confirmed agreement {}", ref, ag.getAgreementNo());
+                    }
+                } catch (Exception ex) {
+                    log.warn("Could not create Escrow for confirmed agreement: {}", ex.getMessage());
                 }
             }
         } catch (Exception e) {

@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface EscrowRepository extends JpaRepository<Escrow, Long> {
     Optional<Escrow> findByEscrowReference(String escrowReference);
     Optional<Escrow> findByTrade_TradeId(Long tradeId);
+    Optional<Escrow> findByAgreementId(Long agreementId);
 
     @org.springframework.data.jpa.repository.Query("SELECT e FROM Escrow e WHERE e.buyerUser.userId = :userId OR e.sellerUser.userId = :userId ORDER BY e.createdAt DESC")
     java.util.List<Escrow> findUserEscrows(@org.springframework.data.repository.query.Param("userId") Long userId);

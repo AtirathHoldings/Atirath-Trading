@@ -51,6 +51,8 @@ public class UserProfileDto {
     public static class IndividualProfileDto {
         private Long individualId;
         private String fullName;
+        private String companyName;
+        private String gender;
         private OffsetDateTime createdAt;
     }
 
@@ -63,6 +65,9 @@ public class UserProfileDto {
         private String companyName;
         private String registrationId;
         private String contactPersonName;
+        private String industry;
+        private LocalDate incorporationDate;
+        private String companyType;
         private OffsetDateTime createdAt;
     }
 
@@ -76,6 +81,9 @@ public class UserProfileDto {
         private String panFullName;
         private String maskedAadhaarNumber;
         private LocalDate dateOfBirth;
+        private String companyPanNumber;
+        private String gstNumber;
+        private String tanNumber;
         private boolean kycCompleted;
     }
 
