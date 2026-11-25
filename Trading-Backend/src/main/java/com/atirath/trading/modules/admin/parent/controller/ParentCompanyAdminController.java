@@ -26,9 +26,11 @@ public class ParentCompanyAdminController {
     // ==========================================
     @GetMapping("/dashboard")
     @Operation(summary = "Get Parent Company Dashboard overview, charts, and metrics")
-    public ResponseEntity<ApiResponse<ParentDashboardDto>> getDashboard() {
-        log.info("GET /api/v1/admin/parent/dashboard requested");
-        ParentDashboardDto dashboard = adminService.getDashboard();
+    public ResponseEntity<ApiResponse<ParentDashboardDto>> getDashboard(
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false) String company) {
+        log.info("GET /api/v1/admin/parent/dashboard requested (dateRange={}, company={})", dateRange, company);
+        ParentDashboardDto dashboard = adminService.getDashboard(dateRange, company);
         return ResponseEntity.ok(ApiResponse.success(dashboard, "Parent company dashboard retrieved successfully"));
     }
 
@@ -63,14 +65,80 @@ public class ParentCompanyAdminController {
     }
 
     // ==========================================
-    // 3. SUBSIDIARY DETAIL
+    // 3. SUBSIDIARY DETAIL & TABS
     // ==========================================
     @GetMapping("/subsidiaries/{id}")
     @Operation(summary = "Get comprehensive detail for a subsidiary company including KPIs, metrics, and compliance")
-    public ResponseEntity<ApiResponse<SubsidiaryDetailDto>> getSubsidiaryDetail(@PathVariable String id) {
-        log.info("GET /api/v1/admin/parent/subsidiaries/{} requested", id);
-        SubsidiaryDetailDto detail = adminService.getSubsidiaryDetail(id);
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto>> getSubsidiaryDetail(
+            @PathVariable String id,
+            @RequestParam(required = false) String tab) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{} requested (tab={})", id, tab);
+        SubsidiaryDetailDto detail = adminService.getSubsidiaryDetail(id, tab);
         return ResponseEntity.ok(ApiResponse.success(detail, "Subsidiary company details retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/overview")
+    @Operation(summary = "Get overview metrics and details for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto>> getSubsidiaryOverview(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/overview requested", id);
+        SubsidiaryDetailDto detail = adminService.getSubsidiaryDetail(id, "Overview");
+        return ResponseEntity.ok(ApiResponse.success(detail, "Subsidiary overview retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/financials")
+    @Operation(summary = "Get financial performance and statements for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.FinancialsTabDto>> getSubsidiaryFinancials(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/financials requested", id);
+        SubsidiaryDetailDto.FinancialsTabDto financials = adminService.getSubsidiaryFinancials(id);
+        return ResponseEntity.ok(ApiResponse.success(financials, "Subsidiary financials retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/shareholding")
+    @Operation(summary = "Get shareholding pattern and cap table for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.ShareholdingTabDto>> getSubsidiaryShareholding(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/shareholding requested", id);
+        SubsidiaryDetailDto.ShareholdingTabDto shareholding = adminService.getSubsidiaryShareholding(id);
+        return ResponseEntity.ok(ApiResponse.success(shareholding, "Subsidiary shareholding retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/members")
+    @Operation(summary = "Get member directory and demographics for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.MembersTabDto>> getSubsidiaryMembers(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/members requested", id);
+        SubsidiaryDetailDto.MembersTabDto members = adminService.getSubsidiaryMembers(id);
+        return ResponseEntity.ok(ApiResponse.success(members, "Subsidiary members retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/trading-activity")
+    @Operation(summary = "Get trading activity and recent order logs for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.TradingActivityTabDto>> getSubsidiaryTradingActivity(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/trading-activity requested", id);
+        SubsidiaryDetailDto.TradingActivityTabDto activity = adminService.getSubsidiaryTradingActivity(id);
+        return ResponseEntity.ok(ApiResponse.success(activity, "Subsidiary trading activity retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/compliance")
+    @Operation(summary = "Get statutory filings and compliance status for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.ComplianceTabDto>> getSubsidiaryCompliance(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/compliance requested", id);
+        SubsidiaryDetailDto.ComplianceTabDto compliance = adminService.getSubsidiaryCompliance(id);
+        return ResponseEntity.ok(ApiResponse.success(compliance, "Subsidiary compliance status retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/documents")
+    @Operation(summary = "Get verified statutory and company documents for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.DocumentsTabDto>> getSubsidiaryDocuments(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/documents requested", id);
+        SubsidiaryDetailDto.DocumentsTabDto docs = adminService.getSubsidiaryDocuments(id);
+        return ResponseEntity.ok(ApiResponse.success(docs, "Subsidiary documents retrieved successfully"));
+    }
+
+    @GetMapping("/subsidiaries/{id}/settings")
+    @Operation(summary = "Get trading configuration and operational settings for a subsidiary company")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto.SettingsTabDto>> getSubsidiarySettings(@PathVariable String id) {
+        log.info("GET /api/v1/admin/parent/subsidiaries/{}/settings requested", id);
+        SubsidiaryDetailDto.SettingsTabDto settings = adminService.getSubsidiarySettings(id);
+        return ResponseEntity.ok(ApiResponse.success(settings, "Subsidiary settings retrieved successfully"));
     }
 
     @PutMapping("/subsidiaries/{id}/info")
@@ -81,6 +149,34 @@ public class ParentCompanyAdminController {
         log.info("PUT /api/v1/admin/parent/subsidiaries/{}/info requested", id);
         SubsidiaryDetailDto updated = adminService.updateSubsidiaryInfo(id, request);
         return ResponseEntity.ok(ApiResponse.success(updated, "Subsidiary information updated successfully"));
+    }
+
+    @PutMapping("/subsidiaries/{id}/status")
+    @Operation(summary = "Update subsidiary operational status (Active, Under Setup, Inactive)")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto>> updateSubsidiaryStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+        log.info("PUT /api/v1/admin/parent/subsidiaries/{}/status requested with status={}", id, status);
+        SubsidiaryDetailDto updated = adminService.updateSubsidiaryStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Subsidiary status updated successfully"));
+    }
+
+    @PostMapping("/subsidiaries/{id}/activities")
+    @Operation(summary = "Add a new recent activity entry for a subsidiary")
+    public ResponseEntity<ApiResponse<SubsidiaryDetailDto>> addSubsidiaryActivity(
+            @PathVariable String id,
+            @RequestBody SubsidiaryDetailDto.SubsidiaryActivityDto activity) {
+        log.info("POST /api/v1/admin/parent/subsidiaries/{}/activities requested", id);
+        SubsidiaryDetailDto updated = adminService.addSubsidiaryActivity(id, activity);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Subsidiary activity recorded successfully"));
+    }
+
+    @DeleteMapping("/subsidiaries/{id}")
+    @Operation(summary = "Delete or archive a subsidiary company from the group")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteSubsidiary(@PathVariable String id) {
+        log.info("DELETE /api/v1/admin/parent/subsidiaries/{} requested", id);
+        boolean deleted = adminService.deleteSubsidiary(id);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("deleted", deleted, "id", id), "Subsidiary processed successfully"));
     }
 
     // ==========================================
@@ -112,10 +208,12 @@ public class ParentCompanyAdminController {
     public ResponseEntity<ApiResponse<GroupShareholdersPageDto>> getShareholders(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String company) {
-        log.info("GET /api/v1/admin/parent/shareholders requested (query={}, category={}, company={})", query, category, company);
-        GroupShareholdersPageDto page = adminService.getShareholdersPage(query, category, company);
-        return ResponseEntity.ok(ApiResponse.success(page, "Group shareholders retrieved successfully"));
+            @RequestParam(required = false) String company,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
+        log.info("GET /api/v1/admin/parent/shareholders requested (query={}, category={}, company={}, page={}, size={})", query, category, company, page, size);
+        GroupShareholdersPageDto pageDto = adminService.getShareholdersPage(query, category, company, page, size);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Group shareholders retrieved successfully"));
     }
 
     @PostMapping("/shareholders")
@@ -142,10 +240,11 @@ public class ParentCompanyAdminController {
     @Operation(summary = "Get Group Holdings breakdown, company valuations, sector distribution, and activity")
     public ResponseEntity<ApiResponse<GroupHoldingsPageDto>> getGroupHoldings(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String sector) {
-        log.info("GET /api/v1/admin/parent/holdings requested (query={}, sector={})", query, sector);
-        GroupHoldingsPageDto page = adminService.getGroupHoldingsPage(query, sector);
-        return ResponseEntity.ok(ApiResponse.success(page, "Group holdings retrieved successfully"));
+            @RequestParam(required = false) String sector,
+            @RequestParam(required = false) String bySector) {
+        log.info("GET /api/v1/admin/parent/holdings requested (query={}, sector={}, bySector={})", query, sector, bySector);
+        GroupHoldingsPageDto pageDto = adminService.getGroupHoldingsPage(query, sector);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Group holdings retrieved successfully"));
     }
 
     @GetMapping("/holdings/export")
@@ -164,10 +263,13 @@ public class ParentCompanyAdminController {
     public ResponseEntity<ApiResponse<MarketActivityGroupPageDto>> getMarketActivity(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sector,
-            @RequestParam(required = false) String company) {
-        log.info("GET /api/v1/admin/parent/market-activity requested (query={}, sector={}, company={})", query, sector, company);
-        MarketActivityGroupPageDto page = adminService.getMarketActivityPage(query, sector, company);
-        return ResponseEntity.ok(ApiResponse.success(page, "Market activity data retrieved successfully"));
+            @RequestParam(required = false) String company,
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "6") Integer size) {
+        log.info("GET /api/v1/admin/parent/market-activity requested (query={}, sector={}, company={}, dateRange={}, page={}, size={})", query, sector, company, dateRange, page, size);
+        MarketActivityGroupPageDto pageDto = adminService.getMarketActivityPage(query, sector, company, page, size, dateRange);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Market activity data retrieved successfully"));
     }
 
     @GetMapping("/market-activity/export")
@@ -187,10 +289,13 @@ public class ParentCompanyAdminController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String sector,
-            @RequestParam(required = false) String type) {
-        log.info("GET /api/v1/admin/parent/trade-monitoring requested (query={}, company={}, sector={}, type={})", query, company, sector, type);
-        GroupTradeMonitoringPageDto page = adminService.getTradeMonitoringPage(query, company, sector, type);
-        return ResponseEntity.ok(ApiResponse.success(page, "Trade monitoring data retrieved successfully"));
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "8") Integer size) {
+        log.info("GET /api/v1/admin/parent/trade-monitoring requested (query={}, company={}, sector={}, type={}, dateRange={}, page={}, size={})", query, company, sector, type, dateRange, page, size);
+        GroupTradeMonitoringPageDto pageDto = adminService.getTradeMonitoringPage(query, company, sector, type, page, size, dateRange);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Trade monitoring data retrieved successfully"));
     }
 
     @GetMapping("/trade-monitoring/export")
@@ -210,10 +315,14 @@ public class ParentCompanyAdminController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String tradeType,
-            @RequestParam(required = false) String status) {
-        log.info("GET /api/v1/admin/parent/escrow-settlement requested (query={}, company={}, tradeType={}, status={})", query, company, tradeType, status);
-        EscrowSettlementGroupPageDto page = adminService.getEscrowSettlementPage(query, company, tradeType, status);
-        return ResponseEntity.ok(ApiResponse.success(page, "Escrow and settlement data retrieved successfully"));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String tab,
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "8") Integer size) {
+        log.info("GET /api/v1/admin/parent/escrow-settlement requested (query={}, company={}, tradeType={}, status={}, tab={}, dateRange={}, page={}, size={})", query, company, tradeType, status, tab, dateRange, page, size);
+        EscrowSettlementGroupPageDto pageDto = adminService.getEscrowSettlementPage(query, company, tradeType, status, tab, page, size, dateRange);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Escrow and settlement data retrieved successfully"));
     }
 
     @PostMapping("/escrow-settlement")
@@ -243,10 +352,15 @@ public class ParentCompanyAdminController {
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String approvalType,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String priority) {
-        log.info("GET /api/v1/admin/parent/approvals requested (query={}, company={}, type={}, status={}, priority={})", query, company, approvalType, status, priority);
-        ApprovalsPageDto page = adminService.getApprovalsPage(query, company, approvalType, status, priority);
-        return ResponseEntity.ok(ApiResponse.success(page, "Approvals list retrieved successfully"));
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String tab,
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
+        log.info("GET /api/v1/admin/parent/approvals requested (query={}, company={}, type={}, status={}, priority={}, tab={}, dateRange={}, page={}, size={})",
+                query, company, approvalType, status, priority, tab, dateRange, page, size);
+        ApprovalsPageDto pageDto = adminService.getApprovalsPage(query, company, approvalType, status, priority, tab, page, size, dateRange);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "Approvals list retrieved successfully"));
     }
 
     @GetMapping("/approvals/{id}")
@@ -290,10 +404,15 @@ public class ParentCompanyAdminController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sector,
             @RequestParam(required = false) String investmentType,
-            @RequestParam(required = false) String status) {
-        log.info("GET /api/v1/admin/parent/investor-requests requested (query={}, sector={}, type={}, status={})", query, sector, investmentType, status);
-        ExternalInvestorRequestsPageDto page = adminService.getInvestorRequestsPage(query, sector, investmentType, status);
-        return ResponseEntity.ok(ApiResponse.success(page, "External investor requests retrieved successfully"));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String tab,
+            @RequestParam(required = false) String dateRange,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
+        log.info("GET /api/v1/admin/parent/investor-requests requested (query={}, sector={}, type={}, status={}, tab={}, dateRange={}, page={}, size={})",
+                query, sector, investmentType, status, tab, dateRange, page, size);
+        ExternalInvestorRequestsPageDto pageDto = adminService.getInvestorRequestsPage(query, sector, investmentType, status, tab, page, size, dateRange);
+        return ResponseEntity.ok(ApiResponse.success(pageDto, "External investor requests retrieved successfully"));
     }
 
     @GetMapping("/investor-requests/{id}")

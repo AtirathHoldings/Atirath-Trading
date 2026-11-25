@@ -31,6 +31,10 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\RawWebS
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\RedisConfig.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\SecurityConfig.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\config\WebSocketConfig.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\model\AdminApprovalWorkflow.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\model\AdminAuditLog.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\model\Dispute.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\model\SupportTicket.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\controller\ParentCompanyAdminController.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddApprovalRequestDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\AddEscrowRequestDto.java
@@ -56,6 +60,10 @@ D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\SubsidiarySummaryDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\dto\UpdateCompanyInfoDto.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\parent\service\ParentCompanyAdminService.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\repository\AdminApprovalWorkflowRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\repository\AdminAuditLogRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\repository\DisputeRepository.java
+D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\repository\SupportTicketRepository.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\controller\SubsidiaryAdminController.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\controller\SubsidiaryComplianceController.java
 D:\trade sample\Trading-Backend\src\main\java\com\atirath\trading\modules\admin\subsidiary\dto\AddCapTableTransactionRequestDto.java

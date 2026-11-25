@@ -184,7 +184,7 @@ public class SubsidiaryOperationsController {
     // ==========================================
     // 5. SETTLEMENT MONITORING
     // ==========================================
-    @GetMapping("/settlements")
+    @GetMapping({"/settlements", "/settlement"})
     @Operation(summary = "Get Settlement Monitoring page with settlement KPIs, cycle tabs, monthly trend, settlement table, upcoming settlements, and failed settlements")
     public ResponseEntity<ApiResponse<SettlementMonitoringPageDto>> getSettlementMonitoring(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -198,7 +198,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(page, "Settlement monitoring data retrieved successfully"));
     }
 
-    @GetMapping("/settlements/{id}")
+    @GetMapping({"/settlements/{id}", "/settlement/{id}"})
     @Operation(summary = "Get detailed Settlement side drawer by ID")
     public ResponseEntity<ApiResponse<SettlementDetailDto>> getSettlementDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/subsidiary/operations/settlements/{} requested", id);
@@ -206,7 +206,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Settlement detail retrieved successfully"));
     }
 
-    @PutMapping("/settlements/{id}/settle")
+    @PutMapping({"/settlements/{id}/settle", "/settlement/{id}/settle"})
     @Operation(summary = "Mark settlement as Settled")
     public ResponseEntity<ApiResponse<SettlementDetailDto>> markSettlementSettled(@PathVariable String id) {
         log.info("PUT /api/v1/admin/subsidiary/operations/settlements/{}/settle requested", id);
@@ -214,7 +214,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(updated, "Settlement marked as settled successfully"));
     }
 
-    @PutMapping("/settlements/{id}/fail")
+    @PutMapping({"/settlements/{id}/fail", "/settlement/{id}/fail"})
     @Operation(summary = "Mark settlement as Failed")
     public ResponseEntity<ApiResponse<SettlementDetailDto>> markSettlementFailed(@PathVariable String id) {
         log.info("PUT /api/v1/admin/subsidiary/operations/settlements/{}/fail requested", id);
@@ -225,7 +225,7 @@ public class SubsidiaryOperationsController {
     // ==========================================
     // 6. FAILED TRANSACTIONS
     // ==========================================
-    @GetMapping("/failed-transactions")
+    @GetMapping({"/failed-transactions", "/failed"})
     @Operation(summary = "Get Failed Transactions page data with KPIs, tabs, filters, donut chart, reasons chart, trend, and transactions table")
     public ResponseEntity<ApiResponse<FailedTransactionsPageDto>> getFailedTransactions(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -239,7 +239,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(page, "Failed transactions retrieved successfully"));
     }
 
-    @GetMapping("/failed-transactions/{id}")
+    @GetMapping({"/failed-transactions/{id}", "/failed/{id}"})
     @Operation(summary = "Get detailed Failed Transaction side drawer by ID")
     public ResponseEntity<ApiResponse<FailedTransactionDetailDto>> getFailedTransactionDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/subsidiary/operations/failed-transactions/{} requested", id);
@@ -247,7 +247,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Failed transaction detail retrieved successfully"));
     }
 
-    @PostMapping("/failed-transactions/{id}/retry")
+    @PostMapping({"/failed-transactions/{id}/retry", "/failed/{id}/retry"})
     @Operation(summary = "Retry a failed transaction")
     public ResponseEntity<ApiResponse<FailedTransactionDetailDto>> retryFailedTransaction(@PathVariable String id) {
         log.info("POST /api/v1/admin/subsidiary/operations/failed-transactions/{}/retry requested", id);
@@ -255,7 +255,7 @@ public class SubsidiaryOperationsController {
         return ResponseEntity.ok(ApiResponse.success(updated, "Transaction retry scheduled successfully"));
     }
 
-    @PutMapping("/failed-transactions/{id}/cancel")
+    @PutMapping({"/failed-transactions/{id}/cancel", "/failed/{id}/cancel"})
     @Operation(summary = "Cancel a failed transaction")
     public ResponseEntity<ApiResponse<FailedTransactionDetailDto>> cancelFailedTransaction(@PathVariable String id) {
         log.info("PUT /api/v1/admin/subsidiary/operations/failed-transactions/{}/cancel requested", id);

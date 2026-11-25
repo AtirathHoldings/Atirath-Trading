@@ -123,7 +123,7 @@ public class EscrowService {
                 .tradeId("TRD250918004")
                 .companyName("Atirath Holdings")
                 .buyerName("Sairam V. (You)")
-                .sellerName("Rakesh Mehta")
+                .sellerName("Rahul Verma")
                 .quantity(1000L)
                 .pricePerShare(new BigDecimal("242.00"))
                 .tradeValue(new BigDecimal("242000.00"))
@@ -279,12 +279,12 @@ public class EscrowService {
                         .phone("+91 98765 43210")
                         .build())
                 .seller(EscrowDetailDto.PartyDto.builder()
-                        .memberName("Rakesh Mehta")
-                        .initials("RM")
+                        .memberName("Rahul Verma")
+                        .initials("RV")
                         .isCurrentUser(false)
                         .verified(true)
-                        .memberId("ATG10056")
-                        .email("rakesh.mehta@fvt.com")
+                        .memberId("ATG10044")
+                        .email("rahul.verma@atirathgroup.com")
                         .phone("+91 91234 56789")
                         .build())
                 .tradeAndEscrowInfo(EscrowDetailDto.TradeAndEscrowInfoDto.builder()
@@ -545,7 +545,7 @@ public class EscrowService {
                 .transferId("TRF250918001")
                 .tradeId("TRD250918004")
                 .companyName("Atirath Holdings India Limited")
-                .fromSeller("Rakesh Mehta (ATG10056)")
+                .fromSeller("Rahul Verma (ATG10044)")
                 .toBuyer("Sairam Vempati (ATG10027)")
                 .isin("INE012A01025")
                 .quantity(1000L)
@@ -563,7 +563,7 @@ public class EscrowService {
 
         liveShareTransfersList.add(ShareTransferItemDto.builder()
                 .transferId("TRF250918001").tradeId("TRD250918004").companyName("Atirath Holdings India Limited")
-                .fromSeller("Rakesh Mehta (ATG10056)").toBuyer("Sairam Vempati (ATG10027)").quantity(1000L).transferDate("18 Sep 2025 11:05 AM").status("Completed")
+                .fromSeller("Rahul Verma (ATG10044)").toBuyer("Sairam Vempati (ATG10027)").quantity(1000L).transferDate("18 Sep 2025 11:05 AM").status("Completed")
                 .detail(trfDetail001).build());
 
         liveShareTransfersList.add(ShareTransferItemDto.builder()
@@ -580,7 +580,7 @@ public class EscrowService {
 
         liveShareTransfersList.add(ShareTransferItemDto.builder()
                 .transferId("TRF250914005").tradeId("TRD250914003").companyName("Atirath Holdings India Limited")
-                .fromSeller("Rakesh Mehta (ATG10056)").toBuyer("Sairam Vempati (ATG10027)").quantity(1200L).transferDate("14 Sep 2025 05:15 PM").status("Completed").build());
+                .fromSeller("Rahul Verma (ATG10044)").toBuyer("Sairam Vempati (ATG10027)").quantity(1200L).transferDate("14 Sep 2025 05:15 PM").status("Completed").build());
 
         liveShareTransfersList.add(ShareTransferItemDto.builder()
                 .transferId("TRF250913006").tradeId("TRD250913001").companyName("Oceanic Beverages Private Limited")
@@ -1066,6 +1066,13 @@ public class EscrowService {
             if (em.contains("vikram")) return "Vikram Reddy";
             if (em.contains("anita")) return "Anita Desai";
             if (em.contains("karan")) return "Karan Malhotra";
+            if (em.contains("rahul")) return "Rahul Verma";
+            if (em.contains("sneha")) return "Sneha Patel";
+            if (em.contains("manoj")) return "Manoj Tiwari";
+            if (em.contains("divya")) return "Divya Kapoor";
+            if (em.contains("amit")) return "Amit Joshi";
+            if (em.contains("pooja")) return "Pooja Hegde";
+            if (em.contains("suresh")) return "Suresh Nair";
             if (em.contains("neha")) return "Neha Kapoor";
             if (em.contains("sairam")) return "Sairam Vempati";
             if (em.contains("vkpraveen")) return "Kumar";
@@ -1084,6 +1091,9 @@ public class EscrowService {
 
     private String getUserMemberId(UserAccount user) {
         if (user == null) return "ATG10000";
+        if (user.getReferralCode() != null && !user.getReferralCode().isBlank() && user.getReferralCode().startsWith("ATG")) {
+            return user.getReferralCode();
+        }
         return "ATG" + user.getUserId();
     }
 
@@ -1108,7 +1118,9 @@ public class EscrowService {
             }
         }
         if (seller == null && currentUser != null) {
-            seller = userAccountRepository.findByEmailIgnoreCase("rakesh@farmvantara.com").orElse(currentUser);
+            seller = userAccountRepository.findByEmailIgnoreCase("rahul.verma@atirathgroup.com")
+                    .or(() -> userAccountRepository.findByEmailIgnoreCase("priya@farmvantara.com"))
+                    .orElse(currentUser);
         }
 
         // Persist to Database!
@@ -2546,7 +2558,7 @@ public class EscrowService {
                         .tradeId("TRD250918004")
                         .companyName("Atirath Holdings India Limited")
                         .companySymbol("ATG-H")
-                        .fromSeller("Rakesh Mehta (ATG10056)")
+                        .fromSeller("Rahul Verma (ATG10044)")
                         .toBuyer("Sairam Vempati (ATG10027)")
                         .isin("INE012A01025")
                         .quantity(1000L)
@@ -2576,8 +2588,8 @@ public class EscrowService {
                                 .build())
                         .sellerPayment(SettlementConfirmationDto.PartyPaymentSummaryDto.builder()
                                 .label("Seller (Payment Received)")
-                                .memberName("Rakesh Mehta")
-                                .memberId("ATG10056")
+                                .memberName("Rahul Verma")
+                                .memberId("ATG10044")
                                 .amount(new BigDecimal("242000.00"))
                                 .amountFormatted("₹ 2,42,000.00")
                                 .statusMessage("Funds credited to bank account")
@@ -2603,7 +2615,7 @@ public class EscrowService {
         lines.add("Escrow Reference:        ESC250918001");
         lines.add("Company:                 Atirath Holdings India Limited (ATG-H)");
         lines.add("Buyer:                   Sairam Vempati (ATG10027)");
-        lines.add("Seller:                  Rakesh Mehta (ATG10056)");
+        lines.add("Seller:                  Rahul Verma (ATG10044)");
         lines.add("Shares Settled:          1,000 @ INR 242.00");
         lines.add("Total Trade Value:       INR 2,42,000.00");
         lines.add("Settlement Reference No: NSDL250918123456");

@@ -39,6 +39,10 @@ public class AdminAccount {
     @Builder.Default
     private String adminStatus = "ACTIVE";
 
+    @Column(name = "role", length = 50)
+    @Builder.Default
+    private String role = "SUPER_ADMIN";
+
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;
 

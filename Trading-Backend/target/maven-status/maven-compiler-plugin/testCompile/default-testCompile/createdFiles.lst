@@ -10,6 +10,8 @@ com\atirath\trading\AuthFlowIntegrationTest$3.class
 com\atirath\trading\NegotiationIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$4.class
 com\atirath\trading\MemberPendingActionsIntegrationTest.class
+com\atirath\trading\modules\admin\subsidiary\operations\SubsidiaryOperationsServiceTest.class
+com\atirath\trading\modules\admin\system\SystemAdminServiceTest.class
 com\atirath\trading\MobileProfileKycIntegrationTest.class
 com\atirath\trading\MemberTransactionsIntegrationTest.class
 com\atirath\trading\MobileProfileSubscreensIntegrationTest.class
@@ -19,7 +21,10 @@ com\atirath\trading\EscrowIntegrationTest.class
 com\atirath\trading\DeviceLimitSessionIntegrationTest.class
 com\atirath\trading\AuthFlowIntegrationTest$1.class
 com\atirath\trading\ProfileSettingsIntegrationTest.class
+com\atirath\trading\modules\admin\subsidiary\SubsidiaryAdminServiceTest.class
+com\atirath\trading\modules\admin\subsidiary\SubsidiaryComplianceServiceTest.class
 com\atirath\trading\AdminAuthIntegrationTest.class
+com\atirath\trading\modules\admin\parent\ParentCompanyAdminServiceTest.class
 com\atirath\trading\TradeTerminalIntegrationTest.class
 com\atirath\trading\InternalMarketWebIntegrationTest.class
 com\atirath\trading\MemberDashboardIntegrationTest.class

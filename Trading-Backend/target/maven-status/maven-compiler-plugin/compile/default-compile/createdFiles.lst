@@ -29,6 +29,7 @@ com\atirath\trading\modules\admin\parent\dto\ApprovalsPageDto$MonthlyApprovalTre
 com\atirath\trading\modules\admin\subsidiary\dto\CreateComplianceAlertRequestDto$CreateComplianceAlertRequestDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\GroupShareCapitalPageDto$ShareCapitalActivityItemDto.class
 com\atirath\trading\modules\escrow\dto\mobile\MobileEscrowStatusDto$MobileEscrowStatusDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$SubsidiaryTradeItemDto$SubsidiaryTradeItemDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\EscrowSettlementGroupPageDto$EscrowTrendChartDto.class
 com\atirath\trading\modules\admin\parent\dto\EscrowSettlementGroupPageDto$SettlementStatusDonutDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\SupportTicketsPageDto$TicketItemDto$TicketItemDtoBuilder.class
@@ -58,6 +59,7 @@ com\atirath\trading\modules\portfolio\dto\PortfolioOverviewDto.class
 com\atirath\trading\modules\externalrequest\dto\ChecklistItemDto$ChecklistItemDtoBuilder.class
 com\atirath\trading\modules\negotiation\repository\NegotiationOfferRepository.class
 com\atirath\trading\modules\market\dto\CompanyOverviewDto$DocumentItemDto$DocumentItemDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$MembersTabDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\DisputesPageDto$DisputeItemDto$DisputeItemDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\AddTradingRuleRequestDto$AddTradingRuleRequestDtoBuilder.class
 com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto$TerminalRecentTradeDto$TerminalRecentTradeDtoBuilder.class
@@ -76,6 +78,7 @@ com\atirath\trading\modules\auth\dto\biometric\BiometricStatusResponse.class
 com\atirath\trading\modules\admin\subsidiary\dto\ComplianceCasesPageDto$CasesByTypeDonutDto$CasesByTypeDonutDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\EscrowSettlementGroupPageDto$MonthlyEscrowPointDto$MonthlyEscrowPointDtoBuilder.class
 com\atirath\trading\modules\notification\dto\MemberNotificationsDto$SummaryCountsDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$DocumentsTabDto.class
 com\atirath\trading\modules\market\dto\MobileStockDto$AnnualFinancialDto$AnnualFinancialDtoBuilder.class
 com\atirath\trading\modules\profile\dto\NotificationPreferencesDto.class
 com\atirath\trading\modules\negotiation\dto\TradeAgreementDto$AgreementPartiesDto.class
@@ -83,6 +86,7 @@ com\atirath\trading\config\RawWebSocketConfig.class
 com\atirath\trading\modules\profile\dto\PlatformPreferencesDto$PlatformPreferencesDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\CreateTradingRuleRequestDto.class
 com\atirath\trading\modules\externalrequest\dto\ActivityDto$ActivityDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$CategoryShareDto$CategoryShareDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioAnalyticsResponseDto.class
 com\atirath\trading\modules\auth\service\gateway\SmsService.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTradesPageDto$PendingTradeItemDto$PendingTradeItemDtoBuilder.class
@@ -101,6 +105,7 @@ com\atirath\trading\modules\market\model\CompanyShareholding.class
 com\atirath\trading\modules\portfolio\service\PortfolioDataHelper$HoldingSummary.class
 com\atirath\trading\modules\admin\parent\dto\GroupHoldingsPageDto$GroupHoldingItemDto$GroupHoldingItemDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\UserManagementPageDto$UserManagementPageDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ComplianceRecordDto$ComplianceRecordDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\UpdateCompanyInfoDto.class
 com\atirath\trading\modules\market\dto\mobile\MobileMyOrdersResponseDto$MobileOrderCardDto.class
 com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto$ProgressStepDetailDto.class
@@ -136,6 +141,7 @@ com\atirath\trading\modules\negotiation\dto\TradeAgreementDto$FinalAgreedTermsDt
 com\atirath\trading\modules\market\repository\ShareTransferRepository.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$ShareLockStageDto.class
 com\atirath\trading\modules\market\repository\EscrowAccountRepository.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$SettingsTabDto.class
 com\atirath\trading\modules\profile\dto\DocumentsPageDto$DocumentsPageDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\GroupShareCapitalPageDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryApproversPageDto$CompanyApproverItemDto$CompanyApproverItemDtoBuilder.class
@@ -248,6 +254,7 @@ com\atirath\trading\modules\admin\parent\dto\InvestorRequestDetailDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\FailedTransactionDetailDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SuspiciousTransactionsPageDto$AlertTypeSliceDto$AlertTypeSliceDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowMonitoringPageDto$EscrowExceptionRowDto.class
+com\atirath\trading\modules\admin\model\SupportTicket$SupportTicketBuilder.class
 com\atirath\trading\modules\market\model\MarketOrderMatch$MarketOrderMatchBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\MonitoredTransactionDetailDto$MonitoredTransactionDetailDtoBuilder.class
 com\atirath\trading\modules\negotiation\dto\NegotiationDetailDto$NegotiationDetailDtoBuilder.class
@@ -301,6 +308,7 @@ com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowMonitoringPage
 com\atirath\trading\modules\admin\parent\dto\ExternalInvestorRequestsPageDto$CompanyRequestSliceDto.class
 com\atirath\trading\modules\escrow\dto\ShareTransferItemDto$ShareTransferDetailDto$ShareTransferDetailDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\AccessDetailDto$AccessDetailDtoBuilder.class
+com\atirath\trading\modules\admin\repository\DisputeRepository.class
 com\atirath\trading\modules\portfolio\dto\mobile\MobileDashboardDto$MobileDashboardDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioTradesResponseDto.class
 com\atirath\trading\modules\negotiation\dto\mobile\MobileCounterOfferRequestDto$MobileCounterOfferRequestDtoBuilder.class
@@ -425,6 +433,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryApproversPageDto.clas
 com\atirath\trading\modules\negotiation\dto\mobile\MobileNegotiationCardDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\DisputesPageDto$DisputeStatusBarDto.class
 com\atirath\trading\modules\admin\parent\dto\AddEscrowRequestDto$AddEscrowRequestDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ShareholdingTabDto.class
 com\atirath\trading\modules\notification\dto\FrequencyOptionDto$FrequencyOptionDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\ApprovalWorkflowPageDto$ModuleSliceDto.class
 com\atirath\trading\modules\profile\controller\MobileProfileController.class
@@ -595,6 +604,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareIssuancePageDto.
 com\atirath\trading\modules\market\dto\OrderListItemDto.class
 com\atirath\trading\modules\admin\system\dto\GrantAccessRequestDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SuspiciousTransactionsPageDto$AlertTypeDistributionDonutDto$AlertTypeDistributionDonutDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$FinancialStatementDto.class
 com\atirath\trading\modules\portfolio\dto\PortfolioOverviewDto$TrendPointDto$TrendPointDtoBuilder.class
 com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto$TerminalCompanyHeaderDto$TerminalCompanyHeaderDtoBuilder.class
 com\atirath\trading\modules\negotiation\dto\NegotiationListItemDto$NegotiationListItemDtoBuilder.class
@@ -602,6 +612,7 @@ com\atirath\trading\modules\portfolio\dto\MemberDashboardDto$PendingActionDto$Pe
 com\atirath\trading\modules\escrow\dto\SettlementConfirmationDto$SettlementSuccessCardDto.class
 com\atirath\trading\modules\portfolio\service\MobilePortfolioService.class
 com\atirath\trading\config\ClientIntegrityFilter.class
+com\atirath\trading\modules\admin\model\SupportTicket.class
 com\atirath\trading\modules\market\dto\MobileStockDto$QuarterlyFinancialDto$QuarterlyFinancialDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\AccessControlPageDto$AccessItemDto.class
 com\atirath\trading\modules\profile\dto\SecurityPreferencesDto.class
@@ -653,6 +664,7 @@ com\atirath\trading\modules\portfolio\dto\PortfolioHoldingItemDto$PortfolioHoldi
 com\atirath\trading\modules\auth\service\UserDeviceSessionManager.class
 com\atirath\trading\modules\portfolio\dto\mobile\MobileActionsPageDto.class
 com\atirath\trading\modules\profile\dto\AdditionalInfoDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$DocumentItemDto.class
 com\atirath\trading\modules\market\dto\PriceCandleDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\CompanyDocumentDetailDto.class
 com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto$OrderBookLevelDetailDto.class
@@ -686,9 +698,11 @@ com\atirath\trading\modules\admin\subsidiary\operations\dto\OperationsDashboardD
 com\atirath\trading\modules\admin\subsidiary\operations\dto\OperationsDashboardDto$TicketRowDto$TicketRowDtoBuilder.class
 com\atirath\trading\modules\negotiation\dto\NegotiationStatusBreakdownDto$NegotiationStatusBreakdownDtoBuilder.class
 com\atirath\trading\modules\profile\dto\mobile\MobileDeviceItemDto$MobileDeviceItemDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$TradingActivityTabDto.class
 com\atirath\trading\modules\notification\controller\MobileNotificationController.class
 com\atirath\trading\modules\profile\dto\mobile\MobileDeviceItemDto.class
 com\atirath\trading\modules\portfolio\service\PortfolioDataHelper$PriceQuote.class
+com\atirath\trading\modules\admin\model\AdminApprovalWorkflow$AdminApprovalWorkflowBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryCapTablePageDto$CapTableTransactionDto.class
 com\atirath\trading\modules\auth\model\UserCredential.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryTransactionsPageDto$TransactionsByTypeDonutDto.class
@@ -737,6 +751,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\KycDetailDto$KycDetailDtoBuilde
 com\atirath\trading\modules\portfolio\dto\PortfolioPositionItemDto$PortfolioPositionItemDtoBuilder.class
 com\atirath\trading\modules\negotiation\dto\InitiateNegotiationRequestDto$InitiateNegotiationRequestDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\TransferFundsRequestDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ComplianceRecordDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\SettlementMonitoringPageDto$SettlementStatusDonutDto.class
 com\atirath\trading\modules\negotiation\dto\NegotiationNotificationsPageDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareClassesPageDto$InvestorCategorySliceDto.class
@@ -824,6 +839,7 @@ com\atirath\trading\modules\portfolio\dto\mobile\MobileDashboardHoldingDto$Mobil
 com\atirath\trading\modules\negotiation\dto\mobile\MobileNegotiationDashboardDto$MobileNegotiationDashboardDtoBuilder.class
 com\atirath\trading\modules\profile\dto\OrganizationInfoDto$OrganizationInfoDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\KycDetailDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$FinancialStatementDto$FinancialStatementDtoBuilder.class
 com\atirath\trading\modules\auth\dto\UserProfileDto$DocumentSummaryDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTradesPageDto$PendingTradesStatusDonutDto.class
 com\atirath\trading\modules\portfolio\service\MemberTransactionsService$TimedTransaction.class
@@ -840,6 +856,7 @@ com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto$HorizontalStepDto$H
 com\atirath\trading\modules\market\repository\CompanyFinancialRatioRepository.class
 com\atirath\trading\modules\negotiation\dto\NegotiationNotificationItemDto$NegotiationNotificationItemDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioTradeDetailDto.class
+com\atirath\trading\modules\admin\model\Dispute$DisputeBuilder.class
 com\atirath\trading\modules\auth\model\CorporateProfile$CorporateProfileBuilder.class
 com\atirath\trading\modules\admin\parent\dto\ApprovalsPageDto$TypeSliceDto$TypeSliceDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\EscrowSummaryMetricsDto$EscrowSummaryMetricsDtoBuilder.class
@@ -872,6 +889,7 @@ com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTransfersPage
 com\atirath\trading\modules\profile\dto\AddressInfoDto.class
 com\atirath\trading\modules\market\dto\MobileStockDto$AnnualFinancialDto.class
 com\atirath\trading\modules\portfolio\dto\mobile\MobileAllocationDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$CategoryShareDto.class
 com\atirath\trading\modules\profile\dto\SecurityOverviewDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowMonitoringPageDto$EscrowTrendMonthDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTransfersPageDto$PendingTransferItemDto.class
@@ -950,6 +968,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryDocumentsPageDto$Expi
 com\atirath\trading\modules\admin\subsidiary\operations\dto\InitiateTransferRequestDto$InitiateTransferRequestDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\CreateRoleRequestDto.class
 com\atirath\trading\modules\market\dto\OrderBookUpdateDto$OrderBookLevelDto$OrderBookLevelDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ShareholdingTabDto$ShareholdingTabDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\MemberDashboardDto$PerformancePointDto.class
 com\atirath\trading\modules\admin\parent\dto\AddInvestorRequestDto$AddInvestorRequestDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\ParentDashboardDto$RecentMemberActivityDto$RecentMemberActivityDtoBuilder.class
@@ -1020,6 +1039,7 @@ com\atirath\trading\TradingBackendApplication.class
 com\atirath\trading\modules\negotiation\dto\mobile\MobileNegotiationCountersDto$MobileNegotiationCountersDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\EscrowMonitoringPageDto$EscrowMonitoringPageDtoBuilder.class
 com\atirath\trading\modules\portfolio\service\MobileActionService.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$FinancialsTabDto.class
 com\atirath\trading\modules\profile\dto\DeviceItemDto.class
 com\atirath\trading\modules\admin\system\dto\SystemSettingsPageDto.class
 com\atirath\trading\modules\auth\dto\biometric\BiometricStatusResponse$BiometricStatusResponseBuilder.class
@@ -1058,6 +1078,7 @@ com\atirath\trading\modules\escrow\dto\mobile\MobileEscrowCardDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryCapTablePageDto$CapTableSummaryDonutDto$CapTableSummaryDonutDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\mobile\MobileEscrowStatusDto.class
 com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto$HorizontalStepDto.class
+com\atirath\trading\modules\admin\repository\AdminApprovalWorkflowRepository.class
 com\atirath\trading\modules\portfolio\dto\MemberDashboardDto.class
 com\atirath\trading\modules\portfolio\dto\mobile\MobilePendingActionDto.class
 com\atirath\trading\modules\portfolio\dto\PortfolioOwnershipResponseDto$PortfolioOwnershipResponseDtoBuilder.class
@@ -1119,6 +1140,7 @@ com\atirath\trading\modules\externalrequest\dto\AddNoteRequestDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryApproversPageDto$DepartmentApproverSliceDto.class
 com\atirath\trading\modules\admin\parent\dto\GroupReportsPageDto$RevenueProfitInvestmentTrendDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$DepositoryTransferDetailsDto$DepositoryTransferDetailsDtoBuilder.class
+com\atirath\trading\modules\admin\model\AdminAuditLog$AdminAuditLogBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareTransferRulesPageDto$SubsidiaryShareTransferRulesPageDtoBuilder.class
 com\atirath\trading\modules\negotiation\model\NegotiationOffer$NegotiationOfferBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\ComplianceCasesPageDto.class
@@ -1148,6 +1170,7 @@ com\atirath\trading\modules\market\model\Escrow$EscrowBuilder.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\FailedTransactionsPageDto$FailureReasonBarDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryAdminDashboardDto$EmployeeDepartmentSliceDto.class
 com\atirath\trading\modules\admin\system\dto\ApprovalWorkflowPageDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$SubsidiaryTradeItemDto.class
 com\atirath\trading\modules\escrow\dto\mobile\MobileShareTransferDto.class
 com\atirath\trading\modules\negotiation\dto\NegotiationStatusBreakdownDto$StatusItemDto$StatusItemDtoBuilder.class
 com\atirath\trading\modules\market\dto\MarketActivitySummaryDto.class
@@ -1196,6 +1219,7 @@ com\atirath\trading\modules\admin\parent\dto\GroupHoldingsPageDto$HoldingActivit
 com\atirath\trading\modules\admin\parent\dto\GroupHoldingsPageDto$SectorHoldingsDistributionDto$SectorHoldingsDistributionDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\RoleManagementPageDto$RolesByTypeDonutDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryAdminDashboardDto$SubsidiaryMilestoneItemDto$SubsidiaryMilestoneItemDtoBuilder.class
+com\atirath\trading\modules\admin\model\AdminAuditLog.class
 com\atirath\trading\modules\negotiation\dto\TradeAgreementConfirmRequestDto$TradeAgreementConfirmRequestDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioCompanyPnlRowDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\SettlementMonitoringPageDto$SettlementTrendMonthDto.class
@@ -1252,6 +1276,7 @@ com\atirath\trading\modules\admin\subsidiary\operations\dto\CreateTicketRequestD
 com\atirath\trading\modules\negotiation\model\NegotiationOffer.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$FundEscrowStageDto.class
 com\atirath\trading\modules\externalrequest\dto\RequestStatusDto$RequestStatusDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$MemberItemDto$MemberItemDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$EscrowPipelineSummaryDto.class
 com\atirath\trading\modules\profile\dto\DocumentRecordDto$DocumentRecordDtoBuilder.class
 com\atirath\trading\modules\profile\dto\DocumentRecordDto.class
@@ -1287,6 +1312,7 @@ com\atirath\trading\modules\admin\system\dto\PermissionManagementPageDto$Permiss
 com\atirath\trading\modules\portfolio\dto\MemberTransactionsDto.class
 com\atirath\trading\modules\admin\system\dto\CreateWorkflowRequestDto$CreateWorkflowRequestDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\ShareLockItemDto$LockProgressStepDto$LockProgressStepDtoBuilder.class
+com\atirath\trading\modules\admin\model\AdminApprovalWorkflow.class
 com\atirath\trading\modules\admin\subsidiary\dto\AddSubsidiaryShareholderRequestDto.class
 com\atirath\trading\modules\profile\dto\mobile\MobileActiveDevicesDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareholdersPageDto$CategoryCountBarDto.class
@@ -1300,8 +1326,10 @@ com\atirath\trading\modules\escrow\dto\EscrowStatusPageDto.class
 com\atirath\trading\modules\escrow\dto\mobile\MobilePaymentProceedRequestDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\GenerateSubsidiaryReportRequestDto$GenerateSubsidiaryReportRequestDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\TradingRuleConfigPageDto$RulesByCategoryDonutDto.class
+com\atirath\trading\modules\admin\model\Dispute.class
 com\atirath\trading\modules\auth\dto\device\DeviceLimitExceededDto$DeviceLimitExceededDtoBuilder.class
 com\atirath\trading\modules\market\dto\OrderStatusDetailDto$OrderDocumentDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ComplianceTabDto$ComplianceTabDtoBuilder.class
 com\atirath\trading\modules\profile\dto\MemberProfileDto$MemberProfileDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\ApprovalsPageDto$TabCountDto$TabCountDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\SubsidiariesPageDto$SubsidiaryUpdateItemDto$SubsidiaryUpdateItemDtoBuilder.class
@@ -1359,6 +1387,7 @@ com\atirath\trading\modules\portfolio\dto\PortfolioReturnAnalysisDto$PortfolioRe
 com\atirath\trading\config\AsyncConfig.class
 com\atirath\trading\modules\market\dto\MarketTradeDto.class
 com\atirath\trading\modules\market\dto\mobile\MobileTradeScreenDto$MobileOrderBookRowDto$MobileOrderBookRowDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$DocumentsTabDto$DocumentsTabDtoBuilder.class
 com\atirath\trading\modules\auth\dto\KycSubmitRequest$KycSubmitRequestBuilder.class
 com\atirath\trading\modules\auth\dto\OtpVerifyRequest$OtpVerifyRequestBuilder.class
 com\atirath\trading\modules\escrow\dto\ShareLockStatusPageDto$ShareLockStatusPageDtoBuilder.class
@@ -1393,6 +1422,7 @@ com\atirath\trading\modules\admin\parent\dto\ParentDashboardDto$TradeActivityTre
 com\atirath\trading\modules\admin\system\dto\NotificationConfigPageDto$NotificationsByCategoryDonutDto.class
 com\atirath\trading\modules\escrow\dto\ShareLockItemDto$LockProgressStepDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$DocumentItemDto$DocumentItemDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\SubsidiariesPageDto$SubsidiaryUpdateItemDto.class
 com\atirath\trading\modules\admin\parent\dto\GroupTradeMonitoringPageDto$TradeValueVolumeTrendDto$TradeValueVolumeTrendDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareClassesPageDto$SubsidiaryShareClassesPageDtoBuilder.class
@@ -1526,6 +1556,7 @@ com\atirath\trading\modules\admin\system\dto\UserManagementPageDto$RoleSliceDto.
 com\atirath\trading\modules\escrow\dto\SettlementConfirmationDto$PartyPaymentSummaryDto.class
 com\atirath\trading\modules\admin\system\dto\CreateUserRequestDto$CreateUserRequestDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\GroupReportsPageDto$CompanyRevenueSliceDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$SettingsTabDto$SettingsTabDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryAdminDashboardDto$SubsidiaryPerformanceItemDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$SettlementDetailsDto$SettlementDetailsDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\SubsidiarySummaryDto.class
@@ -1535,6 +1566,7 @@ com\atirath\trading\modules\externalrequest\dto\TimelineStepDto$TimelineStepDtoB
 com\atirath\trading\modules\notification\dto\NotificationSummaryKpiDto$NotificationSummaryKpiDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\RoleManagementPageDto$RoleAccessLevelBarDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\PendingTransfersPageDto$TransfersTrendMonthDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ShareholderItemDto$ShareholderItemDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\ShareLockItemDto$LockActivityDto.class
 com\atirath\trading\modules\escrow\dto\EscrowSummaryMetricsDto.class
 com\atirath\trading\modules\auth\dto\UserProfileDto$KycSummaryDto$KycSummaryDtoBuilder.class
@@ -1549,6 +1581,7 @@ com\atirath\trading\config\DataInitializer$1DocSeed.class
 com\atirath\trading\modules\market\dto\TradeTerminalSnapshotDto$TerminalKeyStatisticsDto$TerminalKeyStatisticsDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryDocumentsPageDto$DocumentCategorySliceDto$DocumentCategorySliceDtoBuilder.class
 com\atirath\trading\modules\market\dto\OrderStatusDetailDto$ProgressStepDto$ProgressStepDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$TradingActivityTabDto$TradingActivityTabDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\CreateUserRequestDto.class
 com\atirath\trading\modules\escrow\dto\EscrowDashboardDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$SettlementCompletedStageDto$SettlementCompletedStageDtoBuilder.class
@@ -1589,6 +1622,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryDocumentsPageDto$Docu
 com\atirath\trading\modules\negotiation\dto\mobile\MobileTimelineEventDto$MobileTimelineEventDtoBuilder.class
 com\atirath\trading\modules\escrow\dto\EscrowStatusDetailDto$PaymentDetailsTabDto$PaymentDetailsTabDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\RestrictedUsersPageDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$MembersTabDto$MembersTabDtoBuilder.class
 com\atirath\trading\modules\market\dto\OrderStatusDetailDto$MarketPriceInfoDto$MarketPriceInfoDtoBuilder.class
 com\atirath\trading\modules\market\dto\CompanySummaryDto$CompanySummaryDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioPriceMoverDto$PortfolioPriceMoverDtoBuilder.class
@@ -1630,6 +1664,7 @@ com\atirath\trading\modules\portfolio\dto\mobile\MobileActionsPageDto$MobileActi
 com\atirath\trading\modules\negotiation\dto\mobile\MobileNegotiationHistoryDto.class
 com\atirath\trading\modules\escrow\dto\mobile\MobileSettlementConfirmationDto$MobileSettlementConfirmationDtoBuilder.class
 com\atirath\trading\modules\auth\dto\common\UserSummaryDto.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ShareholderItemDto.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\ReconciliationPageDto$ReconciliationRecordItemDto.class
 com\atirath\trading\modules\externalrequest\dto\VerificationHistoryItemDto.class
 com\atirath\trading\modules\market\model\MarketPriceHistory.class
@@ -1673,6 +1708,7 @@ com\atirath\trading\modules\market\dto\mobile\MobileTransactionItemDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareIssuancePageDto$ShareIssuanceItemDto$ShareIssuanceItemDtoBuilder.class
 com\atirath\trading\modules\admin\parent\dto\EscrowSettlementGroupPageDto$EscrowTransactionItemDto.class
 com\atirath\trading\modules\negotiation\repository\NegotiationMessageRepository.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$FinancialsTabDto$FinancialsTabDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\PermissionDetailDto$PermissionDetailDtoBuilder.class
 com\atirath\trading\modules\portfolio\dto\PortfolioPnlResponseDto$PortfolioPnlResponseDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryComplianceDashboardDto$KycStatusSliceDto.class
@@ -1697,6 +1733,7 @@ com\atirath\trading\modules\escrow\dto\EscrowValueTrendDto$DataPointDto.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareClassesPageDto$AuthorizedVsIssuedBarDto$AuthorizedVsIssuedBarDtoBuilder.class
 com\atirath\trading\modules\admin\system\dto\CreateWorkflowRequestDto.class
 com\atirath\trading\modules\auth\service\OtpService$OtpRecord.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$MemberItemDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$ShareLockStageDto$ShareLockStageDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryApproversPageDto$ApproversByDepartmentDonutDto$ApproversByDepartmentDonutDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\operations\dto\SettlementMonitoringPageDto$UpcomingSettlementRowDto.class
@@ -1720,6 +1757,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SuspiciousTransactionsPageDto$S
 com\atirath\trading\modules\escrow\dto\ShareLockItemDto$LockActivityDto$LockActivityDtoBuilder.class
 com\atirath\trading\modules\profile\dto\NotificationsPageDto$NotificationsPageDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryTransactionMonitoringPageDto$TransactionTypeSliceDto$TransactionTypeSliceDtoBuilder.class
+com\atirath\trading\modules\admin\repository\SupportTicketRepository.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryCapTablePageDto$CapTableOwnershipShareClassDonutDto$CapTableOwnershipShareClassDonutDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\CompanyTransactionDetailDto$CompanyTransactionDetailDtoBuilder.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareIssuancePageDto$ShareClassIssuanceSliceDto.class
@@ -1749,6 +1787,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareTransferRulesPag
 com\atirath\trading\modules\admin\parent\dto\ApprovalsPageDto$ApprovalTrendChartDto$ApprovalTrendChartDtoBuilder.class
 com\atirath\trading\common\ResourceNotFoundException.class
 com\atirath\trading\modules\profile\controller\ProfileSettingsController.class
+com\atirath\trading\modules\admin\repository\AdminAuditLogRepository.class
 com\atirath\trading\modules\market\dto\mobile\MobileWalletSummaryDto$MobileWalletSummaryDtoBuilder.class
 com\atirath\trading\modules\market\model\TradeOrderDocument$TradeOrderDocumentBuilder.class
 com\atirath\trading\modules\profile\dto\VerificationHistoryLogDto.class
@@ -1767,6 +1806,7 @@ com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryShareholdersPageDto$C
 com\atirath\trading\modules\auth\repository\UserCredentialRepository.class
 com\atirath\trading\modules\portfolio\service\MemberDashboardService.class
 com\atirath\trading\modules\admin\subsidiary\dto\SubsidiaryComplianceDashboardDto$KycStatusSliceDto$KycStatusSliceDtoBuilder.class
+com\atirath\trading\modules\admin\parent\dto\SubsidiaryDetailDto$ComplianceTabDto.class
 com\atirath\trading\modules\portfolio\service\PortfolioDataHelper$ComputedHolding.class
 com\atirath\trading\modules\notification\dto\NotificationTabCountDto.class
 com\atirath\trading\modules\escrow\dto\EscrowPipelineDto$SettlementInProgressStageDto$SettlementInProgressStageDtoBuilder.class

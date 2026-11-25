@@ -634,5 +634,85 @@ ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS company_pan_num
 ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS gst_number VARCHAR(15);
 ALTER TABLE public.identity_kyc_details ADD COLUMN IF NOT EXISTS tan_number VARCHAR(10);
 
+-- =========================================================
+-- MINIMAL ADMIN SUPPORT TABLES (4 Essential Tables)
+-- =========================================================
+
+-- Admin Role Attribute
+ALTER TABLE public.admin_accounts ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'SUPER_ADMIN';
+
+-- 1. Operations Disputes
+CREATE TABLE IF NOT EXISTS public.disputes (
+    dispute_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    dispute_reference VARCHAR(50) NOT NULL UNIQUE,
+    trade_id BIGINT REFERENCES public.market_trades(trade_id) ON DELETE SET NULL,
+    escrow_id BIGINT REFERENCES public.escrows(escrow_id) ON DELETE SET NULL,
+    raised_by_user_id BIGINT NOT NULL REFERENCES public.user_accounts(user_id) ON DELETE CASCADE,
+    against_user_id BIGINT REFERENCES public.user_accounts(user_id) ON DELETE SET NULL,
+    dispute_category VARCHAR(100) NOT NULL DEFAULT 'TRADE_EXECUTION',
+    dispute_reason TEXT NOT NULL,
+    disputed_amount NUMERIC(18, 4) DEFAULT 0.0000,
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    assigned_admin_id BIGINT REFERENCES public.admin_accounts(admin_id) ON DELETE SET NULL,
+    resolution_notes TEXT,
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_disputes_status ON public.disputes(status);
+CREATE INDEX IF NOT EXISTS idx_disputes_raised_by ON public.disputes(raised_by_user_id);
+
+-- 2. Operations Support Tickets
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+    ticket_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ticket_number VARCHAR(50) NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL REFERENCES public.user_accounts(user_id) ON DELETE CASCADE,
+    subject VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'GENERAL',
+    description TEXT NOT NULL,
+    priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    assigned_to BIGINT REFERENCES public.admin_accounts(admin_id) ON DELETE SET NULL,
+    resolution TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
+
+-- 3. System Admin Audit Activity Logs
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+    log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    admin_id BIGINT REFERENCES public.admin_accounts(admin_id) ON DELETE SET NULL,
+    admin_name VARCHAR(150),
+    action_type VARCHAR(100) NOT NULL,
+    module_name VARCHAR(50) NOT NULL,
+    target_entity_type VARCHAR(50),
+    target_entity_id VARCHAR(100),
+    description TEXT,
+    ip_address VARCHAR(50),
+    status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_module ON public.admin_audit_logs(module_name);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON public.admin_audit_logs(created_at DESC);
+
+-- 4. System Admin Approval Workflows
+CREATE TABLE IF NOT EXISTS public.admin_approval_workflows (
+    workflow_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    workflow_code VARCHAR(50) NOT NULL UNIQUE,
+    workflow_name VARCHAR(150) NOT NULL,
+    module VARCHAR(50) NOT NULL,
+    trigger_condition VARCHAR(255),
+    required_role VARCHAR(50) NOT NULL DEFAULT 'ROLE_ADMIN',
+    min_approvals INT NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_approval_workflows_module ON public.admin_approval_workflows(module);
+
+
 
 

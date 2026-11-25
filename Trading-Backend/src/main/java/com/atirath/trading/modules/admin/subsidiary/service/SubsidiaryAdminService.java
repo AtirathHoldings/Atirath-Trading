@@ -1300,14 +1300,14 @@ public class SubsidiaryAdminService {
 
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-1", 1, "Trading Window (Quarterly)", "Trading Window", "blue", "All Classes", "Open: 1-25 of quarter", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-2", 2, "Price Band Limit", "Price Limit", "purple", "Equity Shares (ES)", "±20% from reference price", "Active", "green", "01 Jan 2025"));
-        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-3", 3, "Order Value Limit (Retail)", "Order Limit", "green", "Preference Shares (PS)", "Max ₹10,00,000 per order", "Active", "green", "01 Jan 2025"));
-        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-4", 4, "Order Quantity Limit", "Order Limit", "green", "ES, PS", "Max 1,00,000 shares", "Active", "green", "01 Jan 2025"));
+        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-3", 3, "Order Value Limit (Retail)", "Order Limit", "green", "Preference Shares (PS)", "Max ₹ 10,00,000 per order", "Active", "green", "01 Jan 2025"));
+        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-4", 4, "Order Quantity Limit", "Order Limit", "green", "ES", "Max 1,00,000 shares", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-5", 5, "Eligible Investors", "Eligibility Rule", "orange", "ES, PS, ESOP", "Only approved investors", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-6", 6, "Insider Trading Restriction", "Compliance Rule", "pink", "All Classes", "Restricted for insiders", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-7", 7, "Minimum Holding Period", "Other Rule", "blue", "Series A (A1)", "No sell within 6 months", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-8", 8, "KYC Completion", "Eligibility Rule", "orange", "All Classes", "KYC mandatory before trade", "Active", "green", "01 Jan 2025"));
         tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-9", 9, "Volume Limit (Daily)", "Order Limit", "green", "ES", "Max 5% of daily volume", "Suspended", "red", "01 Jan 2025"));
-        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-10", 10, "Board Approval for Large Trades", "Approval Rule", "blue", "ES, PS", "Trades above ₹50 Cr", "Active", "green", "01 Jan 2025"));
+        tradingRulesList.add(new SubsidiaryTradingRulesPageDto.TradingRuleItemDto("trule-10", 10, "Board Approval for Large Trades", "Approval Rule", "blue", "ES, PS", "Trades above ₹ 50 Cr", "Active", "green", "01 Jan 2025"));
 
         TradingRuleDetailDto trule1Detail = TradingRuleDetailDto.builder()
                 .id("trule-1")
@@ -1921,7 +1921,7 @@ public class SubsidiaryAdminService {
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-4", 4, "TXN-2025-004", "Share Buyback", "red", "25 Aug 2026", "30,000", "30,00,000", "100", "David Brown", "Completed", "green"));
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-5", 5, "TXN-2025-005", "Corporate Action", "purple", "20 Aug 2026", "-", "-", "-", "Stock Split (1:2)", "Completed", "green"));
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-6", 6, "TXN-2025-006", "Share Transfer", "blue", "18 Aug 2026", "75,000", "75,00,000", "100", "Meera Reddy", "Completed", "green"));
-        companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-7", 7, "TXN-2025-007", "Share Issuance", "green", "12 Aug 2026", "5,00,00,000", "50,00,00,000", "100", "Strategic Investors", "Completed", "green"));
+        companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-7", 7, "TXN-2025-007", "Share Issuance", "green", "12 Aug 2026", "5,00,000", "50,00,00,000", "100", "Strategic Investors", "Completed", "green"));
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-8", 8, "TXN-2025-008", "Share Transfer", "blue", "05 Aug 2026", "20,000", "20,00,000", "100", "Ramesh Kumar", "Rejected", "red"));
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-9", 9, "TXN-2025-009", "Share Issuance", "green", "28 Jul 2026", "1,00,000", "10,00,00,000", "100", "Global Energy Partners", "Completed", "green"));
         companyTransactionsList.add(new SubsidiaryTransactionsPageDto.CompanyTransactionItemDto("txn-10", 10, "TXN-2025-010", "Others", "gray", "15 Jul 2026", "-", "5,00,000", "-", "Registration Fee", "Completed", "green"));

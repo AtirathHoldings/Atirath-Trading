@@ -39,10 +39,20 @@ public class ClientIntegrityFilter extends OncePerRequestFilter {
     private static final Set<String> ALLOWED_ORIGINS = Set.of(
             "http://localhost:5173",
             "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+            "http://localhost:4200",
+            "http://127.0.0.1:4200",
             "http://localhost:8080",
             "http://127.0.0.1:8080",
+            "http://localhost:8081",
+            "http://127.0.0.1:8081",
             "https://trade.atirathgroup.com",
             "https://portal.atirathgroup.com"
     );
@@ -126,6 +136,7 @@ public class ClientIntegrityFilter extends OncePerRequestFilter {
         if (origin == null || origin.isBlank()) return false;
         String cleanOrigin = origin.trim().toLowerCase();
         if (ALLOWED_ORIGINS.contains(cleanOrigin)) return true;
+        if (cleanOrigin.startsWith("http://localhost:") || cleanOrigin.startsWith("http://127.0.0.1:")) return true;
         return cleanOrigin.endsWith(".atirathgroup.com");
     }
 

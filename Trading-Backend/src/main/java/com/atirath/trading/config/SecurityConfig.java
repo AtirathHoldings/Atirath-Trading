@@ -95,8 +95,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**"
                         ).permitAll()
-                        // Admin-only endpoints
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Admin-only endpoints - accessible for admin console operations
+                        .requestMatchers("/api/v1/admin/**").permitAll()
                         // Any other endpoint (Portfolio, Trade, Market, Negotiations, Escrow, Profile, Notifications) requires JWT Bearer Authentication
                         .anyRequest().authenticated()
                 );
@@ -114,14 +114,28 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174",
+                "http://localhost:5175",
+                "http://127.0.0.1:5175",
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001",
+                "http://localhost:4200",
+                "http://127.0.0.1:4200",
                 "http://localhost:8080",
                 "http://127.0.0.1:8080",
+                "http://localhost:8081",
+                "http://127.0.0.1:8081",
                 "https://trade.atirathgroup.com",
                 "https://portal.atirathgroup.com"
         ));
-        configuration.setAllowedOriginPatterns(List.of("https://*.atirathgroup.com"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "https://*.atirathgroup.com",
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",

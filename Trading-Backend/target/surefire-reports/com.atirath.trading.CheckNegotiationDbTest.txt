@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: com.atirath.trading.CheckNegotiationDbTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 200.8 s <<< FAILURE! -- in com.atirath.trading.CheckNegotiationDbTest
+com.atirath.trading.CheckNegotiationDbTest.inspectDb -- Time elapsed: 126.7 s <<< ERROR!
+org.hibernate.LazyInitializationException: could not initialize proxy [com.atirath.trading.modules.auth.model.UserAccount#1] - no Session
+	at org.hibernate.proxy.AbstractLazyInitializer.initialize(AbstractLazyInitializer.java:165)
+	at org.hibernate.proxy.AbstractLazyInitializer.getImplementation(AbstractLazyInitializer.java:314)
+	at org.hibernate.proxy.pojo.bytebuddy.ByteBuddyInterceptor.intercept(ByteBuddyInterceptor.java:44)
+	at org.hibernate.proxy.ProxyConfiguration$InterceptorDispatcher.intercept(ProxyConfiguration.java:102)
+	at com.atirath.trading.modules.auth.model.UserAccount$HibernateProxy$rcDIMa1T.getEmail(Unknown Source)
+	at com.atirath.trading.CheckNegotiationDbTest.inspectDb(CheckNegotiationDbTest.java:48)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+

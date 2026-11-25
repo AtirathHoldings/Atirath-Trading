@@ -154,7 +154,7 @@ public class SubsidiaryOperationsService {
                 .pendingSettlements(45)
                 .avgSettlementTime("1.6 Days (-20%)")
                 .settlements(List.of(
-                        new OperationsDashboardDto.SettlementRowDto("ST-2026-001", "TR-2026-001", "18,50,000", "Pending", "orange"),
+                        new OperationsDashboardDto.SettlementRowDto("ST-2026-001", "TR-2026-002", "18,50,000", "Pending", "orange"),
                         new OperationsDashboardDto.SettlementRowDto("ST-2026-002", "TR-2026-004", "15,75,000", "Pending", "orange"),
                         new OperationsDashboardDto.SettlementRowDto("ST-2026-003", "TR-2026-003", "42,00,000", "Completed", "green"),
                         new OperationsDashboardDto.SettlementRowDto("ST-2026-004", "TR-2026-005", "33,20,000", "Pending", "orange"),
@@ -177,7 +177,7 @@ public class SubsidiaryOperationsService {
                 .resolvedThisQuarter(12)
                 .disputes(List.of(
                         new OperationsDashboardDto.DisputeRowDto("DP-2026-001", "TR-2026-004", "Trade Dispute", "Neha Sharma", "Open", "red", "26 Sep 2026"),
-                        new OperationsDashboardDto.DisputeRowDto("DP-2026-002", "TF-2026-003", "Transfer Dispute", "Vikram Rao", "Under Review", "orange", "24 Sep 2026"),
+                        new OperationsDashboardDto.DisputeRowDto("DP-2026-002", "TF-2026-005", "Transfer Dispute", "Vikram Rao", "Under Review", "orange", "24 Sep 2026"),
                         new OperationsDashboardDto.DisputeRowDto("DP-2026-003", "ST-2026-002", "Settlement Dispute", "Priya Mehta", "Open", "red", "21 Sep 2026")
                 )).build();
 
@@ -583,7 +583,7 @@ public class SubsidiaryOperationsService {
                 new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-004", "Sunrise Ventures", "1,75,00,000", "02 Oct 2026", 3),
                 new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-009", "Farm Vantara", "2,60,00,000", "28 Sep 2026", 1),
                 new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-003", "Atirath Holdings", "4,50,00,000", "30 Sep 2026", 2),
-                new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-001", "Global Agri Fund", "2,20,00,000", "24 Sep 2026", 0),
+                new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-006", "Global Agri Fund", "2,20,00,000", "24 Sep 2026", 0),
                 new EscrowMonitoringPageDto.UpcomingReleaseRowDto("ES-2026-008", "Priya Mehta", "1,85,00,000", "25 Sep 2026", 1)
         );
 
@@ -1150,7 +1150,8 @@ public class SubsidiaryOperationsService {
                 KpiCardDto.builder().title("Open Disputes").value("18").change("+50% vs last quarter").comparisonText("").trend("negative").icon("hourglass").color("red").build(),
                 KpiCardDto.builder().title("In Progress").value("10").change("+11% vs last quarter").comparisonText("").trend("neutral").icon("refresh-cw").color("blue").build(),
                 KpiCardDto.builder().title("Resolved").value("6").change("+50% vs last quarter").comparisonText("").trend("positive").icon("check-circle").color("green").build(),
-                KpiCardDto.builder().title("Escalated").value("2").change("+100% vs last quarter").comparisonText("").trend("negative").icon("x-circle").color("red").build()
+                KpiCardDto.builder().title("Escalated").value("2").change("+100% vs last quarter").comparisonText("").trend("negative").icon("x-circle").color("red").build(),
+                KpiCardDto.builder().title("Avg. Resolution Time").value("5.8 Days").change("-25% vs last quarter").comparisonText("").trend("positive").icon("clock").color("blue").build()
         );
 
         DisputesPageDto.DisputesTypeDonutDto donut = DisputesPageDto.DisputesTypeDonutDto.builder()
@@ -1327,7 +1328,8 @@ public class SubsidiaryOperationsService {
                 KpiCardDto.builder().title("Open").value("36").change("+20% vs last quarter").comparisonText("").trend("negative").icon("alert-circle").color("red").build(),
                 KpiCardDto.builder().title("In Progress").value("58").change("+12% vs last quarter").comparisonText("").trend("neutral").icon("refresh-cw").color("blue").build(),
                 KpiCardDto.builder().title("Resolved").value("40").change("+25% vs last quarter").comparisonText("").trend("positive").icon("check-circle").color("green").build(),
-                KpiCardDto.builder().title("Closed").value("8").change("+14% vs last quarter").comparisonText("").trend("neutral").icon("check-square").color("gray").build()
+                KpiCardDto.builder().title("Closed").value("8").change("+14% vs last quarter").comparisonText("").trend("neutral").icon("check-square").color("gray").build(),
+                KpiCardDto.builder().title("Avg. Resolution Time").value("2.6 Days").change("-30% vs last quarter").comparisonText("").trend("positive").icon("clock").color("blue").build()
         );
 
         SupportTicketsPageDto.TicketsCategoryDonutDto donut = SupportTicketsPageDto.TicketsCategoryDonutDto.builder()
@@ -1502,7 +1504,7 @@ public class SubsidiaryOperationsService {
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-3", 3, "TR-2026-003", "27 Sep 2026", "Atirath Holdings", "Preference", "Vikram Rao", "Buy", "5,000", "42,00,000", "Settlement", "green", "3 days"));
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-4", 4, "TR-2026-004", "26 Sep 2026", "Sunrise Ventures", "Equity - A", "Neha Sharma", "Transfer", "12,500", "15,75,000", "Approval", "orange", "2 days"));
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-5", 5, "TR-2026-005", "25 Sep 2026", "Green Future Fund", "Equity - B", "Suresh Kumar", "Buy", "20,000", "33,20,000", "Overdue", "red", "5 days"));
-        pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-6", 6, "TR-2026-006", "24 Sep 2026", "Atirath Technologies", "Equity - A", "Ananya Reddy", "Sell", "8,000", "11,20,000", "Verification", "blue", "3 days"));
+        pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-6", 6, "TR-2026-006", "24 Sep 2026", "Atirath Technologies", "Equity - A", "Ananya Reddy", "Sell", "8,000", "11,20,000", "Settlement", "green", "3 days"));
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-7", 7, "TR-2026-007", "23 Sep 2026", "Global Agri Fund", "Equity - B", "Lakshmi Narayan", "Buy", "15,000", "24,00,000", "Settlement", "green", "4 days"));
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-8", 8, "TR-2026-008", "22 Sep 2026", "Farm Vantara", "Preference", "Sunil Verma", "Transfer", "10,000", "9,50,000", "Approval", "orange", "3 days"));
         pendingTradesList.add(new PendingTradesPageDto.PendingTradeItemDto("tr-9", 9, "TR-2026-009", "21 Sep 2026", "Atirath Traders", "Equity - A", "Kavya Iyer", "Buy", "18,000", "27,00,000", "Overdue", "red", "6 days"));
@@ -1595,7 +1597,7 @@ public class SubsidiaryOperationsService {
         escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-6", 6, "ES-2026-006", "Global Agri Fund", "TR-2026-006", "Lakshmi Narayan", "Equity - A", "2,20,00,000", "Available", "green", "24 Sep 2026", "24 Sep 2026"));
         escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-7", 7, "ES-2026-007", "Atirath Technologies", "TR-2026-007", "Ananya Reddy", "Equity - B", "1,10,00,000", "On Hold", "orange", "23 Sep 2026", "-"));
         escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-8", 8, "ES-2026-008", "Priya Mehta", "TR-2026-008", "Sunil Verma", "Transfer", "1,85,00,000", "Available", "green", "22 Sep 2026", "25 Sep 2026"));
-        escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-9", 9, "ES-2026-009", "Farm Vantara", "TR-2026-009", "Kavya Iyer", "Equity - A", "2,60,00,000", "Pending Release", "orange", "21 Sep 2026", "28 Sep 2026"));
+        escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-9", 9, "ES-2026-009", "Farm Vantara", "TR-2026-009", "Kavya Iyer", "Equity - A", "2,50,00,000", "Pending Release", "orange", "21 Sep 2026", "28 Sep 2026"));
         escrowAccountsList.add(new EscrowMonitoringPageDto.EscrowAccountItemDto("es-10", 10, "ES-2026-010", "Atirath Holdings", "TR-2026-010", "Rajesh Mehta", "Equity - B", "1,40,00,000", "Available", "green", "20 Sep 2026", "20 Sep 2026"));
 
         EscrowDetailDto es1 = EscrowDetailDto.builder()
@@ -1644,7 +1646,7 @@ public class SubsidiaryOperationsService {
         settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-6", 6, "ST-2026-006", "TR-2026-006", "Global Agri Fund", "Lakshmi Narayan", "Equity - A", "24,00,000", "24 Sep 2026", "Pending", "orange"));
         settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-7", 7, "ST-2026-007", "TR-2026-007", "Atirath Technologies", "Ananya Reddy", "Equity - B", "11,20,000", "23 Sep 2026", "On Hold", "purple"));
         settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-8", 8, "ST-2026-008", "TR-2026-008", "Farm Vantara", "Sunil Verma", "Transfer", "9,50,000", "22 Sep 2026", "Under Review", "blue"));
-        settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-9", 9, "ST-2026-009", "TR-2026-009", "Atirath Traders", "Kavya Iyer", "Equity - A", "27,00,000", "21 Sep 2026", "Settled", "green"));
+        settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-9", 9, "ST-2026-009", "TR-2026-009", "Priya Mehta", "Kavya Iyer", "Equity - A", "27,00,000", "21 Sep 2026", "Settled", "green"));
         settlementsList.add(new SettlementMonitoringPageDto.SettlementItemDto("st-10", 10, "ST-2026-010", "TR-2026-010", "Sunrise Ventures", "Rajesh Mehta", "Equity - B", "10,80,000", "20 Sep 2026", "Failed", "red"));
 
         SettlementDetailDto st2 = SettlementDetailDto.builder()
@@ -1689,14 +1691,14 @@ public class SubsidiaryOperationsService {
         failedTransactionsList.clear();
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-1", 1, "FT-2026-001", "Trade", "red", "Atirath Traders", "Rakesh Kumar", "15,75,000", "Insufficient balance", "red", "29 Sep 2026", "Not Retried", "gray"));
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-2", 2, "FT-2026-002", "Transfer", "blue", "Farm Vantara", "Priya Mehta", "8,20,000", "KYC mismatch", "orange", "28 Sep 2026", "In Progress", "blue"));
-        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-3", 3, "FT-2026-003", "Settlement", "purple", "Atirath Holdings", "Vikram Rao", "22,50,000", "Bank rejection", "red", "27 Sep 2026", "Not Retried", "gray"));
+        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-3", 3, "FT-2026-003", "Settlement", "green", "Atirath Holdings", "Vikram Rao", "22,50,000", "Bank rejection", "red", "27 Sep 2026", "Failed", "red"));
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-4", 4, "FT-2026-004", "Trade", "red", "Sunrise Ventures", "Neha Sharma", "11,00,000", "Price limit breach", "orange", "26 Sep 2026", "Retrying", "green"));
-        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-5", 5, "FT-2026-005", "Payment", "teal", "Green Future Fund", "Suresh Kumar", "6,75,000", "Payment gateway error", "red", "25 Sep 2026", "Failed", "red"));
+        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-5", 5, "FT-2026-005", "Payment", "pink", "Green Future Fund", "Suresh Kumar", "6,75,000", "Payment gateway error", "red", "25 Sep 2026", "Failed", "red"));
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-6", 6, "FT-2026-006", "Trade", "red", "Global Agri Fund", "Lakshmi Narayan", "19,50,000", "Insufficient balance", "red", "24 Sep 2026", "Not Retried", "gray"));
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-7", 7, "FT-2026-007", "Transfer", "blue", "Atirath Technologies", "Ananya Reddy", "9,20,000", "Beneficiary not found", "orange", "23 Sep 2026", "In Progress", "blue"));
-        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-8", 8, "FT-2026-008", "Settlement", "purple", "Farm Vantara", "Sunil Verma", "12,80,000", "Compliance block", "red", "22 Sep 2026", "Not Retried", "gray"));
+        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-8", 8, "FT-2026-008", "Settlement", "green", "Farm Vantara", "Sunil Verma", "12,80,000", "Compliance block", "red", "22 Sep 2026", "Not Retried", "gray"));
         failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-9", 9, "FT-2026-009", "Trade", "red", "Atirath Traders", "Kavya Iyer", "18,00,000", "Price variance", "orange", "21 Sep 2026", "Retrying", "green"));
-        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-10", 10, "FT-2026-010", "Settlement", "purple", "Sunrise Ventures", "Rajesh Mehta", "10,80,000", "Bank timeout", "red", "20 Sep 2026", "Failed", "red"));
+        failedTransactionsList.add(new FailedTransactionsPageDto.FailedTransactionItemDto("ft-10", 10, "FT-2026-010", "Settlement", "green", "Sunrise Ventures", "Rajesh Mehta", "10,80,000", "Bank timeout", "red", "20 Sep 2026", "Failed", "red"));
 
         FailedTransactionDetailDto ft1 = FailedTransactionDetailDto.builder()
                 .id("ft-1")
@@ -1723,7 +1725,7 @@ public class SubsidiaryOperationsService {
                 .retryStatus("Not Retried")
                 .autoRetry("Enabled")
                 .nextRetryOn("29 Sep 2026, 01:22 PM")
-                .retryCount("0 / 3")
+                .retryCount("0/3")
                 .build();
 
         failedDetailsMap.put("ft-1", ft1);
@@ -1822,7 +1824,7 @@ public class SubsidiaryOperationsService {
         supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-5", 5, "TK-2026-005", "Escrow release issue", "Escrow", "orange", "Green Future Fund", "Suresh Kumar", "High", "red", "In Progress", "blue", "25 Sep 2026", "28 Sep 2026"));
         supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-6", 6, "TK-2026-006", "Payment gateway error", "Payment", "red", "Global Agri Fund", "Lakshmi Narayan", "Medium", "orange", "Open", "red", "24 Sep 2026", "27 Sep 2026"));
         supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-7", 7, "TK-2026-007", "Report generation issue", "Reporting", "blue", "Atirath Technologies", "Ananya Reddy", "Low", "green", "Resolved", "green", "23 Sep 2026", "25 Sep 2026"));
-        supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-8", 8, "TK-2026-008", "Login access issue", "User Management", "purple", "Farm Vantara", "Sunil Verma", "Medium", "orange", "In Progress", "blue", "22 Sep 2026", "25 Sep 2026"));
+        supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-8", 8, "TK-2026-008", "Login access issue", "User Management", "purple", "Farm Vantara", "Sunil Verma", "Low", "green", "Closed", "gray", "22 Sep 2026", "23 Sep 2026"));
         supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-9", 9, "TK-2026-009", "Data mismatch in reconciliation", "Reconciliation", "teal", "Atirath Traders", "Kavya Iyer", "High", "red", "Escalated", "red", "21 Sep 2026", "23 Sep 2026"));
         supportTicketsList.add(new SupportTicketsPageDto.TicketItemDto("tk-10", 10, "TK-2026-010", "Document upload failed", "Document", "gray", "Sunrise Ventures", "Rajesh Mehta", "Low", "green", "Closed", "gray", "20 Sep 2026", "22 Sep 2026"));
 

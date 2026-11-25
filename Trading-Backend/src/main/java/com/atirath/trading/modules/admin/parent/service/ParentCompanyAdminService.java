@@ -82,8 +82,14 @@ public class ParentCompanyAdminService {
     // 1. PARENT COMPANY DASHBOARD
     // ==========================================
     public ParentDashboardDto getDashboard() {
+        return getDashboard(null, null);
+    }
+
+    public ParentDashboardDto getDashboard(String dateRange, String company) {
+        String activeDateFilter = dateRange != null && !dateRange.isBlank() ? dateRange : "Today, 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
-                KpiCardDto.builder().title("Total Subsidiaries").value("6").change("+1").comparisonText("vs last month").trend("positive").icon("building").color("blue").build(),
+                KpiCardDto.builder().title("Total Subsidiaries").value(String.valueOf(subsidiaries.size() > 0 ? subsidiaries.size() : 6)).change("+1").comparisonText("vs last month").trend("positive").icon("building").color("blue").build(),
                 KpiCardDto.builder().title("Total Members").value("842").change("+12%").comparisonText("vs last month").trend("positive").icon("users").color("green").build(),
                 KpiCardDto.builder().title("Total Trade Volume").value("₹ 24.8 Cr").change("+18%").comparisonText("vs last month").trend("positive").icon("bar-chart").color("orange").build(),
                 KpiCardDto.builder().title("Total Settlement Value").value("₹ 23.6 Cr").change("+16%").comparisonText("vs last month").trend("positive").icon("rupee").color("purple").build(),
@@ -157,7 +163,7 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("Parent Company Dashboard")
                 .pageSubtitle("Overview of group companies, trading activity, investments and key metrics.")
-                .dateFilter("Today, 16 Sep 2026")
+                .dateFilter(activeDateFilter)
                 .kpis(kpis)
                 .groupCompanyPerformance(groupPerformance)
                 .tradeActivityTrends(tradeTrends)
@@ -173,12 +179,17 @@ public class ParentCompanyAdminService {
     // 2. SUBSIDIARY COMPANIES PAGE
     // ==========================================
     public SubsidiariesPageDto getSubsidiariesPage(String query, String statusFilter, String sectorFilter) {
+        long activeCount = subsidiaries.stream().filter(s -> "Active".equalsIgnoreCase(s.getStatus())).count();
+        long underSetupCount = subsidiaries.stream().filter(s -> "Under Setup".equalsIgnoreCase(s.getStatus())).count();
+        long inactiveCount = subsidiaries.stream().filter(s -> "Inactive".equalsIgnoreCase(s.getStatus())).count();
+        int totalEmployees = subsidiaries.stream().mapToInt(SubsidiarySummaryDto::getTotalMembers).sum();
+
         List<KpiCardDto> kpis = List.of(
-                KpiCardDto.builder().title("Total Subsidiaries").value("6").change("Active companies").comparisonText("").trend("neutral").icon("building").color("blue").build(),
-                KpiCardDto.builder().title("Active").value("5").change("Currently operational").comparisonText("").trend("positive").icon("check-circle").color("green").build(),
-                KpiCardDto.builder().title("Under Setup").value("1").change("Incorporation / Setup").comparisonText("").trend("neutral").icon("pause-circle").color("orange").build(),
-                KpiCardDto.builder().title("Inactive").value("0").change("Not operational").comparisonText("").trend("negative").icon("x-circle").color("red").build(),
-                KpiCardDto.builder().title("Total Employees").value("842").change("Across all subsidiaries").comparisonText("").trend("positive").icon("users").color("purple").build()
+                KpiCardDto.builder().title("Total Subsidiaries").value(String.valueOf(subsidiaries.size())).change("Active companies").comparisonText("").trend("neutral").icon("building").color("blue").build(),
+                KpiCardDto.builder().title("Active").value(String.valueOf(activeCount)).change("Currently operational").comparisonText("").trend("positive").icon("check-circle").color("green").build(),
+                KpiCardDto.builder().title("Under Setup").value(String.valueOf(underSetupCount)).change("Incorporation / Setup").comparisonText("").trend("neutral").icon("pause-circle").color("orange").build(),
+                KpiCardDto.builder().title("Inactive").value(String.valueOf(inactiveCount)).change("Not operational").comparisonText("").trend("negative").icon("x-circle").color("red").build(),
+                KpiCardDto.builder().title("Total Employees").value(String.valueOf(totalEmployees > 0 ? totalEmployees : 842)).change("Across all subsidiaries").comparisonText("").trend("positive").icon("users").color("purple").build()
         );
 
         List<SubsidiarySummaryDto> filtered = subsidiaries.stream()
@@ -274,15 +285,42 @@ public class ParentCompanyAdminService {
     // 3. SUBSIDIARY DETAIL VIEW
     // ==========================================
     public SubsidiaryDetailDto getSubsidiaryDetail(String id) {
-        SubsidiaryDetailDto detail = subsidiaryDetailsMap.get(id);
+        return getSubsidiaryDetail(id, null);
+    }
+
+    public SubsidiaryDetailDto getSubsidiaryDetail(String id, String tab) {
+        if (id == null || id.isBlank()) {
+            id = "sub-1";
+        }
+        String cleanId = id.trim();
+        SubsidiaryDetailDto detail = subsidiaryDetailsMap.get(cleanId);
         if (detail == null) {
-            SubsidiarySummaryDto found = subsidiaries.stream()
-                    .filter(s -> s.getId().equalsIgnoreCase(id) || s.getCompanyName().toLowerCase().contains(id.toLowerCase()))
-                    .findFirst()
-                    .orElse(subsidiaries.get(0));
-            detail = subsidiaryDetailsMap.getOrDefault(found.getId(), createDefaultDetailFor(found));
+            SubsidiarySummaryDto found = findSubsidiarySummary(cleanId);
+            if (found != null) {
+                detail = subsidiaryDetailsMap.computeIfAbsent(found.getId(), k -> createDefaultDetailFor(found));
+            } else if (!subsidiaryDetailsMap.isEmpty()) {
+                detail = subsidiaryDetailsMap.values().iterator().next();
+            } else {
+                detail = createDefaultDetailFor(subsidiaries.get(0));
+            }
+        }
+        if (tab != null && !tab.isBlank()) {
+            detail.setActiveTab(tab);
         }
         return detail;
+    }
+
+    private SubsidiarySummaryDto findSubsidiarySummary(String identifier) {
+        if (identifier == null) return subsidiaries.isEmpty() ? null : subsidiaries.get(0);
+        String lower = identifier.trim().toLowerCase();
+        return subsidiaries.stream()
+                .filter(s -> s.getId().equalsIgnoreCase(identifier)
+                        || String.valueOf(s.getNumber()).equals(identifier)
+                        || s.getCin().equalsIgnoreCase(identifier)
+                        || s.getCompanyName().toLowerCase().contains(lower)
+                        || s.getCompanyName().toLowerCase().replace(" ", "-").contains(lower))
+                .findFirst()
+                .orElse(subsidiaries.isEmpty() ? null : subsidiaries.get(0));
     }
 
     public SubsidiaryDetailDto updateSubsidiaryInfo(String id, UpdateCompanyInfoDto req) {
@@ -291,6 +329,7 @@ public class ParentCompanyAdminService {
         if (req.getHeadquarters() != null) {
             detail.getCompanyInfo().setHeadquarters(req.getHeadquarters());
             detail.setHeadquarters(req.getHeadquarters());
+            subsidiaries.stream().filter(s -> s.getId().equals(detail.getId())).findFirst().ifPresent(s -> s.setHeadquarters(req.getHeadquarters()));
         }
         if (req.getPan() != null) detail.getCompanyInfo().setPan(req.getPan());
         if (req.getGstNumber() != null) detail.getCompanyInfo().setGstNumber(req.getGstNumber());
@@ -298,6 +337,62 @@ public class ParentCompanyAdminService {
             detail.getCompanyInfo().setStatus(req.getStatus());
             detail.setStatus(req.getStatus());
             subsidiaries.stream().filter(s -> s.getId().equals(detail.getId())).findFirst().ifPresent(s -> s.setStatus(req.getStatus()));
+        }
+        return detail;
+    }
+
+    public SubsidiaryDetailDto updateSubsidiaryStatus(String id, String newStatus) {
+        SubsidiaryDetailDto detail = getSubsidiaryDetail(id);
+        detail.setStatus(newStatus);
+        detail.getCompanyInfo().setStatus(newStatus);
+        subsidiaries.stream().filter(s -> s.getId().equals(detail.getId())).findFirst().ifPresent(s -> s.setStatus(newStatus));
+        return detail;
+    }
+
+    public boolean deleteSubsidiary(String id) {
+        SubsidiarySummaryDto found = findSubsidiarySummary(id);
+        if (found != null) {
+            subsidiaries.removeIf(s -> s.getId().equals(found.getId()));
+            subsidiaryDetailsMap.remove(found.getId());
+            return true;
+        }
+        return false;
+    }
+
+    public SubsidiaryDetailDto.FinancialsTabDto getSubsidiaryFinancials(String id) {
+        return getSubsidiaryDetail(id).getFinancials();
+    }
+
+    public SubsidiaryDetailDto.ShareholdingTabDto getSubsidiaryShareholding(String id) {
+        return getSubsidiaryDetail(id).getShareholding();
+    }
+
+    public SubsidiaryDetailDto.MembersTabDto getSubsidiaryMembers(String id) {
+        return getSubsidiaryDetail(id).getMembers();
+    }
+
+    public SubsidiaryDetailDto.TradingActivityTabDto getSubsidiaryTradingActivity(String id) {
+        return getSubsidiaryDetail(id).getTradingActivity();
+    }
+
+    public SubsidiaryDetailDto.ComplianceTabDto getSubsidiaryCompliance(String id) {
+        return getSubsidiaryDetail(id).getCompliance();
+    }
+
+    public SubsidiaryDetailDto.DocumentsTabDto getSubsidiaryDocuments(String id) {
+        return getSubsidiaryDetail(id).getDocuments();
+    }
+
+    public SubsidiaryDetailDto.SettingsTabDto getSubsidiarySettings(String id) {
+        return getSubsidiaryDetail(id).getSettings();
+    }
+
+    public SubsidiaryDetailDto addSubsidiaryActivity(String id, SubsidiaryDetailDto.SubsidiaryActivityDto activity) {
+        SubsidiaryDetailDto detail = getSubsidiaryDetail(id);
+        if (detail.getRecentActivities() != null) {
+            List<SubsidiaryDetailDto.SubsidiaryActivityDto> list = new ArrayList<>(detail.getRecentActivities());
+            list.add(0, activity);
+            detail.setRecentActivities(list);
         }
         return detail;
     }
@@ -379,6 +474,13 @@ public class ParentCompanyAdminService {
     // 5. GROUP SHAREHOLDERS PAGE
     // ==========================================
     public GroupShareholdersPageDto getShareholdersPage(String query, String categoryFilter, String companyFilter) {
+        return getShareholdersPage(query, categoryFilter, companyFilter, 1, 10);
+    }
+
+    public GroupShareholdersPageDto getShareholdersPage(String query, String categoryFilter, String companyFilter, Integer page, Integer size) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 10;
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Shareholders").value("1,248").change("+12% vs last year").comparisonText("").trend("positive").icon("users").color("purple").build(),
                 KpiCardDto.builder().title("Individual Shareholders").value("892").change("71.5% of total").comparisonText("").trend("neutral").icon("user").color("blue").build(),
@@ -427,6 +529,9 @@ public class ParentCompanyAdminService {
                 })
                 .collect(Collectors.toList());
 
+        int totalCount = filtered.size();
+        int totalPages = (int) Math.ceil((double) 1248 / pageSize);
+
         return GroupShareholdersPageDto.builder()
                 .adminUser(adminHeader)
                 .pageTitle("Group Shareholders")
@@ -437,8 +542,8 @@ public class ParentCompanyAdminService {
                 .topShareholders(topShareholders)
                 .shareholders(filtered)
                 .totalShareholders(1248)
-                .currentPage(1)
-                .totalPages(125)
+                .currentPage(pageNum)
+                .totalPages(totalPages > 0 ? totalPages : 125)
                 .build();
     }
 
@@ -564,6 +669,14 @@ public class ParentCompanyAdminService {
     // 7. MARKET ACTIVITY (GROUP LEVEL) PAGE
     // ==========================================
     public MarketActivityGroupPageDto getMarketActivityPage(String query, String sectorFilter, String companyFilter) {
+        return getMarketActivityPage(query, sectorFilter, companyFilter, 1, 6, "Today, 16 Sep 2026");
+    }
+
+    public MarketActivityGroupPageDto getMarketActivityPage(String query, String sectorFilter, String companyFilter, Integer page, Integer size, String dateRange) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 6;
+        String effectiveDate = (dateRange != null && !dateRange.isBlank()) ? dateRange : "Today, 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Trade Volume").value("₹ 142.6 Cr").change("+18% vs last quarter").comparisonText("").trend("positive").icon("bar-chart").color("blue").build(),
                 KpiCardDto.builder().title("Total Trades").value("1,248").change("+12% vs last quarter").comparisonText("").trend("positive").icon("wallet").color("orange").build(),
@@ -618,7 +731,7 @@ public class ParentCompanyAdminService {
                 MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(1).company("Atirath Traders").initials("AT").tradeValue("47.4 Cr").valueCr(47.4).color("#3b82f6").build(),
                 MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(2).company("Atirath Holdings").initials("AH").tradeValue("30.6 Cr").valueCr(30.6).color("#22c55e").build(),
                 MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(3).company("Atirath Technologies").initials("AT").tradeValue("23.9 Cr").valueCr(23.9).color("#f87171").build(),
-                MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(4).company("Farm Vantara").initials("FV").tradeValue("16.0 Cr").valueCr(16.0).color("#06b6d4").build(),
+                MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(4).company("Farm Vantara").initials("FV").tradeValue("16.0 Cr").valueCr(16.0).color("#a855f7").build(),
                 MarketActivityGroupPageDto.TopTradedCompanyBarDto.builder().rank(5).company("Goeazymart").initials("GE").tradeValue("12.0 Cr").valueCr(12.0).color("#f59e0b").build()
         );
 
@@ -635,13 +748,13 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("Market Activity (Group Level)")
                 .pageSubtitle("Monitor and analyze trading activity across all group companies in real-time.")
-                .dateFilter("Today, 16 Sep 2026")
+                .dateFilter(effectiveDate)
                 .kpis(kpis)
                 .tradeVolumeTrend(volumeTrend)
                 .sectorTradeDistribution(sectorDist)
                 .recentTrades(filtered)
                 .totalTrades(1248)
-                .currentPage(1)
+                .currentPage(pageNum)
                 .totalPages(125)
                 .topTradedCompanies(topCompanies)
                 .highlights(highlights)
@@ -660,6 +773,14 @@ public class ParentCompanyAdminService {
     // 8. GROUP TRADE MONITORING PAGE
     // ==========================================
     public GroupTradeMonitoringPageDto getTradeMonitoringPage(String query, String companyFilter, String sectorFilter, String typeFilter) {
+        return getTradeMonitoringPage(query, companyFilter, sectorFilter, typeFilter, 1, 8, "01 Sep 2026 - 16 Sep 2026");
+    }
+
+    public GroupTradeMonitoringPageDto getTradeMonitoringPage(String query, String companyFilter, String sectorFilter, String typeFilter, Integer page, Integer size, String dateRange) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 8;
+        String effectiveDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Sep 2026 - 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Trades").value("1,248").change("+12% vs last quarter").comparisonText("").trend("positive").icon("refresh-cw").color("blue").build(),
                 KpiCardDto.builder().title("Total Trade Value").value("₹ 142.6 Cr").change("+18% vs last quarter").comparisonText("").trend("positive").icon("rupee").color("orange").build(),
@@ -727,13 +848,13 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("Group Trade Monitoring")
                 .pageSubtitle("Monitor, track and analyze all trades happening across group companies in real-time.")
-                .dateRange("01 Sep 2026 - 16 Sep 2026")
+                .dateRange(effectiveDateRange)
                 .kpis(kpis)
                 .trendChart(trendChart)
                 .sectorDistribution(sectorDist)
                 .recentTrades(filtered)
                 .totalTrades(1248)
-                .currentPage(1)
+                .currentPage(pageNum)
                 .totalPages(156)
                 .unusualActivities(unusualTradeActivities)
                 .insights(insights)
@@ -752,6 +873,15 @@ public class ParentCompanyAdminService {
     // 9. ESCROW & SETTLEMENT (GROUP LEVEL) PAGE
     // ==========================================
     public EscrowSettlementGroupPageDto getEscrowSettlementPage(String query, String company, String tradeType, String status) {
+        return getEscrowSettlementPage(query, company, tradeType, status, "Escrow Transactions", 1, 8, "01 Sep 2026 - 16 Sep 2026");
+    }
+
+    public EscrowSettlementGroupPageDto getEscrowSettlementPage(String query, String company, String tradeType, String status, String tab, Integer page, Integer size, String dateRange) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 8;
+        String effectiveTab = (tab != null && !tab.isBlank()) ? tab : "Escrow Transactions";
+        String effectiveDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Sep 2026 - 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Escrow Balance").value("₹ 58.4 Cr").change("+12% vs last quarter").comparisonText("").trend("positive").icon("building").color("blue").build(),
                 KpiCardDto.builder().title("Total Settled Amount").value("₹ 142.6 Cr").change("+18% vs last quarter").comparisonText("").trend("positive").icon("rupee").color("green").build(),
@@ -826,15 +956,15 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("Escrow & Settlement (Group Level)")
                 .pageSubtitle("Manage escrow accounts, monitor settlements and track fund flows across all group companies.")
-                .dateRange("01 Sep 2026 - 16 Sep 2026")
+                .dateRange(effectiveDateRange)
                 .kpis(kpis)
                 .escrowTrend(trend)
                 .settlementStatus(statusDonut)
                 .tabs(List.of("Escrow Transactions", "Pending Settlements", "Dispute Management", "Escrow Accounts", "Settlement Reports"))
-                .activeTab("Escrow Transactions")
+                .activeTab(effectiveTab)
                 .transactions(filtered)
                 .totalTransactions(1248)
-                .currentPage(1)
+                .currentPage(pageNum)
                 .totalPages(156)
                 .pendingSettlementSummary(summary)
                 .recentSettlementActivity(recentSettlements)
@@ -877,6 +1007,15 @@ public class ParentCompanyAdminService {
     // 10. APPROVALS PAGE
     // ==========================================
     public ApprovalsPageDto getApprovalsPage(String query, String company, String approvalType, String status, String priority) {
+        return getApprovalsPage(query, company, approvalType, status, priority, "All", 1, 10, "01 Sep 2026 - 16 Sep 2026");
+    }
+
+    public ApprovalsPageDto getApprovalsPage(String query, String company, String approvalType, String status, String priority, String tab, Integer page, Integer size, String dateRange) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 10;
+        String effectiveTab = (tab != null && !tab.isBlank()) ? tab : "All";
+        String effectiveDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Sep 2026 - 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Requests").value("48").change("+12% vs last week").comparisonText("").trend("positive").icon("file-text").color("purple").build(),
                 KpiCardDto.builder().title("Pending").value("21").change("+5% vs last week").comparisonText("").trend("neutral").icon("clock").color("orange").build(),
@@ -914,6 +1053,13 @@ public class ParentCompanyAdminService {
                     if (priority != null && !priority.isBlank() && !priority.equalsIgnoreCase("All Priority")) {
                         if (!a.getPriority().equalsIgnoreCase(priority)) return false;
                     }
+                    if (tab != null && !tab.isBlank() && !tab.equalsIgnoreCase("All") && !tab.equalsIgnoreCase("All Approvals")) {
+                        if (tab.equalsIgnoreCase("UnderReview") || tab.equalsIgnoreCase("Under Review")) {
+                            if (!a.getStatus().equalsIgnoreCase("Under Review")) return false;
+                        } else {
+                            if (!a.getStatus().equalsIgnoreCase(tab)) return false;
+                        }
+                    }
                     return true;
                 }).collect(Collectors.toList());
 
@@ -933,11 +1079,11 @@ public class ParentCompanyAdminService {
         ApprovalsPageDto.ApprovalTrendChartDto trend = ApprovalsPageDto.ApprovalTrendChartDto.builder()
                 .filterRange("Last 6 Months")
                 .monthlyData(List.of(
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Apr", 8, 12, 1),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("May", 10, 15, 2),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jun", 14, 18, 1),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jul", 18, 20, 3),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Aug", 16, 22, 2),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Apr", 14, 8, 2),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("May", 16, 12, 3),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jun", 18, 15, 2),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jul", 22, 18, 4),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Aug", 20, 24, 3),
                         new ApprovalsPageDto.MonthlyApprovalTrendDto("Sep", 21, 22, 3)
                 )).build();
 
@@ -947,13 +1093,13 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("Approvals")
                 .pageSubtitle("Review and process pending approvals across all group companies.")
-                .dateRange("01 Sep 2026 - 16 Sep 2026")
+                .dateRange(effectiveDateRange)
                 .kpis(kpis)
                 .tabs(tabs)
-                .activeTab("All")
+                .activeTab(effectiveTab)
                 .approvals(filtered)
                 .totalRequests(48)
-                .currentPage(1)
+                .currentPage(pageNum)
                 .totalPages(5)
                 .selectedApprovalDetail(selected)
                 .approvalsByType(byType)
@@ -1033,6 +1179,15 @@ public class ParentCompanyAdminService {
     // 11. EXTERNAL INVESTOR REQUESTS PAGE
     // ==========================================
     public ExternalInvestorRequestsPageDto getInvestorRequestsPage(String query, String sector, String investmentType, String status) {
+        return getInvestorRequestsPage(query, sector, investmentType, status, "All", 1, 10, "01 Sep 2026 - 16 Sep 2026");
+    }
+
+    public ExternalInvestorRequestsPageDto getInvestorRequestsPage(String query, String sector, String investmentType, String status, String tab, Integer page, Integer size, String dateRange) {
+        int pageNum = page != null && page > 0 ? page : 1;
+        int pageSize = size != null && size > 0 ? size : 10;
+        String effectiveTab = (tab != null && !tab.isBlank()) ? tab : "All";
+        String effectiveDateRange = (dateRange != null && !dateRange.isBlank()) ? dateRange : "01 Sep 2026 - 16 Sep 2026";
+
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Requests").value("36").change("+20% vs last quarter").comparisonText("").trend("positive").icon("users").color("blue").build(),
                 KpiCardDto.builder().title("Pending Review").value("12").change("+33% vs last quarter").comparisonText("").trend("neutral").icon("clock").color("orange").build(),
@@ -1064,6 +1219,13 @@ public class ParentCompanyAdminService {
                     if (status != null && !status.isBlank() && !status.equalsIgnoreCase("All Status")) {
                         if (!r.getStatus().equalsIgnoreCase(status)) return false;
                     }
+                    if (tab != null && !tab.isBlank() && !tab.equalsIgnoreCase("All") && !tab.equalsIgnoreCase("All Requests")) {
+                        if (tab.equalsIgnoreCase("UnderEvaluation") || tab.equalsIgnoreCase("Under Evaluation")) {
+                            if (!r.getStatus().equalsIgnoreCase("Under Review")) return false;
+                        } else {
+                            if (!r.getStatus().equalsIgnoreCase(tab)) return false;
+                        }
+                    }
                     return true;
                 }).collect(Collectors.toList());
 
@@ -1083,11 +1245,11 @@ public class ParentCompanyAdminService {
         ApprovalsPageDto.ApprovalTrendChartDto trend = ApprovalsPageDto.ApprovalTrendChartDto.builder()
                 .filterRange("Last 6 Months")
                 .monthlyData(List.of(
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Apr", 4, 6, 1),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("May", 5, 7, 1),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jun", 8, 9, 2),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jul", 10, 11, 2),
-                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Aug", 9, 13, 1),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Apr", 4, 6, 2),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("May", 6, 8, 3),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jun", 8, 10, 2),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Jul", 10, 12, 4),
+                        new ApprovalsPageDto.MonthlyApprovalTrendDto("Aug", 11, 14, 3),
                         new ApprovalsPageDto.MonthlyApprovalTrendDto("Sep", 12, 15, 5)
                 )).build();
 
@@ -1106,13 +1268,13 @@ public class ParentCompanyAdminService {
                 .adminUser(adminHeader)
                 .pageTitle("External Investor Requests")
                 .pageSubtitle("Manage, review and process investment requests from external investors.")
-                .dateRange("01 Sep 2026 - 16 Sep 2026")
+                .dateRange(effectiveDateRange)
                 .kpis(kpis)
                 .tabs(tabs)
-                .activeTab("All")
+                .activeTab(effectiveTab)
                 .requests(filtered)
                 .totalRequests(36)
-                .currentPage(1)
+                .currentPage(pageNum)
                 .totalPages(4)
                 .selectedRequestDetail(selected)
                 .requestsByCompany(byCompany)
@@ -1208,12 +1370,12 @@ public class ParentCompanyAdminService {
         GroupReportsPageDto.RevenueProfitInvestmentTrendDto trend = GroupReportsPageDto.RevenueProfitInvestmentTrendDto.builder()
                 .filterRange("Last 6 Months")
                 .monthlyTrends(List.of(
-                        new GroupReportsPageDto.MonthlyReportPointDto("Apr", 18.2, 2.4, 25.0),
-                        new GroupReportsPageDto.MonthlyReportPointDto("May", 21.4, 3.1, 28.0),
-                        new GroupReportsPageDto.MonthlyReportPointDto("Jun", 26.8, 4.2, 32.0),
-                        new GroupReportsPageDto.MonthlyReportPointDto("Jul", 32.6, 5.5, 38.0),
-                        new GroupReportsPageDto.MonthlyReportPointDto("Aug", 38.1, 6.2, 42.0),
-                        new GroupReportsPageDto.MonthlyReportPointDto("Sep", 45.3, 7.8, 52.0)
+                        new GroupReportsPageDto.MonthlyReportPointDto("Apr", 18.2, 2.4, 8.5),
+                        new GroupReportsPageDto.MonthlyReportPointDto("May", 21.4, 3.1, 12.0),
+                        new GroupReportsPageDto.MonthlyReportPointDto("Jun", 26.8, 3.8, 15.2),
+                        new GroupReportsPageDto.MonthlyReportPointDto("Jul", 32.6, 4.5, 18.0),
+                        new GroupReportsPageDto.MonthlyReportPointDto("Aug", 38.1, 5.2, 22.4),
+                        new GroupReportsPageDto.MonthlyReportPointDto("Sep", 45.3, 6.4, 26.8)
                 )).build();
 
         GroupReportsPageDto.SegmentWiseInvestmentDonutDto segmentDonut = GroupReportsPageDto.SegmentWiseInvestmentDonutDto.builder()
@@ -1228,16 +1390,24 @@ public class ParentCompanyAdminService {
                         new GroupReportsPageDto.SegmentSliceDto("Others", 3.9, "₹ 7.3 Cr", "#94a3b8")
                 )).build();
 
-        List<GroupReportsPageDto.CompanyPerformanceReportItemDto> companiesPerformance = List.of(
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(1, "Atirath Traders", "Import-Export", 32.0, 28.4, 4.6, 86, "+18%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(2, "Atirath Holdings", "Renewable Energy", 52.9, 36.8, 6.4, 120, "+24%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(3, "Atirath Technologies", "Technology", 31.3, 18.6, 3.2, 95, "+32%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(4, "Farm Vantara", "Agriculture", 20.9, 12.4, 1.8, 78, "+16%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(5, "Goeazymart", "Retail / FMCG", 23.3, 14.2, 2.1, 62, "+20%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(6, "Tri Energy Battery", "Energy Storage", 11.6, 6.8, 0.9, 48, "+15%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(7, "CS INTERIO", "Real Estate", 7.3, 4.6, 0.5, 28, "+12%", "Active"),
-                new GroupReportsPageDto.CompanyPerformanceReportItemDto(8, "Royal One Heating", "Manufacturing", 6.4, 3.0, 0.3, 7, "+10%", "Active")
+        List<GroupReportsPageDto.CompanyPerformanceReportItemDto> allPerformance = List.of(
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(1, "Atirath Traders", "Import-Export", 32.0, 28.4, 4.6, 86, "↑ 18%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(2, "Atirath Holdings", "Renewable Energy", 52.9, 36.8, 6.4, 120, "↑ 24%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(3, "Atirath Technologies", "Technology", 31.3, 18.6, 3.2, 95, "↑ 32%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(4, "Farm Vantara", "Agriculture", 20.9, 12.4, 1.8, 78, "↑ 16%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(5, "Goeazymart", "Retail / FMCG", 23.3, 14.2, 2.1, 62, "↑ 20%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(6, "Tri Energy Battery", "Energy Storage", 11.6, 6.8, 0.9, 48, "↑ 15%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(7, "CS INTERIO", "Real Estate", 7.3, 4.6, 0.5, 28, "↑ 12%", "Active"),
+                new GroupReportsPageDto.CompanyPerformanceReportItemDto(8, "Royal One Heating", "Manufacturing", 6.4, 3.0, 0.3, 7, "↑ 10%", "Active")
         );
+
+        List<GroupReportsPageDto.CompanyPerformanceReportItemDto> companiesPerformance = allPerformance.stream()
+                .filter(c -> {
+                    if (companyFilter != null && !companyFilter.isBlank() && !companyFilter.equalsIgnoreCase("All Group Companies")) {
+                        return c.getCompanyName().equalsIgnoreCase(companyFilter);
+                    }
+                    return true;
+                }).collect(Collectors.toList());
 
         GroupReportsPageDto.RevenueContributionDonutDto revenueDonut = GroupReportsPageDto.RevenueContributionDonutDto.builder()
                 .slices(List.of(
@@ -1347,7 +1517,10 @@ public class ParentCompanyAdminService {
     }
 
     private void seedSubsidiaryDetails() {
-        List<KpiCardDto> overviewKpis = List.of(
+        subsidiaryDetailsMap.clear();
+
+        // 1. Atirath Traders India Pvt Ltd (Image 3 UI Ground Truth)
+        List<KpiCardDto> sub1Kpis = List.of(
                 KpiCardDto.builder().title("Total Members").value("325").change("+12%").comparisonText("vs last quarter").trend("positive").icon("users").color("blue").build(),
                 KpiCardDto.builder().title("Total Trade Value").value("₹ 8.4 Cr").change("+18%").comparisonText("vs last quarter").trend("positive").icon("trending-up").color("green").build(),
                 KpiCardDto.builder().title("Settlement Value").value("₹ 2.1 Cr").change("+16%").comparisonText("vs last quarter").trend("positive").icon("rupee").color("purple").build(),
@@ -1355,7 +1528,7 @@ public class ParentCompanyAdminService {
                 KpiCardDto.builder().title("Pending Approvals").value("3").change("-25%").comparisonText("vs last quarter").trend("positive").icon("alert-triangle").color("red").build()
         );
 
-        SubsidiaryDetailDto.CompanyInfoDto companyInfo = SubsidiaryDetailDto.CompanyInfoDto.builder()
+        SubsidiaryDetailDto.CompanyInfoDto sub1Info = SubsidiaryDetailDto.CompanyInfoDto.builder()
                 .companyName("Atirath Traders India Pvt Ltd")
                 .cin("U51909TG2021PTC123456")
                 .incorporationDate("12 Jan 2021")
@@ -1368,7 +1541,7 @@ public class ParentCompanyAdminService {
                 .status("Active")
                 .build();
 
-        SubsidiaryDetailDto.KeyMetricsDto keyMetrics = SubsidiaryDetailDto.KeyMetricsDto.builder()
+        SubsidiaryDetailDto.KeyMetricsDto sub1Metrics = SubsidiaryDetailDto.KeyMetricsDto.builder()
                 .filterRange("Last 6 Months")
                 .tradeVolume(SubsidiaryDetailDto.MetricChartDto.builder()
                         .title("Trade Volume (₹ in Crores)")
@@ -1416,7 +1589,7 @@ public class ParentCompanyAdminService {
                         )).build())
                 .build();
 
-        List<SubsidiaryDetailDto.SubsidiaryActivityDto> activities = List.of(
+        List<SubsidiaryDetailDto.SubsidiaryActivityDto> sub1Activities = List.of(
                 SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("16 Sep 2026, 11:20 AM").activity("New trade order created").performedBy("Ramesh Kumar").status("Completed").build(),
                 SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("15 Sep 2026, 04:15 PM").activity("Settlement processed").performedBy("System").status("Completed").build(),
                 SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("14 Sep 2026, 10:30 AM").activity("New member added").performedBy("Farm Vantara").status("Completed").build(),
@@ -1424,7 +1597,7 @@ public class ParentCompanyAdminService {
                 SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("11 Sep 2026, 09:20 AM").activity("KYC verified").performedBy("Compliance Team").status("Completed").build()
         );
 
-        List<SubsidiaryDetailDto.ComplianceItemDto> compliance = List.of(
+        List<SubsidiaryDetailDto.ComplianceItemDto> sub1Compliance = List.of(
                 SubsidiaryDetailDto.ComplianceItemDto.builder().title("ROC Filings").description("All filings up to date").status("Compliant").build(),
                 SubsidiaryDetailDto.ComplianceItemDto.builder().title("GST Compliance").description("Returns filed up to date").status("Compliant").build(),
                 SubsidiaryDetailDto.ComplianceItemDto.builder().title("Income Tax Filings").description("Latest return filed for FY 2024-25").status("Compliant").build(),
@@ -1447,14 +1620,27 @@ public class ParentCompanyAdminService {
                 .totalTradeValue("₹ 8.4 Cr")
                 .availableTabs(List.of("Overview", "Financials", "Shareholding", "Members", "Trading Activity", "Compliance", "Documents", "Settings"))
                 .activeTab("Overview")
-                .overviewKpis(overviewKpis)
-                .companyInfo(companyInfo)
-                .keyMetrics(keyMetrics)
-                .recentActivities(activities)
-                .complianceStatus(compliance)
+                .overviewKpis(sub1Kpis)
+                .companyInfo(sub1Info)
+                .keyMetrics(sub1Metrics)
+                .recentActivities(sub1Activities)
+                .complianceStatus(sub1Compliance)
+                .financials(buildDefaultFinancials("Atirath Traders", "32.0 Cr", "6.4 Cr", "4.6 Cr", "14.4%"))
+                .shareholding(buildDefaultShareholding("160.0 Cr", "112.0 Cr", "104.5 Cr", "10,45,00,000", "₹ 10"))
+                .members(buildDefaultMembers(325, 310, 15, 45, 280))
+                .tradingActivity(buildDefaultTradingActivity(420, "₹ 8.4 Cr", "₹ 4.8 Cr", "₹ 3.6 Cr", 48))
+                .compliance(buildDefaultCompliance())
+                .documents(buildDefaultDocuments("Atirath Traders India Pvt Ltd"))
+                .settings(buildDefaultSettings("Atirath Traders", "traders@atirathgroup.com", "+91 98765 43210"))
                 .build();
 
         subsidiaryDetailsMap.put("sub-1", sub1Detail);
+
+        // Seed details for the remaining group subsidiaries
+        subsidiaries.stream().filter(s -> !s.getId().equals("sub-1")).forEach(s -> {
+            SubsidiaryDetailDto detail = createDefaultDetailFor(s);
+            subsidiaryDetailsMap.put(s.getId(), detail);
+        });
     }
 
     private SubsidiaryDetailDto createDefaultDetailFor(SubsidiarySummaryDto summary) {
@@ -1464,7 +1650,7 @@ public class ParentCompanyAdminService {
                 .incorporationDate(summary.getIncorporationDate())
                 .sector(summary.getSector())
                 .industry(summary.getSubIndustry())
-                .registeredAddress("Plot No. 456, Hi-Tech City, Hyderabad, Telangana - 500081")
+                .registeredAddress("Plot No. " + (summary.getNumber() * 50) + ", Financial District, Hyderabad, Telangana - 500032")
                 .headquarters(summary.getHeadquarters())
                 .pan("AABCT" + summary.getNumber() + "456B")
                 .gstNumber("36AABCT" + summary.getNumber() + "456B1Z8")
@@ -1477,6 +1663,68 @@ public class ParentCompanyAdminService {
                 KpiCardDto.builder().title("Settlement Value").value("₹ 1.2 Cr").change("+10%").comparisonText("vs last quarter").trend("positive").icon("rupee").color("purple").build(),
                 KpiCardDto.builder().title("Open Orders").value("24").change("+3%").comparisonText("vs last quarter").trend("positive").icon("file-text").color("orange").build(),
                 KpiCardDto.builder().title("Pending Approvals").value("1").change("-50%").comparisonText("vs last quarter").trend("positive").icon("alert-triangle").color("red").build()
+        );
+
+        SubsidiaryDetailDto.KeyMetricsDto metrics = SubsidiaryDetailDto.KeyMetricsDto.builder()
+                .filterRange("Last 6 Months")
+                .tradeVolume(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("Trade Volume (₹ in Crores)")
+                        .currentValue(summary.getTotalTradeValue().replace("₹ ", "").replace(" Cr", ""))
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", 0.8),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", 1.2),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", 1.4),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", 1.8),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", 2.2),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", 2.8)
+                        )).build())
+                .settlementValue(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("Settlement Value (₹ in Crores)")
+                        .currentValue("1.2")
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", 0.3),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", 0.5),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", 0.6),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", 0.8),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", 1.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", 1.2)
+                        )).build())
+                .activeMembers(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("Active Members")
+                        .currentValue(String.valueOf(summary.getTotalMembers()))
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", (double) (summary.getTotalMembers() / 2)),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", (double) (summary.getTotalMembers() * 6 / 10)),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", (double) (summary.getTotalMembers() * 7 / 10)),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", (double) (summary.getTotalMembers() * 8 / 10)),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", (double) (summary.getTotalMembers() * 9 / 10)),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", (double) summary.getTotalMembers())
+                        )).build())
+                .newMembers(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("New Members")
+                        .currentValue("16")
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", 8.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", 10.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", 12.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", 14.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", 15.0),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", 16.0)
+                        )).build())
+                .build();
+
+        List<SubsidiaryDetailDto.SubsidiaryActivityDto> activities = List.of(
+                SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("16 Sep 2026, 10:30 AM").activity("Share transfer recorded").performedBy("Admin User").status("Completed").build(),
+                SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("15 Sep 2026, 03:00 PM").activity("Quarterly compliance validated").performedBy("Compliance Team").status("Completed").build(),
+                SubsidiaryDetailDto.SubsidiaryActivityDto.builder().dateTime("14 Sep 2026, 11:15 AM").activity("New member onboarding").performedBy("Operations").status("Completed").build()
+        );
+
+        List<SubsidiaryDetailDto.ComplianceItemDto> compliance = List.of(
+                SubsidiaryDetailDto.ComplianceItemDto.builder().title("ROC Filings").description("All filings up to date").status("Compliant").build(),
+                SubsidiaryDetailDto.ComplianceItemDto.builder().title("GST Compliance").description("Returns filed up to date").status("Compliant").build(),
+                SubsidiaryDetailDto.ComplianceItemDto.builder().title("Income Tax Filings").description("Latest return filed for FY 2024-25").status("Compliant").build(),
+                SubsidiaryDetailDto.ComplianceItemDto.builder().title("KYC & AML").description("All director and member KYC verified").status("Compliant").build(),
+                SubsidiaryDetailDto.ComplianceItemDto.builder().title("Regulatory Documents").description("All mandatory documents updated").status("Compliant").build()
         );
 
         return SubsidiaryDetailDto.builder()
@@ -1496,9 +1744,156 @@ public class ParentCompanyAdminService {
                 .activeTab("Overview")
                 .overviewKpis(kpis)
                 .companyInfo(info)
-                .keyMetrics(subsidiaryDetailsMap.get("sub-1") != null ? subsidiaryDetailsMap.get("sub-1").getKeyMetrics() : null)
-                .recentActivities(subsidiaryDetailsMap.get("sub-1") != null ? subsidiaryDetailsMap.get("sub-1").getRecentActivities() : List.of())
-                .complianceStatus(subsidiaryDetailsMap.get("sub-1") != null ? subsidiaryDetailsMap.get("sub-1").getComplianceStatus() : List.of())
+                .keyMetrics(metrics)
+                .recentActivities(activities)
+                .complianceStatus(compliance)
+                .financials(buildDefaultFinancials(summary.getCompanyName(), "24.5 Cr", "5.2 Cr", "3.6 Cr", "14.7%"))
+                .shareholding(buildDefaultShareholding("100.0 Cr", "75.0 Cr", "70.0 Cr", "7,00,00,000", "₹ 10"))
+                .members(buildDefaultMembers(summary.getTotalMembers(), summary.getTotalMembers() * 9 / 10, summary.getTotalMembers() / 10, 20, summary.getTotalMembers() - 20))
+                .tradingActivity(buildDefaultTradingActivity(250, summary.getTotalTradeValue(), "₹ 1.5 Cr", "₹ 1.0 Cr", 24))
+                .compliance(buildDefaultCompliance())
+                .documents(buildDefaultDocuments(summary.getCompanyName()))
+                .settings(buildDefaultSettings(summary.getCompanyName(), "support@" + summary.getInitials().toLowerCase() + ".atirathgroup.com", "+91 98765 00000"))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.FinancialsTabDto buildDefaultFinancials(String company, String rev, String ebitda, String profit, String margin) {
+        return SubsidiaryDetailDto.FinancialsTabDto.builder()
+                .kpis(List.of(
+                        KpiCardDto.builder().title("Revenue (YTD)").value("₹ " + rev).change("+18%").trend("positive").icon("bar-chart").color("blue").build(),
+                        KpiCardDto.builder().title("EBITDA").value("₹ " + ebitda).change("+22%").trend("positive").icon("trending-up").color("green").build(),
+                        KpiCardDto.builder().title("Net Profit").value("₹ " + profit).change("+15%").trend("positive").icon("rupee").color("purple").build(),
+                        KpiCardDto.builder().title("Profit Margin").value(margin).change("+2.1%").trend("positive").icon("pie-chart").color("orange").build()
+                ))
+                .revenueTrend(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("Revenue Trend (₹ Cr)")
+                        .currentValue(rev.replace(" Cr", ""))
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", 3.2),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", 4.1),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", 4.8),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", 5.5),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", 6.8),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", 7.6)
+                        )).build())
+                .profitTrend(SubsidiaryDetailDto.MetricChartDto.builder()
+                        .title("Net Profit Trend (₹ Cr)")
+                        .currentValue(profit.replace(" Cr", ""))
+                        .monthlyData(List.of(
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Apr", 0.4),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("May", 0.6),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jun", 0.7),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Jul", 0.9),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Aug", 1.2),
+                                new SubsidiaryDetailDto.MonthlyDataPointDto("Sep", 1.4)
+                        )).build())
+                .statements(List.of(
+                        SubsidiaryDetailDto.FinancialStatementDto.builder().period("FY 2025-26 Q1").revenue("₹ 8.5 Cr").expenses("₹ 6.8 Cr").netProfit("₹ 1.7 Cr").profitMargin("20.0%").filingStatus("Audited").build(),
+                        SubsidiaryDetailDto.FinancialStatementDto.builder().period("FY 2024-25 Full Year").revenue("₹ 28.4 Cr").expenses("₹ 23.8 Cr").netProfit("₹ 4.6 Cr").profitMargin("16.2%").filingStatus("Audited & Filed").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.ShareholdingTabDto buildDefaultShareholding(String auth, String issued, String paid, String shares, String face) {
+        return SubsidiaryDetailDto.ShareholdingTabDto.builder()
+                .authorizedCapital("₹ " + auth)
+                .issuedCapital("₹ " + issued)
+                .paidUpCapital("₹ " + paid)
+                .totalShares(shares)
+                .faceValue(face)
+                .topShareholders(List.of(
+                        SubsidiaryDetailDto.ShareholderItemDto.builder().shareholderName("Atirath Holdings India Limited").category("Promoter").shares("5,40,00,000").percentage(51.68).status("Active").build(),
+                        SubsidiaryDetailDto.ShareholderItemDto.builder().shareholderName("Ramesh Kumar").category("Individual").shares("1,50,00,000").percentage(14.35).status("Active").build(),
+                        SubsidiaryDetailDto.ShareholderItemDto.builder().shareholderName("Global Renewables Ltd").category("Institutional").shares("1,20,00,000").percentage(11.48).status("Active").build(),
+                        SubsidiaryDetailDto.ShareholderItemDto.builder().shareholderName("Public & Others").category("Public").shares("2,35,00,000").percentage(22.49).status("Active").build()
+                ))
+                .categoryBreakdown(List.of(
+                        SubsidiaryDetailDto.CategoryShareDto.builder().category("Promoter").percentage(51.68).color("#3b82f6").build(),
+                        SubsidiaryDetailDto.CategoryShareDto.builder().category("Institutional").percentage(11.48).color("#22c55e").build(),
+                        SubsidiaryDetailDto.CategoryShareDto.builder().category("Individual").percentage(14.35).color("#f59e0b").build(),
+                        SubsidiaryDetailDto.CategoryShareDto.builder().category("Public / Others").percentage(22.49).color("#94a3b8").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.MembersTabDto buildDefaultMembers(int total, int active, int kyc, int corp, int indiv) {
+        return SubsidiaryDetailDto.MembersTabDto.builder()
+                .totalMembers(total)
+                .activeMembers(active)
+                .pendingKyc(kyc)
+                .corporateMembers(corp)
+                .individualMembers(indiv)
+                .memberList(List.of(
+                        SubsidiaryDetailDto.MemberItemDto.builder().id("MEM-001").memberName("Ramesh Kumar").type("Individual").email("ramesh.k@example.com").joinDate("15 Jan 2022").kycStatus("Verified").status("Active").build(),
+                        SubsidiaryDetailDto.MemberItemDto.builder().id("MEM-002").memberName("Priya Verma").type("Individual").email("priya.v@example.com").joinDate("18 Feb 2022").kycStatus("Verified").status("Active").build(),
+                        SubsidiaryDetailDto.MemberItemDto.builder().id("MEM-003").memberName("Global Renewables Ltd").type("Corporate").email("contact@globalrenewables.com").joinDate("10 May 2022").kycStatus("Verified").status("Active").build(),
+                        SubsidiaryDetailDto.MemberItemDto.builder().id("MEM-004").memberName("Vikram Shah").type("Individual").email("vikram.s@example.com").joinDate("22 Aug 2022").kycStatus("Verified").status("Active").build(),
+                        SubsidiaryDetailDto.MemberItemDto.builder().id("MEM-005").memberName("Sunil Reddy").type("Individual").email("sunil.r@example.com").joinDate("05 Nov 2022").kycStatus("Pending").status("Pending").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.TradingActivityTabDto buildDefaultTradingActivity(int trades, String vol, String buyVol, String sellVol, int open) {
+        return SubsidiaryDetailDto.TradingActivityTabDto.builder()
+                .totalTrades(trades)
+                .tradeVolume(vol)
+                .buyVolume(buyVol)
+                .sellVolume(sellVol)
+                .openOrdersCount(open)
+                .recentTrades(List.of(
+                        SubsidiaryDetailDto.SubsidiaryTradeItemDto.builder().tradeId("TRD-9021").dateTime("16 Sep 2026, 11:24 AM").orderType("Buy").quantity("10,000").price("₹ 245.60").totalValue("₹ 24,56,000").status("Executed").build(),
+                        SubsidiaryDetailDto.SubsidiaryTradeItemDto.builder().tradeId("TRD-9020").dateTime("16 Sep 2026, 10:18 AM").orderType("Sell").quantity("5,000").price("₹ 180.30").totalValue("₹ 9,01,500").status("Executed").build(),
+                        SubsidiaryDetailDto.SubsidiaryTradeItemDto.builder().tradeId("TRD-9019").dateTime("16 Sep 2026, 09:45 AM").orderType("Buy").quantity("8,000").price("₹ 98.75").totalValue("₹ 7,90,000").status("Executed").build(),
+                        SubsidiaryDetailDto.SubsidiaryTradeItemDto.builder().tradeId("TRD-9018").dateTime("15 Sep 2026, 04:12 PM").orderType("Sell").quantity("12,000").price("₹ 76.40").totalValue("₹ 9,16,800").status("Executed").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.ComplianceTabDto buildDefaultCompliance() {
+        return SubsidiaryDetailDto.ComplianceTabDto.builder()
+                .overallStatus("Compliant")
+                .lastAuditDate("15 Jul 2026")
+                .nextFilingDueDate("30 Sep 2026")
+                .items(List.of(
+                        SubsidiaryDetailDto.ComplianceItemDto.builder().title("ROC Filings").description("All filings up to date").status("Compliant").build(),
+                        SubsidiaryDetailDto.ComplianceItemDto.builder().title("GST Compliance").description("Returns filed up to date").status("Compliant").build(),
+                        SubsidiaryDetailDto.ComplianceItemDto.builder().title("Income Tax Filings").description("Latest return filed for FY 2024-25").status("Compliant").build(),
+                        SubsidiaryDetailDto.ComplianceItemDto.builder().title("KYC & AML").description("All director and member KYC verified").status("Compliant").build(),
+                        SubsidiaryDetailDto.ComplianceItemDto.builder().title("Regulatory Documents").description("All mandatory documents updated").status("Compliant").build()
+                ))
+                .records(List.of(
+                        SubsidiaryDetailDto.ComplianceRecordDto.builder().filingType("AOC-4 (Financial Statements)").dueDate("30 Oct 2025").submittedDate("25 Oct 2025").acknowledgementNo("ROC-HYD-99881").status("Approved").build(),
+                        SubsidiaryDetailDto.ComplianceRecordDto.builder().filingType("MGT-7 (Annual Return)").dueDate("29 Nov 2025").submittedDate("20 Nov 2025").acknowledgementNo("ROC-HYD-99882").status("Approved").build(),
+                        SubsidiaryDetailDto.ComplianceRecordDto.builder().filingType("GSTR-3B (August 2026)").dueDate("20 Sep 2026").submittedDate("18 Sep 2026").acknowledgementNo("GST-TG-123456").status("Approved").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.DocumentsTabDto buildDefaultDocuments(String company) {
+        return SubsidiaryDetailDto.DocumentsTabDto.builder()
+                .totalDocuments(8)
+                .verifiedDocuments(8)
+                .pendingVerification(0)
+                .documentList(List.of(
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-01").documentName("Certificate of Incorporation").category("Statutory").fileType("PDF").uploadDate("12 Jan 2021").status("Verified").downloadUrl("/api/v1/documents/cert-incorp.pdf").build(),
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-02").documentName("Memorandum of Association (MOA)").category("Statutory").fileType("PDF").uploadDate("12 Jan 2021").status("Verified").downloadUrl("/api/v1/documents/moa.pdf").build(),
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-03").documentName("Articles of Association (AOA)").category("Statutory").fileType("PDF").uploadDate("12 Jan 2021").status("Verified").downloadUrl("/api/v1/documents/aoa.pdf").build(),
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-04").documentName("Company PAN Card").category("Tax").fileType("PDF").uploadDate("15 Jan 2021").status("Verified").downloadUrl("/api/v1/documents/pan.pdf").build(),
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-05").documentName("GST Registration Certificate").category("Tax").fileType("PDF").uploadDate("20 Jan 2021").status("Verified").downloadUrl("/api/v1/documents/gst.pdf").build(),
+                        SubsidiaryDetailDto.DocumentItemDto.builder().id("DOC-06").documentName("Audited Financial Statements FY 2024-25").category("Financial").fileType("PDF").uploadDate("15 Jul 2025").status("Verified").downloadUrl("/api/v1/documents/audit-2025.pdf").build()
+                ))
+                .build();
+    }
+
+    private SubsidiaryDetailDto.SettingsTabDto buildDefaultSettings(String company, String email, String phone) {
+        return SubsidiaryDetailDto.SettingsTabDto.builder()
+                .tradingStatus("Active")
+                .minOrderQuantity("100")
+                .maxOrderQuantity("50,000")
+                .circuitBreakerPercentage("10%")
+                .primaryContactName("Chief Compliance Officer")
+                .primaryContactEmail(email)
+                .primaryContactPhone(phone)
                 .build();
     }
 
@@ -1645,7 +2040,7 @@ public class ParentCompanyAdminService {
 
         marketActivityTrades.add(MarketActivityGroupPageDto.MarketActivityTradeDto.builder()
                 .id("mat-2").number(2).dateTime("16 Sep 2026, 10:35 AM").company("Atirath Holdings").companyInitials("AH")
-                .type("Buy").security("Equity").quantity("25,000").price("317.40").tradeValue("79,35,000")
+                .type("Sell").security("Equity").quantity("25,000").price("317.40").tradeValue("79,35,000")
                 .buyer("Sunrise Capital").seller("Priya Verma").status("Settled").build());
 
         marketActivityTrades.add(MarketActivityGroupPageDto.MarketActivityTradeDto.builder()
@@ -1709,7 +2104,7 @@ public class ParentCompanyAdminService {
         tradeMonitoringItems.add(GroupTradeMonitoringPageDto.TradeMonitoringItemDto.builder()
                 .id("mon-8").number(8).tradeId("TRD-100475").dateTime("13 Sep 2026, 05:10 PM")
                 .buyer("Vikram Shah").seller("Amit Singh").company("Atirath Traders").security("Equity")
-                .quantity("15,000").price("302.40").tradeValue("45,36,000").type("Sell").status("Settled").settlementDate("15 Sep 2026").build());
+                .quantity("15,000").price("302.40").tradeValue("45,36,000").type("Buy").status("Settled").settlementDate("15 Sep 2026").build());
 
         unusualTradeActivities.clear();
         unusualTradeActivities.add(GroupTradeMonitoringPageDto.UnusualTradeActivityItemDto.builder()
@@ -1799,7 +2194,7 @@ public class ParentCompanyAdminService {
         approvalsList.add(ApprovalsPageDto.ApprovalItemDto.builder()
                 .id("apr-3").number(3).requestId("APR-2026-1040").dateTime("15 Sep 2026, 04:45 PM")
                 .approvalType("Escrow Release").company("Atirath Technologies").requestedBy("Vikram Shah")
-                .amountOrDetails("₹ 1,47,92,000").priority("Medium").priorityTheme("yellow").status("Approved").statusTheme("green").build());
+                .amountOrDetails("₹ 1,47,92,000").priority("Medium").priorityTheme("yellow").status("Pending").statusTheme("yellow").build());
 
         approvalsList.add(ApprovalsPageDto.ApprovalItemDto.builder()
                 .id("apr-4").number(4).requestId("APR-2026-1039").dateTime("15 Sep 2026, 03:20 PM")

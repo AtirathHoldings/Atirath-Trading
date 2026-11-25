@@ -100,7 +100,7 @@ public class SubsidiaryComplianceService {
                 new SubsidiaryComplianceDashboardDto.ComplianceStatusBySubsidiaryDto("Atirath Traders", 80, 50, 20, 10),
                 new SubsidiaryComplianceDashboardDto.ComplianceStatusBySubsidiaryDto("Atirath Technologies", 60, 35, 15, 10),
                 new SubsidiaryComplianceDashboardDto.ComplianceStatusBySubsidiaryDto("Farm Vantara", 40, 25, 10, 5),
-                new SubsidiaryComplianceDashboardDto.ComplianceStatusBySubsidiaryDto("Others", 20, 12, 5, 3)
+                new SubsidiaryComplianceDashboardDto.ComplianceStatusBySubsidiaryDto("Others", 20, 10, 5, 5)
         );
 
         SubsidiaryComplianceDashboardDto.KycStatusDonutDto kycDonut = SubsidiaryComplianceDashboardDto.KycStatusDonutDto.builder()
@@ -432,7 +432,7 @@ public class SubsidiaryComplianceService {
     public SubsidiaryTransactionMonitoringPageDto getTransactionMonitoringPage(String company, String tab, String query, String transactionType, String riskLevel, String status) {
         List<KpiCardDto> kpis = List.of(
                 KpiCardDto.builder().title("Total Transactions").value("1,248").change("+18% vs last quarter").comparisonText("").trend("positive").icon("repeat").color("blue").build(),
-                KpiCardDto.builder().title("Flagged Transactions").value("32").change("-45% vs last quarter").comparisonText("").trend("positive").icon("alert-circle").color("red").build(),
+                KpiCardDto.builder().title("Flagged Transactions").value("32").change("+45% vs last quarter").comparisonText("").trend("negative").icon("alert-circle").color("red").build(),
                 KpiCardDto.builder().title("Under Review").value("18").change("+28% vs last quarter").comparisonText("").trend("neutral").icon("clock").color("orange").build(),
                 KpiCardDto.builder().title("Cleared Transactions").value("1,198").change("+16% vs last quarter").comparisonText("").trend("positive").icon("check-circle").color("green").build()
         );
@@ -1184,7 +1184,7 @@ public class SubsidiaryComplianceService {
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-2", 2, "KYC-2026-002", "Sunrise Ventures Pvt Ltd", "Corporate Investor", "U74999TS2026PTC123456", "28 Sep 2026", "Under Review", "orange", "Medium", "orange"));
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-3", 3, "KYC-2026-003", "Priya Mehta", "Individual Investor", "AALPM5678K", "27 Sep 2026", "Pending", "blue", "High", "red"));
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-4", 4, "KYC-2026-004", "Global Agri Fund", "Corporate Investor", "U67100MH2026PLC654321", "26 Sep 2026", "Verified", "green", "Low", "green"));
-        kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-5", 5, "KYC-2026-005", "Suresh Kumar", "Director / KMP", "ABXPB8765L", "25 Sep 2026", "Rejected", "red", "High", "red"));
+        kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-5", 5, "KYC-2026-005", "Suresh Kumar", "Director / KMP", "ABXPS8765L", "25 Sep 2026", "Rejected", "red", "High", "red"));
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-6", 6, "KYC-2026-006", "Atirath Technologies", "Corporate Investor", "U72200TG2026PTC112233", "24 Sep 2026", "Verified", "green", "Low", "green"));
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-7", 7, "KYC-2026-007", "Ananya Reddy", "Individual Investor", "CHXPR2345M", "23 Sep 2026", "Under Review", "orange", "Medium", "orange"));
         kycRequestsList.add(new SubsidiaryKycReviewPageDto.KycRequestItemDto("kyc-8", 8, "KYC-2026-008", "Neha Sharma", "Employee", "BBNPS3456D", "22 Sep 2026", "Verified", "green", "Low", "green"));
@@ -1258,7 +1258,7 @@ public class SubsidiaryComplianceService {
                 .investor("Rakesh Mehta")
                 .fromParty("Sunrise Ventures Pvt Ltd")
                 .toParty("Global Agri Fund")
-                .shares("5,20,00,000")
+                .shares("5,20,000")
                 .amount("₹ 5,20,00,000")
                 .transactionDate("28 Sep 2026")
                 .referenceNo("TXN-2026-4587")
@@ -1278,7 +1278,7 @@ public class SubsidiaryComplianceService {
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-2", 2, "TXN-2026-002", "28 Sep 2026, 04:15 PM", "Farm Vantara", "Share Issuance", "Global Agri Fund", "10,00,00,000", "Medium", "orange", "Under Review", "orange"));
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-3", 3, "TXN-2026-003", "27 Sep 2026, 10:30 AM", "Atirath Holdings", "Pledge Creation", "Priya Mehta", "2,50,00,000", "High", "red", "Flagged", "red"));
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-4", 4, "TXN-2026-004", "26 Sep 2026, 02:45 PM", "Atirath Technologies", "Share Transfer", "Suresh Kumar", "1,75,00,000", "Low", "green", "Cleared", "green"));
-        monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-5", 5, "TXN-2026-005", "25 Sep 2026, 11:10 AM", "Others", "Share Buyback", "Green Future Fund", "3,00,00,000", "Under Review", "orange", "Under Review", "orange"));
+        monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-5", 5, "TXN-2026-005", "25 Sep 2026, 11:10 AM", "Others", "Share Buyback", "Green Future Fund", "3,00,00,000", "Medium", "orange", "Under Review", "orange"));
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-6", 6, "TXN-2026-006", "24 Sep 2026, 03:20 PM", "Sunrise Ventures", "Share Transfer", "Neha Sharma", "4,80,00,000", "High", "red", "Flagged", "red"));
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-7", 7, "TXN-2026-007", "23 Sep 2026, 09:30 AM", "Farm Vantara", "Corporate Action", "Vikram Rao", "1,20,00,000", "Low", "green", "Cleared", "green"));
         monitoredTransactionsList.add(new SubsidiaryTransactionMonitoringPageDto.MonitoredTransactionItemDto("mtxn-8", 8, "TXN-2026-008", "22 Sep 2026, 05:15 PM", "Atirath Traders", "Share Transfer", "Ananya Reddy", "6,50,00,000", "High", "red", "Under Review", "orange"));
@@ -1298,9 +1298,9 @@ public class SubsidiaryComplianceService {
                 .investorOrShareholder("Rajesh Kumar")
                 .fromParty("Rajesh Kumar")
                 .toParty("Green Future Fund")
-                .noOfShares("5,20,00,000")
+                .noOfShares("5,20,000")
                 .amount("₹ 5,20,00,000")
-                .pricePerShare("₹ 100")
+                .pricePerShare("100")
                 .transactionDate("29 Sep 2026, 11:20 AM")
                 .riskLevel("High")
                 .riskTheme("red")
@@ -1455,7 +1455,7 @@ public class SubsidiaryComplianceService {
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-3", 3, "CC-2026-003", "Possible price manipulation", "Atirath Holdings", "Market Manipulation", "High", "red", "Under Review", "orange", "Suresh Kumar", "27 Sep 2026", "04 Oct 2026"));
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-4", 4, "CC-2026-004", "Restricted user trading activity", "Atirath Technologies", "Policy Violation", "High", "red", "Open", "red", "Ananya Reddy", "26 Sep 2026", "03 Oct 2026"));
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-5", 5, "CC-2026-005", "Sanctions list match", "Green Future Fund", "Sanctions", "Critical", "red", "In Progress", "blue", "Vikram Rao", "25 Sep 2026", "02 Oct 2026"));
-        complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-6", 6, "CC-2026-006", "Share transfer without approval", "Others", "Regulatory Breach", "Medium", "orange", "Open", "red", "Neha Sharma", "24 Sep 2026", "01 Oct 2026"));
+        complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-6", 6, "CC-2026-006", "Share transfer without approval", "Others", "Regulatory Breach", "High", "red", "Open", "red", "Neha Sharma", "24 Sep 2026", "01 Oct 2026"));
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-7", 7, "CC-2026-007", "Insider trading suspicion", "Sunrise Ventures", "Insider Trading", "High", "red", "Under Review", "orange", "Lakshmi Narayan", "23 Sep 2026", "30 Sep 2026"));
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-8", 8, "CC-2026-008", "Ownership limit breach", "Farm Vantara", "Ownership Violation", "Medium", "orange", "In Progress", "blue", "Rajesh Mehta", "22 Sep 2026", "29 Sep 2026"));
         complianceCasesList.add(new ComplianceCasesPageDto.ComplianceCaseItemDto("cc-9", 9, "CC-2026-009", "Document forgery suspicion", "Atirath Traders", "Fraud", "Critical", "red", "Open", "red", "Sunil Verma", "21 Sep 2026", "28 Sep 2026"));

@@ -99,13 +99,71 @@ public class NegotiationService {
     }
 
     public String resolveMemberId(UserAccount user) {
-        if (user == null) return "ATG10056";
-        if (user.getUserId() != null && user.getUserId() == 1L) return "ATG10027";
-        if (user.getEmail() != null && user.getEmail().contains("sairam")) return "ATG10027";
-        if (user.getUserId() != null && user.getUserId() == 56L) return "ATG10056";
-        if (user.getEmail() != null && user.getEmail().contains("rakesh")) return "ATG10056";
-        if (user.getReferralCode() != null && user.getReferralCode().startsWith("ATG")) return user.getReferralCode();
-        return "ATG" + (user.getUserId() != null ? (10000 + user.getUserId()) : "10099");
+        if (user == null) return "ATG10000";
+        if (user.getReferralCode() != null && !user.getReferralCode().isBlank() && user.getReferralCode().startsWith("ATG")) {
+            return user.getReferralCode();
+        }
+        if (user.getUserId() != null) {
+            return "ATG" + user.getUserId();
+        }
+        return "ATG10000";
+    }
+
+    public UserAccount resolveCounterpartyForCompany(String symbol, String requestedCpId, UserAccount currentUser) {
+        if (requestedCpId != null && !requestedCpId.isBlank()) {
+            String cpTrimmed = requestedCpId.trim();
+            // 1. Try finding by referral code
+            Optional<UserAccount> byRef = userAccountRepository.findByReferralCode(cpTrimmed);
+            if (byRef.isPresent()) return byRef.get();
+
+            // 2. Try finding by email
+            Optional<UserAccount> byEmail = userAccountRepository.findByEmailIgnoreCase(cpTrimmed);
+            if (byEmail.isPresent()) return byEmail.get();
+
+            // 3. Try finding by user ID directly
+            try {
+                String numeric = cpTrimmed.replaceAll("\\D+", "");
+                if (!numeric.isBlank()) {
+                    Long uid = Long.parseLong(numeric);
+                    Optional<UserAccount> byId = userAccountRepository.findById(uid);
+                    if (byId.isPresent()) return byId.get();
+                    if (uid > 10000) {
+                        byId = userAccountRepository.findById(uid - 10000);
+                        if (byId.isPresent()) return byId.get();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Company specific designated counterparty
+        String sym = symbol != null ? symbol.trim().toUpperCase() : "ATG-H";
+        String email = switch (sym) {
+            case "FVT" -> "priya@farmvantara.com";
+            case "GEM" -> "vikram@goeazymart.com";
+            case "CSI" -> "anita@csinterio.com";
+            case "TEB" -> "suresh.nair@trienergy.com";
+            case "ROHE" -> "karan.malhotra@royalone.com";
+            case "ATG-T" -> "rahul.verma@atirathgroup.com";
+            case "ATG-E" -> "sneha.patel@atirathgroup.com";
+            case "ATG-F" -> "manoj.tiwari@atirathgroup.com";
+            case "ATG-L" -> "divya.kapoor@atirathgroup.com";
+            case "ATG-M" -> "amit.joshi@atirathmining.com";
+            case "ATG-R" -> "pooja.hegde@atirathrealty.com";
+            case "ATG-H", "ATG" -> "rahul.verma@atirathgroup.com";
+            default -> "rahul.verma@atirathgroup.com";
+        };
+
+        Optional<UserAccount> target = userAccountRepository.findByEmailIgnoreCase(email);
+        if (target.isPresent() && (currentUser == null || !target.get().getUserId().equals(currentUser.getUserId()))) {
+            return target.get();
+        }
+
+        Optional<UserAccount> alt = userAccountRepository.findByEmailIgnoreCase("divya.kapoor@atirathgroup.com");
+        if (alt.isPresent() && (currentUser == null || !alt.get().getUserId().equals(currentUser.getUserId()))) {
+            return alt.get();
+        }
+
+        return userAccountRepository.findByEmailIgnoreCase("priya@farmvantara.com").orElse(null);
     }
 
     private void initDemoData() {
@@ -116,8 +174,8 @@ public class NegotiationService {
                 .companyName("Atirath Holdings")
                 .companySymbol("ATG-H")
                 .type("Buy")
-                .counterpartyName("Rakesh Mehta")
-                .counterpartyMemberId("ATG10056")
+                .counterpartyName("Rahul Verma")
+                .counterpartyMemberId("ATG10044")
                 .shares(1000L)
                 .currentPrice(new BigDecimal("242.00"))
                 .proposedPrice(new BigDecimal("235.00"))
@@ -297,12 +355,12 @@ public class NegotiationService {
 
         NegotiationDetailDto.PartyDto seller = NegotiationDetailDto.PartyDto.builder()
                 .isCurrentUser(false)
-                .companyName("Farm Vantara Technologies")
-                .companySymbol("FVT")
+                .companyName("Atirath Holdings India Limited")
+                .companySymbol("ATG-H")
                 .verified(true)
-                .memberId("ATG10056")
-                .memberName("Rakesh Mehta")
-                .email("rakesh@farmvantara.com")
+                .memberId("ATG10044")
+                .memberName("Rahul Verma")
+                .email("rahul.verma@atirathgroup.com")
                 .phone("+91 91234 56789")
                 .currentHoldings(5000L)
                 .quantity(1000L)
@@ -378,8 +436,8 @@ public class NegotiationService {
                         .title("Negotiation initiated by Seller")
                         .description("Initial offer: ₹ 250.00 per share, 1,000 shares")
                         .timestamp("17 Sep 2025, 11:20 AM")
-                        .senderCode("RM")
-                        .senderName("Rakesh Mehta")
+                        .senderCode("RV")
+                        .senderName("Rahul Verma")
                         .status("COMPLETED")
                         .price("₹ 250.00")
                         .shares("1,000 shares")
@@ -400,8 +458,8 @@ public class NegotiationService {
                         .title("Seller countered")
                         .description("₹ 242.00 per share, 1,000 shares")
                         .timestamp("18 Sep 2025, 09:15 AM")
-                        .senderCode("RM")
-                        .senderName("Rakesh Mehta")
+                        .senderCode("RV")
+                        .senderName("Rahul Verma")
                         .status("COMPLETED")
                         .price("₹ 242.00")
                         .shares("1,000 shares")
@@ -442,9 +500,9 @@ public class NegotiationService {
         List<NegotiationHistoryDto.HistoryItemDto> historyList = new ArrayList<>(List.of(
                 NegotiationHistoryDto.HistoryItemDto.builder()
                         .id(1L)
-                        .senderCode("RM")
-                        .senderName("Rakesh Mehta")
-                        .senderMemberId("ATG10056")
+                        .senderCode("RV")
+                        .senderName("Rahul Verma")
+                        .senderMemberId("ATG10044")
                         .title("Initial Offer from Seller")
                         .message("I would like to sell 1,000 shares at ₹ 250.00 per share.")
                         .price(new BigDecimal("250.00"))
@@ -992,6 +1050,16 @@ public class NegotiationService {
                 Negotiation n = optDb.get();
                 n.setStatus("ACCEPTED");
                 n.setUpdatedAt(OffsetDateTime.now());
+
+                if (n.getCounterpartyUser() != null && "rakesh@farmvantara.com".equalsIgnoreCase(n.getCounterpartyUser().getEmail())) {
+                    String sym = n.getCompany() != null ? n.getCompany().getSymbol() : "ATG-H";
+                    if (!"FVT".equalsIgnoreCase(sym)) {
+                        UserAccount properCp = resolveCounterpartyForCompany(sym, null, n.getInitiatorUser());
+                        if (properCp != null) {
+                            n.setCounterpartyUser(properCp);
+                        }
+                    }
+                }
                 negotiationRepository.save(n);
 
                 if (tradeAgreementRepository.findByNegotiation_NegotiationNo(negotiationNo).isEmpty()) {
@@ -1671,6 +1739,22 @@ public class NegotiationService {
         boolean isInitiator = currentUser == null || (n.getInitiatorUser() != null && currentUser.getUserId().equals(n.getInitiatorUser().getUserId()));
         UserAccount counterparty = isInitiator ? n.getCounterpartyUser() : n.getInitiatorUser();
 
+        // Self-heal: If counterparty was erroneously assigned to Rakesh Mehta for a non-FVT company, resolve proper counterparty
+        if (counterparty != null && "rakesh@farmvantara.com".equalsIgnoreCase(counterparty.getEmail()) && !"FVT".equalsIgnoreCase(symbol)) {
+            UserAccount properCp = resolveCounterpartyForCompany(symbol, null, currentUser);
+            if (properCp != null) {
+                counterparty = properCp;
+                if (isInitiator) {
+                    n.setCounterpartyUser(properCp);
+                } else {
+                    n.setInitiatorUser(properCp);
+                }
+                try {
+                    negotiationRepository.save(n);
+                } catch (Exception ignored) {}
+            }
+        }
+
         String cpName = resolveUserName(counterparty);
         String cpMemberId = resolveMemberId(counterparty);
 
@@ -1721,6 +1805,18 @@ public class NegotiationService {
         UserAccount initUser = n.getInitiatorUser();
         UserAccount cpUser = n.getCounterpartyUser();
 
+        // Self-heal: If counterparty was erroneously assigned to Rakesh Mehta for a non-FVT company, resolve proper counterparty
+        if (cpUser != null && "rakesh@farmvantara.com".equalsIgnoreCase(cpUser.getEmail()) && !"FVT".equalsIgnoreCase(symbol)) {
+            UserAccount properCp = resolveCounterpartyForCompany(symbol, null, currentUser);
+            if (properCp != null) {
+                cpUser = properCp;
+                n.setCounterpartyUser(properCp);
+                try {
+                    negotiationRepository.save(n);
+                } catch (Exception ignored) {}
+            }
+        }
+
         String initName = resolveUserName(initUser);
         String cpName = resolveUserName(cpUser);
 
@@ -1752,7 +1848,7 @@ public class NegotiationService {
 
         NegotiationDetailDto.PartyDto seller = NegotiationDetailDto.PartyDto.builder()
                 .isCurrentUser(isCurrentUserSeller)
-                .companyName(cpName.contains("Mehta") ? "Farm Vantara Technologies" : compName)
+                .companyName(compName)
                 .companySymbol(symbol)
                 .verified(true)
                 .memberId(cpMemberId)
@@ -1940,19 +2036,20 @@ public class NegotiationService {
     public NegotiationListItemDto initiateNegotiation(InitiateNegotiationRequestDto request, Long userId) {
         UserAccount indiv = resolveCurrentUser(userId);
         String newNo = "NEG" + System.currentTimeMillis() % 1000000000L;
-        String symbol = request.getCompanySymbol().trim().toUpperCase();
+        String symbol = request.getCompanySymbol() != null ? request.getCompanySymbol().trim().toUpperCase() : "ATG-H";
         String companyName = resolveCompanyName(symbol);
         String side = "SELL".equalsIgnoreCase(request.getType()) ? "Sell" : "Buy";
-        String cpId = request.getCounterpartyMemberId() != null && !request.getCounterpartyMemberId().isBlank()
-                ? request.getCounterpartyMemberId().trim()
-                : "ATG10056";
+
+        UserAccount cp = resolveCounterpartyForCompany(symbol, request.getCounterpartyMemberId(), indiv);
+        String cpId = resolveMemberId(cp);
+        String cpName = resolveUserName(cp);
 
         NegotiationListItemDto item = NegotiationListItemDto.builder()
                 .negotiationNo(newNo)
                 .companyName(companyName)
                 .companySymbol(symbol)
                 .type(side)
-                .counterpartyName("Counterparty (" + cpId + ")")
+                .counterpartyName(cpName)
                 .counterpartyMemberId(cpId)
                 .shares(request.getShares())
                 .currentPrice(request.getProposedPrice())
@@ -1963,9 +2060,6 @@ public class NegotiationService {
 
         try {
             MarketCompany comp = marketCompanyRepository.findBySymbolIgnoreCase(symbol).orElse(null);
-            UserAccount cp = userAccountRepository.findByReferralCode(cpId)
-                    .or(() -> userAccountRepository.findByEmailIgnoreCase("rakesh@farmvantara.com"))
-                    .orElse(null);
 
             if (comp != null && indiv != null && cp != null) {
                 Negotiation neg = negotiationRepository.save(Negotiation.builder()
@@ -2137,18 +2231,18 @@ public class NegotiationService {
                 .title("New Counter Offer Received")
                 .timeAgo("10 minutes ago")
                 .timestamp("18 Sep 2025, 10:05 AM")
-                .message("Rakesh Mehta has sent a counter offer for 1,000 shares of ATG-H at ₹ 242.00 per share.")
+                .message("Rahul Verma has sent a counter offer for 1,000 shares of ATG-H at ₹ 242.00 per share.")
                 .negotiationNo("NEG250918001")
                 .companyName("Atirath Holdings India Limited")
                 .companySymbol("ATG-H")
-                .counterpartyName("Rakesh Mehta")
-                .counterpartyMemberId("ATG10056")
+                .counterpartyName("Rahul Verma")
+                .counterpartyMemberId("ATG10044")
                 .status("Awaiting Your Response")
                 .negotiationSummary(NegotiationNotificationItemDto.NotificationDetailSummaryDto.builder()
                         .negotiationId("NEG250918001")
                         .companyName("Atirath Holdings India Limited")
                         .companySymbol("ATG-H")
-                        .counterparty("Rakesh Mehta (ATG10056)")
+                        .counterparty("Rahul Verma (ATG10044)")
                         .yourLastOffer("₹ 235.00 per share | 1,000 shares")
                         .counterpartyOffer("₹ 242.00 per share | 1,000 shares")
                         .difference("+ ₹ 7.00 (+2.98%)")
@@ -2208,18 +2302,18 @@ public class NegotiationService {
                 .title("Action Required")
                 .timeAgo("4 hours ago")
                 .timestamp("18 Sep 2025, 06:15 AM")
-                .message("Please review and respond to the counter offer from Rakesh Mehta for ATG-H.")
+                .message("Please review and respond to the counter offer from Rahul Verma for ATG-H.")
                 .negotiationNo("NEG250918001")
                 .companyName("Atirath Holdings India Limited")
                 .companySymbol("ATG-H")
-                .counterpartyName("Rakesh Mehta")
-                .counterpartyMemberId("ATG10056")
+                .counterpartyName("Rahul Verma")
+                .counterpartyMemberId("ATG10044")
                 .status("Awaiting Your Response")
                 .negotiationSummary(NegotiationNotificationItemDto.NotificationDetailSummaryDto.builder()
                         .negotiationId("NEG250918001")
                         .companyName("Atirath Holdings India Limited")
                         .companySymbol("ATG-H")
-                        .counterparty("Rakesh Mehta (ATG10056)")
+                        .counterparty("Rahul Verma (ATG10044)")
                         .yourLastOffer("₹ 235.00 per share | 1,000 shares")
                         .counterpartyOffer("₹ 242.00 per share | 1,000 shares")
                         .difference("+ ₹ 7.00 (+2.98%)")
@@ -2382,14 +2476,14 @@ public class NegotiationService {
                 .negotiationNo("NEG250918001")
                 .companyName("Atirath Holdings India Limited")
                 .companySymbol("ATG-H")
-                .counterpartyName("Rakesh Mehta")
-                .counterpartyMemberId("ATG10056")
+                .counterpartyName("Rahul Verma")
+                .counterpartyMemberId("ATG10044")
                 .status("Agreement Ready")
                 .negotiationSummary(NegotiationNotificationItemDto.NotificationDetailSummaryDto.builder()
                         .negotiationId("NEG250918001")
                         .companyName("Atirath Holdings India Limited")
                         .companySymbol("ATG-H")
-                        .counterparty("Rakesh Mehta (ATG10056)")
+                        .counterparty("Rahul Verma (ATG10044)")
                         .yourLastOffer("₹ 235.00 per share | 1,000 shares")
                         .counterpartyOffer("₹ 242.00 per share | 1,000 shares")
                         .difference("+ ₹ 7.00")

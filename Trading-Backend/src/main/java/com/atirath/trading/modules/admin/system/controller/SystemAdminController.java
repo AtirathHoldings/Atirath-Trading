@@ -169,7 +169,7 @@ public class SystemAdminController {
     // ==========================================
     // 4. ACCESS CONTROL
     // ==========================================
-    @GetMapping("/access")
+    @GetMapping({"/access", "/access-control"})
     @Operation(summary = "Get Access Control page with access KPIs, tabs, module access donut, access level bar, and access records table")
     public ResponseEntity<ApiResponse<AccessControlPageDto>> getAccessControl(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -183,7 +183,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "Access control records retrieved successfully"));
     }
 
-    @GetMapping("/access/{id}")
+    @GetMapping({"/access/{id}", "/access-control/{id}"})
     @Operation(summary = "Get detailed Access side drawer by ID")
     public ResponseEntity<ApiResponse<AccessDetailDto>> getAccessDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/access/{} requested", id);
@@ -191,7 +191,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Access detail retrieved successfully"));
     }
 
-    @PostMapping("/access")
+    @PostMapping({"/access", "/access-control"})
     @Operation(summary = "Grant access to user")
     public ResponseEntity<ApiResponse<AccessDetailDto>> grantAccess(@RequestBody GrantAccessRequestDto request) {
         log.info("POST /api/v1/admin/system/access requested for userName={}, role={}", request.getUserName(), request.getRole());
@@ -199,7 +199,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(created, "Access granted successfully"));
     }
 
-    @PutMapping("/access/{id}/revoke")
+    @PutMapping({"/access/{id}/revoke", "/access-control/{id}/revoke"})
     @Operation(summary = "Revoke user access")
     public ResponseEntity<ApiResponse<AccessDetailDto>> revokeAccess(@PathVariable String id) {
         log.info("PUT /api/v1/admin/system/access/{}/revoke requested", id);
@@ -210,7 +210,7 @@ public class SystemAdminController {
     // ==========================================
     // 5. APPROVAL WORKFLOW
     // ==========================================
-    @GetMapping("/workflows")
+    @GetMapping({"/workflows", "/approval-workflows", "/approval-workflow"})
     @Operation(summary = "Get Approval Workflow Configuration page with workflow KPIs, tabs, module donut, levels bar, and workflows table")
     public ResponseEntity<ApiResponse<ApprovalWorkflowPageDto>> getWorkflows(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -224,7 +224,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "Approval workflows retrieved successfully"));
     }
 
-    @GetMapping("/workflows/{id}")
+    @GetMapping({"/workflows/{id}", "/approval-workflows/{id}", "/approval-workflow/{id}"})
     @Operation(summary = "Get detailed Workflow side drawer by ID")
     public ResponseEntity<ApiResponse<WorkflowDetailDto>> getWorkflowDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/workflows/{} requested", id);
@@ -232,7 +232,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Workflow detail retrieved successfully"));
     }
 
-    @PostMapping("/workflows")
+    @PostMapping({"/workflows", "/approval-workflows", "/approval-workflow"})
     @Operation(summary = "Create a new Approval Workflow")
     public ResponseEntity<ApiResponse<WorkflowDetailDto>> createWorkflow(@RequestBody CreateWorkflowRequestDto request) {
         log.info("POST /api/v1/admin/system/workflows requested for workflowName={}, module={}", request.getWorkflowName(), request.getModule());
@@ -240,7 +240,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(created, "Workflow created successfully"));
     }
 
-    @PostMapping("/workflows/{id}/clone")
+    @PostMapping({"/workflows/{id}/clone", "/approval-workflows/{id}/clone", "/approval-workflow/{id}/clone"})
     @Operation(summary = "Clone an existing Approval Workflow")
     public ResponseEntity<ApiResponse<WorkflowDetailDto>> cloneWorkflow(@PathVariable String id) {
         log.info("POST /api/v1/admin/system/workflows/{}/clone requested", id);
@@ -248,7 +248,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(cloned, "Workflow cloned successfully"));
     }
 
-    @PutMapping("/workflows/{id}/deactivate")
+    @PutMapping({"/workflows/{id}/deactivate", "/approval-workflows/{id}/deactivate", "/approval-workflow/{id}/deactivate"})
     @Operation(summary = "Deactivate workflow")
     public ResponseEntity<ApiResponse<WorkflowDetailDto>> deactivateWorkflow(@PathVariable String id) {
         log.info("PUT /api/v1/admin/system/workflows/{}/deactivate requested", id);
@@ -259,7 +259,7 @@ public class SystemAdminController {
     // ==========================================
     // 6. TRADING RULE CONFIGURATION
     // ==========================================
-    @GetMapping("/trading-rules")
+    @GetMapping({"/trading-rules", "/trading-rule-configuration", "/trading-rules-config"})
     @Operation(summary = "Get Trading Rule Configuration page with KPIs, category donut, status/priority bars, and rules table")
     public ResponseEntity<ApiResponse<TradingRuleConfigPageDto>> getTradingRules(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -273,7 +273,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "Trading rules retrieved successfully"));
     }
 
-    @GetMapping("/trading-rules/{id}")
+    @GetMapping({"/trading-rules/{id}", "/trading-rule-configuration/{id}", "/trading-rules-config/{id}"})
     @Operation(summary = "Get detailed Trading Rule side drawer by ID")
     public ResponseEntity<ApiResponse<TradingRuleDetailDto>> getTradingRuleDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/trading-rules/{} requested", id);
@@ -281,7 +281,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Trading rule detail retrieved successfully"));
     }
 
-    @PostMapping("/trading-rules")
+    @PostMapping({"/trading-rules", "/trading-rule-configuration", "/trading-rules-config"})
     @Operation(summary = "Create a new Trading Rule")
     public ResponseEntity<ApiResponse<TradingRuleDetailDto>> createTradingRule(@RequestBody CreateTradingRuleRequestDto request) {
         log.info("POST /api/v1/admin/system/trading-rules requested for ruleName={}", request.getRuleName());
@@ -289,7 +289,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(created, "Trading rule created successfully"));
     }
 
-    @PostMapping("/trading-rules/{id}/clone")
+    @PostMapping({"/trading-rules/{id}/clone", "/trading-rule-configuration/{id}/clone", "/trading-rules-config/{id}/clone"})
     @Operation(summary = "Clone an existing Trading Rule")
     public ResponseEntity<ApiResponse<TradingRuleDetailDto>> cloneTradingRule(@PathVariable String id) {
         log.info("POST /api/v1/admin/system/trading-rules/{}/clone requested", id);
@@ -297,7 +297,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(cloned, "Trading rule cloned successfully"));
     }
 
-    @PutMapping("/trading-rules/{id}/deactivate")
+    @PutMapping({"/trading-rules/{id}/deactivate", "/trading-rule-configuration/{id}/deactivate", "/trading-rules-config/{id}/deactivate"})
     @Operation(summary = "Deactivate trading rule")
     public ResponseEntity<ApiResponse<TradingRuleDetailDto>> deactivateTradingRule(@PathVariable String id) {
         log.info("PUT /api/v1/admin/system/trading-rules/{}/deactivate requested", id);
@@ -308,7 +308,7 @@ public class SystemAdminController {
     // ==========================================
     // 7. NOTIFICATION CONFIGURATION
     // ==========================================
-    @GetMapping("/notifications")
+    @GetMapping({"/notifications", "/notification-configuration", "/notification-config"})
     @Operation(summary = "Get Notification Configuration page with KPIs, channels bar, trend line chart, and notifications table")
     public ResponseEntity<ApiResponse<NotificationConfigPageDto>> getNotifications(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -322,7 +322,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "Notifications retrieved successfully"));
     }
 
-    @GetMapping("/notifications/{id}")
+    @GetMapping({"/notifications/{id}", "/notification-configuration/{id}", "/notification-config/{id}"})
     @Operation(summary = "Get detailed Notification side drawer by ID")
     public ResponseEntity<ApiResponse<NotificationDetailDto>> getNotificationDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/notifications/{} requested", id);
@@ -330,7 +330,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(detail, "Notification detail retrieved successfully"));
     }
 
-    @PostMapping("/notifications")
+    @PostMapping({"/notifications", "/notification-configuration", "/notification-config"})
     @Operation(summary = "Create a new Notification")
     public ResponseEntity<ApiResponse<NotificationDetailDto>> createNotification(@RequestBody CreateNotificationRequestDto request) {
         log.info("POST /api/v1/admin/system/notifications requested for notificationName={}", request.getNotificationName());
@@ -338,7 +338,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(created, "Notification created successfully"));
     }
 
-    @PostMapping("/notifications/{id}/clone")
+    @PostMapping({"/notifications/{id}/clone", "/notification-configuration/{id}/clone", "/notification-config/{id}/clone"})
     @Operation(summary = "Clone an existing Notification")
     public ResponseEntity<ApiResponse<NotificationDetailDto>> cloneNotification(@PathVariable String id) {
         log.info("POST /api/v1/admin/system/notifications/{}/clone requested", id);
@@ -346,7 +346,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(cloned, "Notification cloned successfully"));
     }
 
-    @PutMapping("/notifications/{id}/deactivate")
+    @PutMapping({"/notifications/{id}/deactivate", "/notification-configuration/{id}/deactivate", "/notification-config/{id}/deactivate"})
     @Operation(summary = "Deactivate notification")
     public ResponseEntity<ApiResponse<NotificationDetailDto>> deactivateNotification(@PathVariable String id) {
         log.info("PUT /api/v1/admin/system/notifications/{}/deactivate requested", id);
@@ -357,7 +357,7 @@ public class SystemAdminController {
     // ==========================================
     // 8. SYSTEM SETTINGS
     // ==========================================
-    @GetMapping("/settings")
+    @GetMapping({"/settings", "/system-settings"})
     @Operation(summary = "Get System Settings page with KPIs, module donut, status bar, recent changes, and settings table")
     public ResponseEntity<ApiResponse<SystemSettingsPageDto>> getSettings(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -371,7 +371,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "System settings retrieved successfully"));
     }
 
-    @GetMapping("/settings/{id}")
+    @GetMapping({"/settings/{id}", "/system-settings/{id}"})
     @Operation(summary = "Get detailed System Setting side drawer by ID")
     public ResponseEntity<ApiResponse<SystemSettingDetailDto>> getSettingDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/settings/{} requested", id);
@@ -408,7 +408,7 @@ public class SystemAdminController {
     // ==========================================
     // 9. AUDIT & ACTIVITY LOGS
     // ==========================================
-    @GetMapping("/audit-logs")
+    @GetMapping({"/audit-logs", "/audit-activity-logs", "/activity-logs", "/audit"})
     @Operation(summary = "Get Audit & Activity Logs page with KPIs, module donut, action bar, activity trend chart, and logs table")
     public ResponseEntity<ApiResponse<AuditActivityLogsPageDto>> getAuditLogs(
             @RequestParam(required = false, defaultValue = "Atirath Holdings") String company,
@@ -424,7 +424,7 @@ public class SystemAdminController {
         return ResponseEntity.ok(ApiResponse.success(page, "Audit logs retrieved successfully"));
     }
 
-    @GetMapping("/audit-logs/{id}")
+    @GetMapping({"/audit-logs/{id}", "/audit-activity-logs/{id}", "/activity-logs/{id}", "/audit/{id}"})
     @Operation(summary = "Get detailed Audit Log side drawer by ID")
     public ResponseEntity<ApiResponse<AuditLogDetailDto>> getAuditLogDetail(@PathVariable String id) {
         log.info("GET /api/v1/admin/system/audit-logs/{} requested", id);

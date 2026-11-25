@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.atirath.trading.NegotiationIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 118.1 s -- in com.atirath.trading.NegotiationIntegrationTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 61.48 s -- in com.atirath.trading.NegotiationIntegrationTest

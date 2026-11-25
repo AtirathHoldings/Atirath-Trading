@@ -13,6 +13,11 @@ D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileNegotiat
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileProfileKycIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileProfileSubscreensIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\MobileTradeIntegrationTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\modules\admin\parent\ParentCompanyAdminServiceTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\modules\admin\subsidiary\operations\SubsidiaryOperationsServiceTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\modules\admin\subsidiary\SubsidiaryAdminServiceTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\modules\admin\subsidiary\SubsidiaryComplianceServiceTest.java
+D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\modules\admin\system\SystemAdminServiceTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\NegotiationIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\OwaspApiSecurityIntegrationTest.java
 D:\trade sample\Trading-Backend\src\test\java\com\atirath\trading\PortfolioScreenIntegrationTest.java
